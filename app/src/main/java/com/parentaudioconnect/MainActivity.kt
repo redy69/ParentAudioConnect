@@ -80,10 +80,9 @@ private var mediaPlayer: MediaPlayer? = null
         "https://parent-audio-token.yudhis-r15.workers.dev/token"
 
     companion object {
-        private const val MIC_PERMISSION = 1001
-    }
-
+    private const val MIC_PERMISSION = 1001
     private const val MP3_PICKER = 1002
+}
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
