@@ -485,9 +485,10 @@ playMp3Button.setOnClickListener {
         statusText.text = message
     },
     onReceived = { file ->
-        receivedMp3File = file
-        playMp3Button.visibility = View.VISIBLE
-    }
+    receivedMp3File = file
+    playMp3Button.visibility = View.VISIBLE
+    playReceivedMp3()
+}
 )
 
                         if (role == "parent") {
