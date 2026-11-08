@@ -1,3 +1,4 @@
+
 name: Build Parent Audio Connect APK
 
 on:
@@ -5,6 +6,9 @@ on:
   push:
     branches:
       - main
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -37,7 +41,15 @@ jobs:
       - name: Build APK
         run: gradle assembleDebug
 
-      - name: Upload APK
+      - name: Publish APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Parent Audio Connect Build ${{ github.run_number }}
+          files: app/build/outputs/apk/debug/app-debug.apk
+          generate_release_notes: true
+
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ParentAudioConnect-debug
