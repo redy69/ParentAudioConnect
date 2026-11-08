@@ -62,6 +62,12 @@ class MainActivity : Activity(), LifecycleOwner {
     private lateinit var codeText: TextView
     private lateinit var startButton: Button
     private lateinit var stopButton: Button
+    private lateinit var sendMp3Button: Button
+private lateinit var playMp3Button: Button
+
+private var mp3TransferManager: Mp3TransferManager? = null
+private var receivedMp3File: File? = null
+private var mediaPlayer: MediaPlayer? = null
 
     private var pairingListener: ListenerRegistration? = null
     private var room: Room? = null
