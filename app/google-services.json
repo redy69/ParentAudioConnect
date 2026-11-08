@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "510992503464",
+    "project_id": "parentaudioconnect",
+    "storage_bucket": "parentaudioconnect.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:510992503464:android:dc7ad2dcec068eb927289d",
+        "android_client_info": {
+          "package_name": "com.parentaudioconnect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArnd_Ejlu045Sgu_UYKaD0BLs3BtFLTDg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
