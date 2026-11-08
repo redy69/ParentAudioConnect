@@ -1,6 +1,9 @@
 
 package com.parentaudioconnect
 
+import android.media.MediaPlayer
+import android.net.Uri
+import java.io.File
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
