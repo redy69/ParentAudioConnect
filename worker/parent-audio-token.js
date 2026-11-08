@@ -43,7 +43,7 @@ async function createLiveKitToken(env, uid, room, canPublish) {
       room: room,
       canPublish: canPublish,
       canSubscribe: true,
-      canPublishData: false
+      canPublishData: canPublish
     }
   };
 
