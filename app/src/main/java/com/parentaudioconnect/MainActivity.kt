@@ -86,13 +86,40 @@ class MainActivity : Activity() {
 
         setContentView(layout)
 
-        if (auth.currentUser != null) {
-            statusText.text = "Firebase terhubung!"
-        } else {
-            statusText.text = "Firebase belum terhubung. Buka ulang aplikasi."
-        }
+        connectFirebase()
     }
 
+    private fun connectFirebase() {
+    if (auth.currentUser != null) {
+        statusText.text = "Firebase terhubung!"
+        return
+    }
+
+    statusText.text = "Menghubungkan ke Firebase..."
+
+    auth.signInAnonymously()
+        .addOnCompleteListener(this) { task ->
+
+            if (task.isSuccessful) {
+                statusText.text = "Firebase terhubung!"
+
+                Toast.makeText(
+                    this,
+                    "Identitas perangkat berhasil dibuat",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+            } else {
+                statusText.text = "Gagal terhubung ke Firebase"
+
+                Toast.makeText(
+                    this,
+                    task.exception?.localizedMessage ?: "Koneksi gagal",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+}
     private fun createButton(label: String): Button {
         return Button(this).apply {
             text = label
