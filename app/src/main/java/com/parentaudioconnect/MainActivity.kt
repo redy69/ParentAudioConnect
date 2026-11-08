@@ -1,6 +1,6 @@
 
 package com.parentaudioconnect
-
+import android.content.Intent
 import android.media.MediaPlayer
 import android.net.Uri
 import java.io.File
@@ -83,6 +83,7 @@ private var mediaPlayer: MediaPlayer? = null
         private const val MIC_PERMISSION = 1001
     }
 
+    private const val MP3_PICKER = 1002
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -125,9 +126,15 @@ private var mediaPlayer: MediaPlayer? = null
 
         startButton = createButton("MULAI KIRIM SUARA")
         stopButton = createButton("HENTIKAN SUARA")
+        sendMp3Button = createButton("KIRIM FILE MP3")
+playMp3Button = createButton("PUTAR MP3 DITERIMA")
+
+sendMp3Button.visibility = View.GONE
+playMp3Button.visibility = View.GONE
 
         startButton.visibility = View.GONE
         stopButton.visibility = View.GONE
+        sendMp3Button.visibility = View.VISIBLE
 
         parentButton.setOnClickListener {
             createPairingCode()
@@ -144,6 +151,13 @@ private var mediaPlayer: MediaPlayer? = null
         stopButton.setOnClickListener {
             stopMicrophone()
         }
+        sendMp3Button.setOnClickListener {
+    openMp3Picker()
+}
+
+playMp3Button.setOnClickListener {
+    playReceivedMp3()
+}
 
         layout.addView(title)
         layout.addView(statusText)
@@ -152,6 +166,8 @@ private var mediaPlayer: MediaPlayer? = null
         layout.addView(childButton)
         layout.addView(startButton)
         layout.addView(stopButton)
+        layout.addView(sendMp3Button)
+        layout.addView(playMp3Button)
 
         setContentView(layout)
 
@@ -462,6 +478,18 @@ private var mediaPlayer: MediaPlayer? = null
                         )
 
                         room = newRoom
+                        mp3TransferManager = Mp3TransferManager(
+    context = this@MainActivity,
+    room = newRoom,
+    scope = activityScope,
+    onStatus = { message ->
+        statusText.text = message
+    },
+    onReceived = { file ->
+        receivedMp3File = file
+        playMp3Button.visibility = View.VISIBLE
+    }
+)
 
                         if (role == "parent") {
                             newRoom.localParticipant
@@ -608,6 +636,84 @@ private var mediaPlayer: MediaPlayer? = null
             }
         }
     }
+    
+
+private fun openMp3Picker() {
+    if (currentRole != "parent") {
+        statusText.text = "Hanya HP orang tua yang dapat mengirim MP3"
+        return
+    }
+
+    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+        addCategory(Intent.CATEGORY_OPENABLE)
+        type = "audio/mpeg"
+    }
+
+    startActivityForResult(intent, MP3_PICKER)
+}
+
+override fun onActivityResult(
+    requestCode: Int,
+    resultCode: Int,
+    data: Intent?
+) {
+    super.onActivityResult(requestCode, resultCode, data)
+
+    if (requestCode == MP3_PICKER &&
+        resultCode == RESULT_OK
+    ) {
+        val uri = data?.data ?: return
+
+        val manager = mp3TransferManager
+
+        if (manager == null) {
+            statusText.text = "Ruang audio belum terhubung"
+            return
+        }
+
+        manager.send(uri)
+    }
+}
+
+private fun playReceivedMp3() {
+    val file = receivedMp3File
+
+    if (file == null || !file.exists()) {
+        statusText.text = "Belum ada MP3 yang diterima"
+        return
+    }
+
+    try {
+        mediaPlayer?.release()
+
+        mediaPlayer = MediaPlayer().apply {
+            setDataSource(file.absolutePath)
+
+            setOnPreparedListener {
+                it.start()
+                statusText.text = "Memutar MP3..."
+            }
+
+            setOnCompletionListener {
+                it.release()
+                mediaPlayer = null
+                statusText.text = "MP3 selesai diputar"
+            }
+
+            setOnErrorListener { player, _, _ ->
+                player.release()
+                mediaPlayer = null
+                statusText.text = "Gagal memutar MP3"
+                true
+            }
+
+            prepareAsync()
+        }
+
+    } catch (error: Exception) {
+        statusText.text = "Gagal memutar MP3: ${error.message}"
+    }
+}
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
