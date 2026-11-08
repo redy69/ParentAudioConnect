@@ -1,6 +1,5 @@
 package com.parentaudioconnect
 
-import android.Manifest
 import android.app.Activity
 import android.os.Bundle
 import android.widget.Button
@@ -10,16 +9,17 @@ import android.widget.Toast
 import android.graphics.Color
 import android.view.Gravity
 import android.view.ViewGroup
-import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : Activity() {
 
     private lateinit var statusText: TextView
+    private lateinit var auth: FirebaseAuth
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        auth = FirebaseAuth.getInstance()
 
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -36,7 +36,7 @@ class MainActivity : Activity() {
         }
 
         statusText = TextView(this).apply {
-            text = "Selamat datang"
+            text = "Menghubungkan ke Firebase..."
             textSize = 16f
             setTextColor(Color.LTGRAY)
             gravity = Gravity.CENTER
@@ -48,12 +48,20 @@ class MainActivity : Activity() {
 
         parentButton.setOnClickListener {
             statusText.text = "Mode Orang Tua dipilih"
-            Toast.makeText(this, "Mode Orang Tua", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                this,
+                "Mode Orang Tua",
+                Toast.LENGTH_SHORT
+            ).show()
         }
 
         childButton.setOnClickListener {
             statusText.text = "Mode Anak dipilih"
-            Toast.makeText(this, "Mode Anak", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                this,
+                "Mode Anak",
+                Toast.LENGTH_SHORT
+            ).show()
         }
 
         layout.addView(title)
@@ -63,7 +71,7 @@ class MainActivity : Activity() {
 
         setContentView(layout)
 
-        requestMicrophonePermission()
+        connectFirebase()
     }
 
     private fun createButton(label: String): Button {
@@ -71,6 +79,7 @@ class MainActivity : Activity() {
             text = label
             textSize = 16f
             isAllCaps = false
+
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -80,17 +89,37 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun requestMicrophonePermission() {
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECORD_AUDIO
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.RECORD_AUDIO),
-                100
-            )
+    private fun connectFirebase() {
+        val currentUser = auth.currentUser
+
+        if (currentUser != null) {
+            statusText.text = "Firebase terhubung!"
+            return
         }
+
+        auth.signInAnonymously()
+            .addOnCompleteListener(this) { task ->
+
+                if (task.isSuccessful) {
+                    statusText.text = "Firebase terhubung!"
+
+                    Toast.makeText(
+                        this,
+                        "Identitas perangkat berhasil dibuat",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                } else {
+                    statusText.text =
+                        "Gagal terhubung ke Firebase. Periksa internet."
+
+                    Toast.makeText(
+                        this,
+                        task.exception?.localizedMessage
+                            ?: "Koneksi gagal",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
     }
 }
