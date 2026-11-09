@@ -1,4 +1,4 @@
-package com.parentaudioconnect
+package com.santethp
 
 import android.content.BroadcastReceiver
 import android.content.Context
