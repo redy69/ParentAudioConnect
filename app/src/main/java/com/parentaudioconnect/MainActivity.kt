@@ -133,9 +133,9 @@ private var receivedMp3File: File? = null
         val parentButton = createButton("BUAT KODE ORANG TUA")
         val childButton = createButton("MASUKKAN KODE ANAK")
 
-        startButton = createButton("MULAI KIRIM SUARA")
+        startButton = createButton("BICARA LIVE")
         stopButton = createButton("HENTIKAN SUARA")
-        sendMp3Button = createButton("KIRIM FILE MP3")
+        sendMp3Button = createButton("PUTAR MP3")
 playMp3Button = createButton("PUTAR MP3 DITERIMA")
         adminWhatsAppButton = createButton("CHAT ADMIN VIA WHATSAPP")
 
