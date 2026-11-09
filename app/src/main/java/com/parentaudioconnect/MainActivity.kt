@@ -61,7 +61,7 @@ class MainActivity : Activity(), LifecycleOwner {
 
     private lateinit var statusText: TextView
     private lateinit var childAudioActivityText: TextView
-    private lateinit var codeText
+    private lateinit var codeText: TextView
     private lateinit var startButton: Button
     private lateinit var stopButton: Button
     private lateinit var sendMp3Button: Button
