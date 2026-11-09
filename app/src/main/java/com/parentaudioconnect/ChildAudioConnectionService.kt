@@ -95,6 +95,7 @@ class ChildAudioConnectionService : Service() {
                         url = response.getString("serverUrl"),
                         token = response.getString("token")
                     )
+                    newRoom.localParticipant.setMicrophoneEnabled(false)
                     room = newRoom
                     updateNotification("Terhubung • penerimaan audio aktif • mikrofon mati")
                     return
@@ -180,9 +181,17 @@ class ChildAudioConnectionService : Service() {
 
     override fun onDestroy() {
         serviceScope.cancel()
-        room?.disconnect()
-        room?.release()
+        val activeRoom = room
         room = null
+        if (activeRoom != null) {
+            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+                try {
+                    activeRoom.disconnect()
+                } finally {
+                    activeRoom.release()
+                }
+            }
+        }
         super.onDestroy()
     }
 
