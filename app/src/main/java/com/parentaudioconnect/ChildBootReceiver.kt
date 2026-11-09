@@ -28,7 +28,7 @@ class ChildBootReceiver : BroadcastReceiver() {
         }
 
         val serviceIntent = Intent(context, ChildAudioConnectionService::class.java).apply {
-            action = ChildAudioConnectionService.ACTION_CONNECT
+            setAction(ChildAudioConnectionService.ACTION_CONNECT)
             putExtra(ChildAudioConnectionService.EXTRA_PAIR_CODE, code)
             // Service refreshes Firebase ID token itself after boot.
             putExtra(ChildAudioConnectionService.EXTRA_FIREBASE_ID_TOKEN, "")
