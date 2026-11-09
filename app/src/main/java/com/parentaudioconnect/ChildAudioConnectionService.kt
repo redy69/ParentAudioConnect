@@ -49,7 +49,7 @@ class ChildAudioConnectionService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var room: Room? = null
     private var roomEventsJob: Job? = null
-    private var previousVoiceCallVolume: Int? = null
+    private var mp3TransferManager: Mp3TransferManager? = null
     private val activeRemoteAudioTrackIds = mutableSetOf<Int>()
     @Volatile private var connecting = false
 
@@ -110,14 +110,11 @@ class ChildAudioConnectionService : Service() {
                                 is RoomEvent.TrackUnsubscribed -> {
                                     if (event.track is RemoteAudioTrack) {
                                         activeRemoteAudioTrackIds.remove(event.track.hashCode())
-                                        if (activeRemoteAudioTrackIds.isEmpty()) {
-                                            restoreLiveAudioVolume()
-                                        }
+                                        // Keep the requested maximum volume after each audio session.
                                     }
                                 }
                                 is RoomEvent.Disconnected -> {
                                     activeRemoteAudioTrackIds.clear()
-                                    restoreLiveAudioVolume()
                                 }
                                 else -> Unit
                             }
@@ -130,15 +127,34 @@ class ChildAudioConnectionService : Service() {
                     )
                     newRoom.localParticipant.setMicrophoneEnabled(false)
                     room = newRoom
-                    updateNotification("Terhubung • penerimaan audio aktif • mikrofon mati")
+                    mp3TransferManager = Mp3TransferManager(
+                        context = applicationContext,
+                        room = newRoom,
+                        scope = serviceScope,
+                        onStatus = { message -> updateNotification(message) },
+                        onReceived = { file ->
+                            maximizeMediaVolume()
+                            val playbackIntent = Intent(applicationContext, AudioPlaybackService::class.java).apply {
+                                action = AudioPlaybackService.ACTION_PLAY
+                                putExtra(AudioPlaybackService.EXTRA_FILE_PATH, file.absolutePath)
+                            }
+                            try {
+                                androidx.core.content.ContextCompat.startForegroundService(applicationContext, playbackIntent)
+                                updateNotification("MP3 diterima • memutar audio")
+                            } catch (error: Exception) {
+                                updateNotification("MP3 diterima, gagal memutar: ${error.localizedMessage}")
+                            }
+                        }
+                    )
+                    updateNotification("Terhubung • audio live dan MP3 aktif • mikrofon mati")
                     return
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: Exception) {
                     roomEventsJob?.cancel()
                     roomEventsJob = null
+                    mp3TransferManager = null
                     activeRemoteAudioTrackIds.clear()
-                    restoreLiveAudioVolume()
                     attempt++
                     updateNotification("Koneksi gagal. Mencoba kembali ($attempt)…")
                     delay((attempt.coerceAtMost(6) * 5_000L))
@@ -149,36 +165,18 @@ class ChildAudioConnectionService : Service() {
         }
     }
 
-    /**
-     * LiveKit uses Android's voice-call stream for its default communication audio mode.
-     * Raise that stream only while a remote audio track is subscribed, then restore it.
-     */
+    /** Maximize the call stream used by LiveKit's communication audio route. */
     private fun maximizeLiveAudioVolume() {
         val audioManager = getSystemService(AudioManager::class.java)
-        if (previousVoiceCallVolume == null) {
-            previousVoiceCallVolume =
-                audioManager.getStreamVolume(AudioManager.STREAM_VOICE_CALL)
-        }
         val maximum = audioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
-        audioManager.setStreamVolume(
-            AudioManager.STREAM_VOICE_CALL,
-            maximum,
-            AudioManager.FLAG_SHOW_UI
-        )
+        audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, maximum, AudioManager.FLAG_SHOW_UI)
     }
 
-    private fun restoreLiveAudioVolume() {
-        val previous = previousVoiceCallVolume ?: return
-        previousVoiceCallVolume = null
+    /** MP3 playback uses the media/music stream, not the call stream. */
+    private fun maximizeMediaVolume() {
         val audioManager = getSystemService(AudioManager::class.java)
-        audioManager.setStreamVolume(
-            AudioManager.STREAM_VOICE_CALL,
-            previous.coerceIn(
-                0,
-                audioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
-            ),
-            0
-        )
+        val maximum = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maximum, AudioManager.FLAG_SHOW_UI)
     }
 
     private fun requestToken(idToken: String, code: String): JSONObject {
@@ -252,7 +250,7 @@ class ChildAudioConnectionService : Service() {
         roomEventsJob?.cancel()
         roomEventsJob = null
         activeRemoteAudioTrackIds.clear()
-        restoreLiveAudioVolume()
+        mp3TransferManager = null
         serviceScope.cancel()
         val activeRoom = room
         room = null
