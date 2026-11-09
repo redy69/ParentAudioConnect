@@ -115,6 +115,14 @@ class ChildAudioConnectionService : Service() {
                                         }
                                     }
                                 }
+                                is RoomEvent.TrackMuted -> {
+                                    restoreLiveAudioVolume()
+                                }
+                                is RoomEvent.TrackUnmuted -> {
+                                    if (activeRemoteAudioTracks > 0) {
+                                        maximizeLiveAudioVolume()
+                                    }
+                                }
                                 is RoomEvent.Disconnected -> {
                                     activeRemoteAudioTracks = 0
                                     restoreLiveAudioVolume()
