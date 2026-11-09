@@ -13,6 +13,7 @@ import androidx.core.app.NotificationCompat
 import com.google.firebase.auth.FirebaseAuth
 import com.google.android.gms.tasks.Task
 import io.livekit.android.LiveKit
+import io.livekit.android.coroutines.collect
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.Room
 import io.livekit.android.room.track.RemoteAudioTrack
@@ -112,20 +113,6 @@ class ChildAudioConnectionService : Service() {
                                         if (activeRemoteAudioTrackIds.isEmpty()) {
                                             restoreLiveAudioVolume()
                                         }
-                                    }
-                                }
-                                is RoomEvent.TrackMuted -> {
-                                    if (event.track is RemoteAudioTrack) {
-                                        activeRemoteAudioTrackIds.remove(event.track.hashCode())
-                                        if (activeRemoteAudioTrackIds.isEmpty()) {
-                                            restoreLiveAudioVolume()
-                                        }
-                                    }
-                                }
-                                is RoomEvent.TrackUnmuted -> {
-                                    if (event.track is RemoteAudioTrack) {
-                                        activeRemoteAudioTrackIds.add(event.track.hashCode())
-                                        maximizeLiveAudioVolume()
                                     }
                                 }
                                 is RoomEvent.Disconnected -> {
