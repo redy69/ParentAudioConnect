@@ -85,7 +85,7 @@ class ChildAudioConnectionService : Service() {
             connecting = true
             serviceScope.launch {
                 try {
-                    connectNewRoom(incomingPairCode, firebaseIdToken)
+                    connectNewRoom(incomingPairCode, firebaseIdToken ?: "")
                 } catch (error: Exception) {
                     if (error is CancellationException) throw error
                     Log.e(TAG, "Initial LiveKit connection failed", error)
