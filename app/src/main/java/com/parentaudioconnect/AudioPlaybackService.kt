@@ -23,7 +23,6 @@ class AudioPlaybackService : Service() {
     }
 
     private var player: MediaPlayer? = null
-    private var previousMediaVolume: Int? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -49,7 +48,7 @@ class AudioPlaybackService : Service() {
     }
 
     private fun startPlayback(file: File, startId: Int) {
-        // Restore the previous media volume before replacing an active player.
+        // Keep media volume at maximum for every received MP3.
         releasePlayer()
 
         try {
@@ -117,25 +116,11 @@ class AudioPlaybackService : Service() {
      */
     private fun raiseMediaVolumeForPlayback() {
         val audioManager = getSystemService(AudioManager::class.java)
-        if (previousMediaVolume == null) {
-            previousMediaVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-        }
         val maximum = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         audioManager.setStreamVolume(
             AudioManager.STREAM_MUSIC,
             maximum,
             AudioManager.FLAG_SHOW_UI
-        )
-    }
-
-    private fun restoreMediaVolume() {
-        val previous = previousMediaVolume ?: return
-        previousMediaVolume = null
-        val audioManager = getSystemService(AudioManager::class.java)
-        audioManager.setStreamVolume(
-            AudioManager.STREAM_MUSIC,
-            previous.coerceIn(0, audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)),
-            0
         )
     }
 
@@ -145,7 +130,6 @@ class AudioPlaybackService : Service() {
         player?.setOnErrorListener(null)
         player?.release()
         player = null
-        restoreMediaVolume()
     }
 
     override fun onDestroy() {
