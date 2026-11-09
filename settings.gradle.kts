@@ -16,5 +16,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ParentAudioConnect"
+rootProject.name = "SantetHP"
 include(":app")
