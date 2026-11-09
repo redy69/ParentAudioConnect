@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.media.AudioAttributes
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Build
@@ -60,6 +61,8 @@ class AudioPlaybackService : Service() {
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                     .build()
             )
+            // Prefer the phone's built-in loudspeaker, even if another output is available.
+            routePlayerToLoudspeaker(nextPlayer)
             nextPlayer.setDataSource(file.absolutePath)
             nextPlayer.setOnPreparedListener { prepared ->
                 raiseMediaVolumeForPlayback()
@@ -111,6 +114,16 @@ class AudioPlaybackService : Service() {
             )
             getSystemService(NotificationManager::class.java)
                 .createNotificationChannel(channel)
+        }
+    }
+
+    /** Prefer the built-in speaker for received MP3 playback. */
+    private fun routePlayerToLoudspeaker(mediaPlayer: MediaPlayer) {
+        val audioManager = getSystemService(AudioManager::class.java)
+        val speaker = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+        if (speaker != null) {
+            mediaPlayer.setPreferredDevice(speaker)
         }
     }
 
