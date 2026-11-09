@@ -12,6 +12,7 @@ import androidx.core.app.NotificationCompat
 import com.google.firebase.auth.FirebaseAuth
 import io.livekit.android.LiveKit
 import io.livekit.android.events.RoomEvent
+import io.livekit.android.events.collect
 import io.livekit.android.room.Room
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -20,8 +21,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -118,7 +117,8 @@ class ChildAudioConnectionService : Service() {
 
         val newRoom = LiveKit.create(applicationContext)
         roomEventsJob?.cancel()
-        roomEventsJob = newRoom.events.onEach { event ->
+        roomEventsJob = serviceScope.launch {
+            newRoom.events.collect { event ->
                 when (event) {
                     is RoomEvent.Reconnecting -> {
                         if (room === newRoom) {
@@ -144,7 +144,8 @@ class ChildAudioConnectionService : Service() {
                     }
                     else -> Unit
                 }
-        }.launchIn(serviceScope)
+            }
+        }
 
         try {
             newRoom.connect(url = serverUrl, token = token)
