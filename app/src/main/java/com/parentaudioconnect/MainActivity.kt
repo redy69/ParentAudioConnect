@@ -27,6 +27,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.Timestamp
+import com.google.firebase.messaging.FirebaseMessaging
 
 import io.livekit.android.LiveKit
 import io.livekit.android.room.Room
@@ -174,6 +175,7 @@ playMp3Button.setOnClickListener {
 
     private fun connectFirebase() {
         if (auth.currentUser != null) {
+            refreshFcmToken()
             statusText.text = "Firebase terhubung!"
             restoreSavedPairing()
             return
@@ -185,6 +187,7 @@ playMp3Button.setOnClickListener {
             .addOnCompleteListener(this) { task ->
 
                 if (task.isSuccessful) {
+                    refreshFcmToken()
                     statusText.text = "Firebase terhubung!"
                     restoreSavedPairing()
 
@@ -203,6 +206,20 @@ playMp3Button.setOnClickListener {
                         Toast.LENGTH_LONG
                     ).show()
                 }
+            }
+    }
+
+    private fun refreshFcmToken() {
+        FirebaseMessaging.getInstance().token
+            .addOnSuccessListener { token ->
+                getSharedPreferences("parent_audio", MODE_PRIVATE)
+                    .edit()
+                    .putString("fcm_token", token)
+                    .apply()
+                statusText.text = "Firebase terhubung • notifikasi siap"
+            }
+            .addOnFailureListener {
+                // Keep the app usable if token retrieval is temporarily unavailable.
             }
     }
 
