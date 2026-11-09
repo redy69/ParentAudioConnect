@@ -321,8 +321,22 @@ playMp3Button.setOnClickListener {
             statusText.text = "Menunggu HP anak..."
             listenForChild(code)
         } else {
-            statusText.text = "Menghubungkan ke ruang audio..."
-            connectToLiveKit(code)
+            statusText.text = "Memulihkan koneksi audio (mikrofon tetap mati)..."
+            startChildAudioConnection()
+        }
+    }
+
+    private fun startChildAudioConnection() {
+        if (currentRole != "child") return
+        val intent = Intent(this, ChildAudioConnectionService::class.java).apply {
+            action = ChildAudioConnectionService.ACTION_CONNECT
+        }
+        try {
+            ContextCompat.startForegroundService(this, intent)
+            statusText.text = "Koneksi audio berjalan dengan notifikasi • mikrofon mati"
+        } catch (error: Exception) {
+            statusText.text = "Tidak dapat memulai koneksi latar: ${error.localizedMessage ?: "izin sistem"}"
+            Toast.makeText(this, "Buka aplikasi dan izinkan notifikasi agar koneksi dapat dipulihkan.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -477,9 +491,9 @@ playMp3Button.setOnClickListener {
                         currentRole = "child"
 
                         codeText.text = code
-                        statusText.text = "Berhasil dipasangkan!"
+                        statusText.text = "Berhasil dipasangkan! Memulihkan koneksi audio..."
 
-                        connectToLiveKit(code)
+                        startChildAudioConnection()
                     }
                     .addOnFailureListener { error ->
 
