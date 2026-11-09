@@ -134,12 +134,11 @@ class ChildAudioConnectionService : Service() {
                                     }
                                 }
                                 is RoomEvent.TrackUnmuted -> {
+                                    val unmutedTrack = event.publication.track
                                     if (event.publication.kind == Track.Kind.AUDIO &&
-                                        event.publication.track is RemoteAudioTrack
+                                        unmutedTrack is RemoteAudioTrack
                                     ) {
-                                        activeRemoteAudioTrackIds.add(
-                                            event.publication.track.hashCode()
-                                        )
+                                        activeRemoteAudioTrackIds.add(unmutedTrack.hashCode())
                                         ChildAudioActivityReporter.setLiveAudioActive(
                                             applicationContext, true
                                         )
