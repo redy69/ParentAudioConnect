@@ -22,6 +22,34 @@ object ChildAudioActivityReporter {
         update(context, "mp3AudioActive", active)
     }
 
+    fun refreshLiveAudioHeartbeat(context: Context) {
+        heartbeat(context, "liveAudioActivityAt")
+    }
+
+    fun refreshMp3AudioHeartbeat(context: Context) {
+        heartbeat(context, "mp3AudioActivityAt")
+    }
+
+    private fun heartbeat(context: Context, timestampField: String) {
+        val prefs = context.getSharedPreferences("parent_audio", Context.MODE_PRIVATE)
+        val code = prefs.getString("pair_code", null)
+        val role = prefs.getString("pair_role", null)
+        if (code.isNullOrBlank() || role != "child") return
+
+        FirebaseFirestore.getInstance()
+            .collection("pairings")
+            .document(code)
+            .update(
+                mapOf(
+                    timestampField to FieldValue.serverTimestamp(),
+                    "audioActivityAt" to FieldValue.serverTimestamp()
+                )
+            )
+            .addOnFailureListener { error ->
+                Log.e(TAG, "Unable to refresh $timestampField for pairing $code", error)
+            }
+    }
+
     private fun update(context: Context, field: String, active: Boolean) {
         val prefs = context.getSharedPreferences("parent_audio", Context.MODE_PRIVATE)
         val code = prefs.getString("pair_code", null)
@@ -31,14 +59,20 @@ object ChildAudioActivityReporter {
             return
         }
 
-        // Merge keeps the other playback flag intact when MP3 and Live Audio
-        // start or stop independently.
+        val timestampField = if (field == "liveAudioActive") {
+            "liveAudioActivityAt"
+        } else {
+            "mp3AudioActivityAt"
+        }
+
+        // Each audio type has its own heartbeat so a stale flag can expire independently.
         FirebaseFirestore.getInstance()
             .collection("pairings")
             .document(code)
             .set(
                 mapOf(
                     field to active,
+                    timestampField to FieldValue.serverTimestamp(),
                     "audioActivityAt" to FieldValue.serverTimestamp()
                 ),
                 SetOptions.merge()
