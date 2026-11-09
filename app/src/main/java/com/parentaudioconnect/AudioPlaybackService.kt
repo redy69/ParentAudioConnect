@@ -13,6 +13,14 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import java.io.File
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 class AudioPlaybackService : Service() {
 
@@ -24,6 +32,8 @@ class AudioPlaybackService : Service() {
     }
 
     private var player: MediaPlayer? = null
+    private val heartbeatScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var heartbeatJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -68,10 +78,12 @@ class AudioPlaybackService : Service() {
                 raiseMediaVolumeForPlayback()
                 ChildAudioActivityReporter.setMp3AudioActive(applicationContext, true)
                 prepared.start()
+                startPlaybackHeartbeat()
                 val manager = getSystemService(NotificationManager::class.java)
                 manager.notify(NOTIFICATION_ID, buildNotification("Pesan suara sedang diputar"))
             }
             nextPlayer.setOnCompletionListener {
+                stopPlaybackHeartbeat()
                 ChildAudioActivityReporter.setMp3AudioActive(applicationContext, false)
                 releasePlayer()
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -86,6 +98,7 @@ class AudioPlaybackService : Service() {
             }
             nextPlayer.prepareAsync()
         } catch (_: Exception) {
+            stopPlaybackHeartbeat()
             ChildAudioActivityReporter.setMp3AudioActive(applicationContext, false)
             releasePlayer()
             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -138,6 +151,23 @@ class AudioPlaybackService : Service() {
         )
     }
 
+    private fun startPlaybackHeartbeat() {
+        stopPlaybackHeartbeat()
+        heartbeatJob = heartbeatScope.launch {
+            while (isActive && player?.isPlaying == true) {
+                delay(10_000)
+                if (player?.isPlaying == true) {
+                    ChildAudioActivityReporter.refreshMp3AudioHeartbeat(applicationContext)
+                }
+            }
+        }
+    }
+
+    private fun stopPlaybackHeartbeat() {
+        heartbeatJob?.cancel()
+        heartbeatJob = null
+    }
+
     private fun releasePlayer() {
         player?.setOnPreparedListener(null)
         player?.setOnCompletionListener(null)
@@ -147,8 +177,10 @@ class AudioPlaybackService : Service() {
     }
 
     override fun onDestroy() {
+        stopPlaybackHeartbeat()
         ChildAudioActivityReporter.setMp3AudioActive(applicationContext, false)
         releasePlayer()
+        heartbeatScope.cancel()
         super.onDestroy()
     }
 
