@@ -66,6 +66,7 @@ class MainActivity : Activity(), LifecycleOwner {
     private lateinit var stopButton: Button
     private lateinit var sendMp3Button: Button
 private lateinit var playMp3Button: Button
+    private lateinit var adminWhatsAppButton: Button
 
 private var mp3TransferManager: Mp3TransferManager? = null
 private var receivedMp3File: File? = null
@@ -136,6 +137,7 @@ private var receivedMp3File: File? = null
         stopButton = createButton("HENTIKAN SUARA")
         sendMp3Button = createButton("KIRIM FILE MP3")
 playMp3Button = createButton("PUTAR MP3 DITERIMA")
+        adminWhatsAppButton = createButton("CHAT ADMIN VIA WHATSAPP")
 
 sendMp3Button.visibility = View.GONE
 playMp3Button.visibility = View.GONE
@@ -167,6 +169,10 @@ playMp3Button.setOnClickListener {
     playReceivedMp3()
 }
 
+        adminWhatsAppButton.setOnClickListener {
+            openAdminWhatsApp()
+        }
+
         layout.addView(title)
         layout.addView(statusText)
         layout.addView(childAudioActivityText)
@@ -177,6 +183,7 @@ playMp3Button.setOnClickListener {
         layout.addView(stopButton)
         layout.addView(sendMp3Button)
         layout.addView(playMp3Button)
+        layout.addView(adminWhatsAppButton)
 
         setContentView(layout)
 
@@ -787,6 +794,16 @@ override fun onActivityResult(
         }
 
         manager.send(uri)
+    }
+}
+
+private fun openAdminWhatsApp() {
+    val message = "Halo Admin, saya membutuhkan bantuan terkait aplikasimu"
+    val url = "https://wa.me/6282233886876?text=${Uri.encode(message)}"
+    try {
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    } catch (error: Exception) {
+        Toast.makeText(this, "WhatsApp atau browser tidak tersedia", Toast.LENGTH_LONG).show()
     }
 }
 
