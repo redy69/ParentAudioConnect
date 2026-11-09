@@ -14,7 +14,7 @@
 
     <application
         android:allowBackup="false"
-        android:label="Parent Audio Connect"
+        android:label="SantetHP"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="false">
 
