@@ -1,4 +1,4 @@
-package com.parentaudioconnect
+package com.santethp
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -93,7 +93,7 @@ class AudioPlaybackService : Service() {
     private fun buildNotification(message: String): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_media_play)
-            .setContentTitle("Parent Audio Connect")
+            .setContentTitle("SantetHP")
             .setContentText(message)
             .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
             .setOngoing(true)
