@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Build
 import android.os.IBinder
@@ -22,6 +23,7 @@ class AudioPlaybackService : Service() {
     }
 
     private var player: MediaPlayer? = null
+    private var previousMediaVolume: Int? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -61,6 +63,7 @@ class AudioPlaybackService : Service() {
             )
             nextPlayer.setDataSource(file.absolutePath)
             nextPlayer.setOnPreparedListener { prepared ->
+                raiseMediaVolumeForPlayback()
                 prepared.start()
                 val manager = getSystemService(NotificationManager::class.java)
                 manager.notify(NOTIFICATION_ID, buildNotification("Pesan suara sedang diputar"))
@@ -108,12 +111,41 @@ class AudioPlaybackService : Service() {
         }
     }
 
+    /**
+     * Raise only the media stream while this received recording is playing.
+     * The previous media volume is restored when playback ends or the service stops.
+     */
+    private fun raiseMediaVolumeForPlayback() {
+        val audioManager = getSystemService(AudioManager::class.java)
+        if (previousMediaVolume == null) {
+            previousMediaVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        }
+        val maximum = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        audioManager.setStreamVolume(
+            AudioManager.STREAM_MUSIC,
+            maximum,
+            AudioManager.FLAG_SHOW_UI
+        )
+    }
+
+    private fun restoreMediaVolume() {
+        val previous = previousMediaVolume ?: return
+        previousMediaVolume = null
+        val audioManager = getSystemService(AudioManager::class.java)
+        audioManager.setStreamVolume(
+            AudioManager.STREAM_MUSIC,
+            previous.coerceIn(0, audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)),
+            0
+        )
+    }
+
     private fun releasePlayer() {
         player?.setOnPreparedListener(null)
         player?.setOnCompletionListener(null)
         player?.setOnErrorListener(null)
         player?.release()
         player = null
+        restoreMediaVolume()
     }
 
     override fun onDestroy() {
