@@ -13,7 +13,7 @@ import androidx.core.app.NotificationCompat
 import com.google.firebase.auth.FirebaseAuth
 import com.google.android.gms.tasks.Task
 import io.livekit.android.LiveKit
-import kotlinx.coroutines.flow.collect
+import io.livekit.android.events.collect
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.Room
 import io.livekit.android.room.track.RemoteAudioTrack
