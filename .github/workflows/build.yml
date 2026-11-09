@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - fix/android-13-boot-reconnect
 
 permissions:
   contents: write
