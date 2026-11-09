@@ -1,4 +1,3 @@
-
 name: Build Parent Audio Connect APK
 
 on:
@@ -39,19 +38,39 @@ jobs:
       - name: Install Android SDK components
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Build APK
-        run: gradle assembleDebug
+      - name: Prepare permanent signing key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::Missing GitHub Actions secret ANDROID_KEYSTORE_BASE64"
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/parent-audio-release.jks"
+          test -s "$RUNNER_TEMP/parent-audio-release.jks"
+
+      - name: Build signed release APK
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/parent-audio-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+          test -n "$ANDROID_KEY_ALIAS"
+          test -n "$ANDROID_KEY_PASSWORD"
+          gradle assembleRelease -PversionCode=${{ github.run_number }}
 
       - name: Publish APK to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
           name: Parent Audio Connect Build ${{ github.run_number }}
-          files: app/build/outputs/apk/debug/app-debug.apk
+          files: app/build/outputs/apk/release/app-release.apk
           generate_release_notes: true
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ParentAudioConnect-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: ParentAudioConnect-release
+          path: app/build/outputs/apk/release/app-release.apk
