@@ -225,13 +225,6 @@ class ChildAudioConnectionService : Service() {
         liveHeartbeatJob = null
     }
 
-    /** MP3 playback uses the media/music stream, not the call stream. */
-    private fun maximizeMediaVolume() {
-        val audioManager = getSystemService(AudioManager::class.java)
-        val maximum = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maximum, AudioManager.FLAG_SHOW_UI)
-    }
-
     private fun requestToken(idToken: String, code: String): JSONObject {
         val connection = URL(WORKER_URL).openConnection() as HttpURLConnection
         try {
