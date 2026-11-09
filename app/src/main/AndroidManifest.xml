@@ -29,6 +29,11 @@
             android:foregroundServiceType="mediaPlayback" />
 
         <service
+            android:name=".ChildAudioConnectionService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <service
             android:name=".ParentAudioMessagingService"
             android:exported="false">
             <intent-filter>
