@@ -49,7 +49,7 @@ class ChildAudioConnectionService : Service() {
     private var room: Room? = null
     private var roomEventsJob: Job? = null
     private var previousVoiceCallVolume: Int? = null
-    private var activeRemoteAudioTracks = 0
+    private val activeRemoteAudioTrackIds = mutableSetOf<Int>()
     @Volatile private var connecting = false
 
     override fun onCreate() {
@@ -102,29 +102,34 @@ class ChildAudioConnectionService : Service() {
                             when (event) {
                                 is RoomEvent.TrackSubscribed -> {
                                     if (event.track is RemoteAudioTrack) {
-                                        activeRemoteAudioTracks++
+                                        activeRemoteAudioTrackIds.add(event.track.hashCode())
                                         maximizeLiveAudioVolume()
                                     }
                                 }
                                 is RoomEvent.TrackUnsubscribed -> {
                                     if (event.track is RemoteAudioTrack) {
-                                        activeRemoteAudioTracks =
-                                            (activeRemoteAudioTracks - 1).coerceAtLeast(0)
-                                        if (activeRemoteAudioTracks == 0) {
+                                        activeRemoteAudioTrackIds.remove(event.track.hashCode())
+                                        if (activeRemoteAudioTrackIds.isEmpty()) {
                                             restoreLiveAudioVolume()
                                         }
                                     }
                                 }
                                 is RoomEvent.TrackMuted -> {
-                                    restoreLiveAudioVolume()
+                                    if (event.track is RemoteAudioTrack) {
+                                        activeRemoteAudioTrackIds.remove(event.track.hashCode())
+                                        if (activeRemoteAudioTrackIds.isEmpty()) {
+                                            restoreLiveAudioVolume()
+                                        }
+                                    }
                                 }
                                 is RoomEvent.TrackUnmuted -> {
-                                    if (activeRemoteAudioTracks > 0) {
+                                    if (event.track is RemoteAudioTrack) {
+                                        activeRemoteAudioTrackIds.add(event.track.hashCode())
                                         maximizeLiveAudioVolume()
                                     }
                                 }
                                 is RoomEvent.Disconnected -> {
-                                    activeRemoteAudioTracks = 0
+                                    activeRemoteAudioTrackIds.clear()
                                     restoreLiveAudioVolume()
                                 }
                                 else -> Unit
@@ -145,7 +150,7 @@ class ChildAudioConnectionService : Service() {
                 } catch (error: Exception) {
                     roomEventsJob?.cancel()
                     roomEventsJob = null
-                    activeRemoteAudioTracks = 0
+                    activeRemoteAudioTrackIds.clear()
                     restoreLiveAudioVolume()
                     attempt++
                     updateNotification("Koneksi gagal. Mencoba kembali ($attempt)…")
@@ -259,7 +264,7 @@ class ChildAudioConnectionService : Service() {
     override fun onDestroy() {
         roomEventsJob?.cancel()
         roomEventsJob = null
-        activeRemoteAudioTracks = 0
+        activeRemoteAudioTrackIds.clear()
         restoreLiveAudioVolume()
         serviceScope.cancel()
         val activeRoom = room
