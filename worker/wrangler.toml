@@ -1,0 +1,4 @@
+name = "parent-audio-token"
+main = "parent-audio-token.js"
+compatibility_date = "2026-11-08"
+keep_vars = true
