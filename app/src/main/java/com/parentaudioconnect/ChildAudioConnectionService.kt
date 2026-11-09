@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.media.AudioManager
+import android.media.AudioDeviceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -104,7 +105,7 @@ class ChildAudioConnectionService : Service() {
                                 is RoomEvent.TrackSubscribed -> {
                                     if (event.track is RemoteAudioTrack) {
                                         activeRemoteAudioTrackIds.add(event.track.hashCode())
-                                        maximizeLiveAudioVolume()
+                                        routeLiveAudioToLoudspeaker()
                                         ChildAudioActivityReporter.setLiveAudioActive(
                                             applicationContext, true
                                         )
@@ -117,12 +118,14 @@ class ChildAudioConnectionService : Service() {
                                             ChildAudioActivityReporter.setLiveAudioActive(
                                                 applicationContext, false
                                             )
+                                            clearLiveAudioRoute()
                                         }
                                         // Keep the requested maximum volume after each audio session.
                                     }
                                 }
                                 is RoomEvent.Disconnected -> {
                                     activeRemoteAudioTrackIds.clear()
+                                    clearLiveAudioRoute()
                                     ChildAudioActivityReporter.setLiveAudioActive(
                                         applicationContext, false
                                     )
@@ -137,6 +140,8 @@ class ChildAudioConnectionService : Service() {
                         token = response.getString("token")
                     )
                     newRoom.localParticipant.setMicrophoneEnabled(false)
+                    // Establish the speaker route before the first live audio frame arrives.
+                    routeLiveAudioToLoudspeaker()
                     room = newRoom
                     mp3TransferManager = Mp3TransferManager(
                         context = applicationContext,
@@ -183,11 +188,38 @@ class ChildAudioConnectionService : Service() {
         }
     }
 
-    /** Maximize the call stream used by LiveKit's communication audio route. */
-    private fun maximizeLiveAudioVolume() {
+    /** Force LiveKit communication audio to the phone's built-in loudspeaker. */
+    private fun routeLiveAudioToLoudspeaker() {
         val audioManager = getSystemService(AudioManager::class.java)
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val speaker = audioManager.availableCommunicationDevices
+                .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+            if (speaker != null) {
+                audioManager.setCommunicationDevice(speaker)
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            run { audioManager.isSpeakerphoneOn = true }
+        }
         val maximum = audioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
-        audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, maximum, AudioManager.FLAG_SHOW_UI)
+        audioManager.setStreamVolume(
+            AudioManager.STREAM_VOICE_CALL,
+            maximum,
+            AudioManager.FLAG_SHOW_UI
+        )
+    }
+
+    /** Release the communication route when live audio ends. */
+    private fun clearLiveAudioRoute() {
+        val audioManager = getSystemService(AudioManager::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            audioManager.clearCommunicationDevice()
+        } else {
+            @Suppress("DEPRECATION")
+            run { audioManager.isSpeakerphoneOn = false }
+        }
+        audioManager.mode = AudioManager.MODE_NORMAL
     }
 
     /** MP3 playback uses the media/music stream, not the call stream. */
@@ -268,6 +300,7 @@ class ChildAudioConnectionService : Service() {
         roomEventsJob?.cancel()
         roomEventsJob = null
         activeRemoteAudioTrackIds.clear()
+        clearLiveAudioRoute()
         ChildAudioActivityReporter.setLiveAudioActive(applicationContext, false)
         mp3TransferManager = null
         serviceScope.cancel()
