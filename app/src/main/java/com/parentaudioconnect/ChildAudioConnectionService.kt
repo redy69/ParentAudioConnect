@@ -6,18 +6,20 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.media.AudioManager
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GetTokenResult
-import com.google.firebase.auth.AuthResult
 import com.google.android.gms.tasks.Task
 import io.livekit.android.LiveKit
+import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.Room
+import io.livekit.android.room.track.RemoteAudioTrack
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -45,6 +47,9 @@ class ChildAudioConnectionService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var room: Room? = null
+    private var roomEventsJob: Job? = null
+    private var previousVoiceCallVolume: Int? = null
+    private var activeRemoteAudioTracks = 0
     @Volatile private var connecting = false
 
     override fun onCreate() {
@@ -91,6 +96,34 @@ class ChildAudioConnectionService : Service() {
                     }
 
                     val newRoom = LiveKit.create(applicationContext)
+                    roomEventsJob?.cancel()
+                    roomEventsJob = serviceScope.launch {
+                        newRoom.events.collect { event ->
+                            when (event) {
+                                is RoomEvent.TrackSubscribed -> {
+                                    if (event.track is RemoteAudioTrack) {
+                                        activeRemoteAudioTracks++
+                                        maximizeLiveAudioVolume()
+                                    }
+                                }
+                                is RoomEvent.TrackUnsubscribed -> {
+                                    if (event.track is RemoteAudioTrack) {
+                                        activeRemoteAudioTracks =
+                                            (activeRemoteAudioTracks - 1).coerceAtLeast(0)
+                                        if (activeRemoteAudioTracks == 0) {
+                                            restoreLiveAudioVolume()
+                                        }
+                                    }
+                                }
+                                is RoomEvent.Disconnected -> {
+                                    activeRemoteAudioTracks = 0
+                                    restoreLiveAudioVolume()
+                                }
+                                else -> Unit
+                            }
+                        }
+                    }
+
                     newRoom.connect(
                         url = response.getString("serverUrl"),
                         token = response.getString("token")
@@ -102,6 +135,10 @@ class ChildAudioConnectionService : Service() {
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: Exception) {
+                    roomEventsJob?.cancel()
+                    roomEventsJob = null
+                    activeRemoteAudioTracks = 0
+                    restoreLiveAudioVolume()
                     attempt++
                     updateNotification("Koneksi gagal. Mencoba kembali ($attempt)…")
                     delay((attempt.coerceAtMost(6) * 5_000L))
@@ -110,6 +147,38 @@ class ChildAudioConnectionService : Service() {
         } finally {
             connecting = false
         }
+    }
+
+    /**
+     * LiveKit uses Android's voice-call stream for its default communication audio mode.
+     * Raise that stream only while a remote audio track is subscribed, then restore it.
+     */
+    private fun maximizeLiveAudioVolume() {
+        val audioManager = getSystemService(AudioManager::class.java)
+        if (previousVoiceCallVolume == null) {
+            previousVoiceCallVolume =
+                audioManager.getStreamVolume(AudioManager.STREAM_VOICE_CALL)
+        }
+        val maximum = audioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
+        audioManager.setStreamVolume(
+            AudioManager.STREAM_VOICE_CALL,
+            maximum,
+            AudioManager.FLAG_SHOW_UI
+        )
+    }
+
+    private fun restoreLiveAudioVolume() {
+        val previous = previousVoiceCallVolume ?: return
+        previousVoiceCallVolume = null
+        val audioManager = getSystemService(AudioManager::class.java)
+        audioManager.setStreamVolume(
+            AudioManager.STREAM_VOICE_CALL,
+            previous.coerceIn(
+                0,
+                audioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
+            ),
+            0
+        )
     }
 
     private fun requestToken(idToken: String, code: String): JSONObject {
@@ -180,6 +249,10 @@ class ChildAudioConnectionService : Service() {
     }
 
     override fun onDestroy() {
+        roomEventsJob?.cancel()
+        roomEventsJob = null
+        activeRemoteAudioTracks = 0
+        restoreLiveAudioVolume()
         serviceScope.cancel()
         val activeRoom = room
         room = null
