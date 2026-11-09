@@ -117,6 +117,7 @@ class ChildAudioConnectionService : Service() {
                                 is RoomEvent.TrackSubscribed -> {
                                     if (event.track is RemoteAudioTrack) {
                                         activeRemoteAudioTrackIds.add(event.track.hashCode())
+                                        maximizeMediaVolume()
                                         ChildAudioActivityReporter.setLiveAudioActive(
                                             applicationContext, true
                                         )
@@ -139,6 +140,7 @@ class ChildAudioConnectionService : Service() {
                                         unmutedTrack is RemoteAudioTrack
                                     ) {
                                         activeRemoteAudioTrackIds.add(unmutedTrack.hashCode())
+                                        maximizeMediaVolume()
                                         ChildAudioActivityReporter.setLiveAudioActive(
                                             applicationContext, true
                                         )
