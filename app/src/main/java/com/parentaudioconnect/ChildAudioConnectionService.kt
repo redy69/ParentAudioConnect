@@ -157,7 +157,14 @@ class ChildAudioConnectionService : Service() {
                     activeRemoteAudioTrackIds.clear()
                     attempt++
                     updateNotification("Koneksi gagal. Mencoba kembali ($attempt)…")
-                    delay((attempt.coerceAtMost(6) * 5_000L))
+                    // Retry quickly after boot/network startup, then keep a short steady backoff.
+                    val retryDelayMs = when {
+                        attempt == 1 -> 1_000L
+                        attempt == 2 -> 2_000L
+                        attempt == 3 -> 4_000L
+                        else -> 8_000L
+                    }
+                    delay(retryDelayMs)
                 }
             }
         } finally {
