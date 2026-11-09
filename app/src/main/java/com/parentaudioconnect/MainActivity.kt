@@ -217,6 +217,13 @@ playMp3Button.setOnClickListener {
                     .putString("fcm_token", token)
                     .apply()
                 statusText.text = "Firebase terhubung • notifikasi siap"
+                val savedCode = getSharedPreferences("parent_audio", MODE_PRIVATE)
+                    .getString("pair_code", null)
+                val savedRole = getSharedPreferences("parent_audio", MODE_PRIVATE)
+                    .getString("pair_role", null)
+                if (!savedCode.isNullOrBlank() && !savedRole.isNullOrBlank()) {
+                    registerDeviceToken(savedCode, savedRole, token)
+                }
             }
             .addOnFailureListener {
                 // Keep the app usable if token retrieval is temporarily unavailable.
@@ -244,6 +251,57 @@ playMp3Button.setOnClickListener {
             .putString("pair_code", code)
             .putString("pair_role", role)
             .apply()
+
+        val token = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            .getString("fcm_token", null)
+        if (!token.isNullOrBlank()) {
+            registerDeviceToken(code, role, token)
+        }
+    }
+
+    private fun registerDeviceToken(code: String, role: String, fcmToken: String) {
+        val user = auth.currentUser ?: return
+        user.getIdToken(false).addOnSuccessListener { result ->
+            val idToken = result.token ?: return@addOnSuccessListener
+            activityScope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        val connection = URL(workerUrl.replace("/token", "/register-device"))
+                            .openConnection() as HttpURLConnection
+                        try {
+                            connection.requestMethod = "POST"
+                            connection.connectTimeout = 15000
+                            connection.readTimeout = 15000
+                            connection.doOutput = true
+                            connection.setRequestProperty("Content-Type", "application/json")
+                            val body = JSONObject().apply {
+                                put("idToken", idToken)
+                                put("code", code)
+                                put("fcmToken", fcmToken)
+                            }
+                            connection.outputStream.use {
+                                it.write(body.toString().toByteArray(Charsets.UTF_8))
+                            }
+                            val status = connection.responseCode
+                            if (status !in 200..299) {
+                                val stream = connection.errorStream
+                                val detail = stream?.bufferedReader()?.use { it.readText() }
+                                throw Exception(
+                                    JSONObject(detail ?: "{}").optString(
+                                        "error", "Server menolak pendaftaran perangkat"
+                                    )
+                                )
+                            }
+                        } finally {
+                            connection.disconnect()
+                        }
+                    }
+                } catch (error: Exception) {
+                    android.util.Log.w("ParentAudioFCM", "Device token registration failed")
+                    // Pairing and existing audio features remain usable if registration is unavailable.
+                }
+            }
+        }
     }
 
     private fun restoreSavedPairing() {
