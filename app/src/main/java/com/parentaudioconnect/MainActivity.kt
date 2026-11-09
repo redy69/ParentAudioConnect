@@ -1,7 +1,6 @@
 
 package com.parentaudioconnect
 import android.content.Intent
-import android.media.MediaPlayer
 import android.net.Uri
 import java.io.File
 import android.Manifest
@@ -18,6 +17,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -67,7 +67,6 @@ private lateinit var playMp3Button: Button
 
 private var mp3TransferManager: Mp3TransferManager? = null
 private var receivedMp3File: File? = null
-private var mediaPlayer: MediaPlayer? = null
 
     private var pairingListener: ListenerRegistration? = null
     private var room: Room? = null
@@ -684,34 +683,14 @@ private fun playReceivedMp3() {
     }
 
     try {
-        mediaPlayer?.release()
-
-        mediaPlayer = MediaPlayer().apply {
-            setDataSource(file.absolutePath)
-
-            setOnPreparedListener {
-                it.start()
-                statusText.text = "Memutar MP3..."
-            }
-
-            setOnCompletionListener {
-                it.release()
-                mediaPlayer = null
-                statusText.text = "MP3 selesai diputar"
-            }
-
-            setOnErrorListener { player, _, _ ->
-                player.release()
-                mediaPlayer = null
-                statusText.text = "Gagal memutar MP3"
-                true
-            }
-
-            prepareAsync()
+        val intent = Intent(this, AudioPlaybackService::class.java).apply {
+            action = AudioPlaybackService.ACTION_PLAY
+            putExtra(AudioPlaybackService.EXTRA_FILE_PATH, file.absolutePath)
         }
-
+        ContextCompat.startForegroundService(this, intent)
+        statusText.text = "Menyiapkan pemutaran audio..."
     } catch (error: Exception) {
-        statusText.text = "Gagal memutar MP3: ${error.message}"
+        statusText.text = "Gagal memulai pemutaran: ${error.message}"
     }
 }
 
