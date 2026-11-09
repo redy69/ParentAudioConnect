@@ -110,10 +110,7 @@ class AudioPlaybackService : Service() {
         }
     }
 
-    /**
-     * Raise only the media stream while this received recording is playing.
-     * The previous media volume is restored when playback ends or the service stops.
-     */
+    /** Raise the media stream to maximum whenever a received MP3 starts playing. */
     private fun raiseMediaVolumeForPlayback() {
         val audioManager = getSystemService(AudioManager::class.java)
         val maximum = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
