@@ -8,7 +8,7 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.Settings
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
+import android.app.AlertDialog
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
