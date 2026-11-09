@@ -7,11 +7,11 @@ plugins {
 val appVersionCode = providers.gradleProperty("versionCode").orElse("1").get().toInt()
 
 android {
-    namespace = "com.parentaudioconnect"
+    namespace = "com.santethp"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.parentaudioconnect"
+        applicationId = "com.santethp"
         minSdk = 26
         targetSdk = 35
         versionCode = appVersionCode
