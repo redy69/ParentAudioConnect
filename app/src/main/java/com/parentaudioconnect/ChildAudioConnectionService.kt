@@ -19,6 +19,7 @@ import io.livekit.android.events.collect
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.Room
 import io.livekit.android.room.track.RemoteAudioTrack
+import io.livekit.android.room.track.Track
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -116,6 +117,29 @@ class ChildAudioConnectionService : Service() {
                                 is RoomEvent.TrackSubscribed -> {
                                     if (event.track is RemoteAudioTrack) {
                                         activeRemoteAudioTrackIds.add(event.track.hashCode())
+                                        ChildAudioActivityReporter.setLiveAudioActive(
+                                            applicationContext, true
+                                        )
+                                        startLiveAudioHeartbeat()
+                                    }
+                                }
+                                is RoomEvent.TrackMuted -> {
+                                    if (event.publication.kind == Track.Kind.AUDIO) {
+                                        // The publisher can mute without unsubscribing the track.
+                                        activeRemoteAudioTrackIds.clear()
+                                        stopLiveAudioHeartbeat()
+                                        ChildAudioActivityReporter.setLiveAudioActive(
+                                            applicationContext, false
+                                        )
+                                    }
+                                }
+                                is RoomEvent.TrackUnmuted -> {
+                                    if (event.publication.kind == Track.Kind.AUDIO &&
+                                        event.publication.track is RemoteAudioTrack
+                                    ) {
+                                        activeRemoteAudioTrackIds.add(
+                                            event.publication.track.hashCode()
+                                        )
                                         ChildAudioActivityReporter.setLiveAudioActive(
                                             applicationContext, true
                                         )
