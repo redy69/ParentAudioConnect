@@ -1,4 +1,4 @@
-package com.parentaudioconnect
+package com.santethp
 
 import android.app.Activity
 import android.app.DownloadManager
@@ -31,7 +31,7 @@ object AppUpdateManager {
                     connection.connectTimeout = 12000
                     connection.readTimeout = 12000
                     connection.setRequestProperty("Accept", "application/vnd.github+json")
-                    connection.setRequestProperty("User-Agent", "ParentAudioConnect-Android")
+                    connection.setRequestProperty("User-Agent", "SantetHP-Android")
                     if (connection.responseCode !in 200..299) {
                         throw IllegalStateException("GitHub update check failed")
                     }
@@ -60,7 +60,7 @@ object AppUpdateManager {
                     AlertDialog.Builder(activity)
                         .setTitle("Pembaruan tersedia")
                         .setMessage(
-                            "Versi baru Parent Audio Connect tersedia (build $remoteVersion). " +
+                            "Versi baru SantetHP tersedia (build $remoteVersion). " +
                                 "Unduh dan pasang sekarang?"
                         )
                         .setNegativeButton("Nanti", null)
@@ -109,7 +109,7 @@ object AppUpdateManager {
     private fun downloadApk(context: Context, url: String) {
         try {
             val request = DownloadManager.Request(Uri.parse(url))
-                .setTitle("Parent Audio Connect")
+                .setTitle("SantetHP")
                 .setDescription("Mengunduh pembaruan aplikasi")
                 .setMimeType("application/vnd.android.package-archive")
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
