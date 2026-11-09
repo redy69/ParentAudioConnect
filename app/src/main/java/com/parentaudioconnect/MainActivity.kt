@@ -25,6 +25,7 @@ import androidx.lifecycle.LifecycleRegistry
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.Timestamp
 import com.google.firebase.messaging.FirebaseMessaging
@@ -78,6 +79,10 @@ private var mp3TransferManager: Mp3TransferManager? = null
 private var receivedMp3File: File? = null
 
     private var pairingListener: ListenerRegistration? = null
+    private var latestPairingSnapshot: DocumentSnapshot? = null
+    private val staleStatusRunnable = Runnable {
+        latestPairingSnapshot?.let { renderChildAudioActivity(it) }
+    }
     private var room: Room? = null
     private var isConnecting = false
     private var currentRole = ""
@@ -450,6 +455,38 @@ private var receivedMp3File: File? = null
             }
     }
 
+    private fun renderChildAudioActivity(snapshot: DocumentSnapshot) {
+        val now = System.currentTimeMillis()
+        val staleAfterMs = 35_000L
+        val liveTimestamp = snapshot.getTimestamp("liveAudioActivityAt")
+            ?: snapshot.getTimestamp("audioActivityAt")
+        val mp3Timestamp = snapshot.getTimestamp("mp3AudioActivityAt")
+            ?: snapshot.getTimestamp("audioActivityAt")
+        val liveAge = liveTimestamp?.toDate()?.time?.let { now - it }
+        val mp3Age = mp3Timestamp?.toDate()?.time?.let { now - it }
+        val liveFresh = liveAge != null && liveAge in -60_000L..staleAfterMs
+        val mp3Fresh = mp3Age != null && mp3Age in -60_000L..staleAfterMs
+        val liveAudioActive =
+            snapshot.getBoolean("liveAudioActive") == true && liveFresh
+        val mp3AudioActive =
+            snapshot.getBoolean("mp3AudioActive") == true && mp3Fresh
+
+        childAudioActivityText.text = when {
+            liveAudioActive && mp3AudioActive ->
+                "AKTIVITAS HP ANAK\nMP3 dan audio live sedang aktif"
+            liveAudioActive ->
+                "AKTIVITAS HP ANAK\nAudio langsung sedang diputar"
+            mp3AudioActive ->
+                "AKTIVITAS HP ANAK\nMP3 sedang diputar"
+            else ->
+                "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
+        }
+        childAudioActivityText.setTextColor(
+            if (liveAudioActive || mp3AudioActive) Color.rgb(105, 230, 170)
+            else Color.rgb(180, 190, 210)
+        )
+    }
+
     private fun listenForChild(code: String) {
         pairingListener?.remove()
 
@@ -463,37 +500,12 @@ private var receivedMp3File: File? = null
                 }
 
                 if (snapshot != null && snapshot.exists()) {
-                    val now = System.currentTimeMillis()
-                    val staleAfterMs = 35_000L
-                    val liveTimestamp = snapshot.getTimestamp("liveAudioActivityAt")
-                        ?: snapshot.getTimestamp("audioActivityAt")
-                    val mp3Timestamp = snapshot.getTimestamp("mp3AudioActivityAt")
-                        ?: snapshot.getTimestamp("audioActivityAt")
-                    val liveFresh = liveTimestamp != null &&
-                        now - liveTimestamp.toDate().time in 0..staleAfterMs
-                    val mp3Fresh = mp3Timestamp != null &&
-                        now - mp3Timestamp.toDate().time in 0..staleAfterMs
-                    val liveAudioActive =
-                        snapshot.getBoolean("liveAudioActive") == true && liveFresh
-                    val mp3AudioActive =
-                        snapshot.getBoolean("mp3AudioActive") == true && mp3Fresh
-                    childAudioActivityText.text = when {
-                        liveAudioActive && mp3AudioActive ->
-                            "AKTIVITAS HP ANAK\nMP3 dan audio live sedang aktif"
-                        liveAudioActive ->
-                            "AKTIVITAS HP ANAK\nAudio langsung sedang diputar"
-                        mp3AudioActive ->
-                            "AKTIVITAS HP ANAK\nMP3 sedang diputar"
-                        else ->
-                            "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
-                    }
-                    childAudioActivityText.setTextColor(
-                        if (liveAudioActive || mp3AudioActive) Color.rgb(105, 230, 170)
-                        else Color.rgb(180, 190, 210)
-                    )
+                    latestPairingSnapshot = snapshot
+                    renderChildAudioActivity(snapshot)
+                    childAudioActivityText.removeCallbacks(staleStatusRunnable)
+                    childAudioActivityText.postDelayed(staleStatusRunnable, 36_000L)
 
                     val childUid = snapshot.getString("childUid")
-
                     if (!childUid.isNullOrEmpty()) {
                         statusText.text = "HP ANAK BERHASIL TERHUBUNG!"
                         connectToLiveKit(code)
@@ -576,6 +588,7 @@ private var receivedMp3File: File? = null
                         currentRole = "child"
 
                         codeText.text = code
+                        showChildConnectedScreen()
                         statusText.text = "Berhasil dipasangkan! Memulihkan koneksi audio..."
 
                         startChildAudioConnection()
@@ -912,6 +925,7 @@ private fun playReceivedMp3() {
 
     override fun onDestroy() {
         pairingListener?.remove()
+        childAudioActivityText.removeCallbacks(staleStatusRunnable)
 
         activityScope.launch {
             room?.disconnect()
