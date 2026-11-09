@@ -27,11 +27,13 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -52,7 +54,7 @@ class ChildAudioConnectionService : Service() {
     private var room: Room? = null
     private var roomEventsJob: Job? = null
     private var mp3TransferManager: Mp3TransferManager? = null
-    private val activeRemoteAudioTrackIds = mutableSetOf<Int>()
+    private val activeRemoteAudioTrackIds = ConcurrentHashMap.newKeySet<Int>()
     private var liveHeartbeatJob: Job? = null
     @Volatile private var connecting = false
 
@@ -180,6 +182,8 @@ class ChildAudioConnectionService : Service() {
                     roomEventsJob = null
                     mp3TransferManager = null
                     activeRemoteAudioTrackIds.clear()
+                    stopLiveAudioHeartbeat()
+                    ChildAudioActivityReporter.setLiveAudioActive(applicationContext, false)
                     attempt++
                     updateNotification("Koneksi gagal. Mencoba kembali ($attempt)…")
                     // Retry quickly after boot/network startup, then keep a short steady backoff.
