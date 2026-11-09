@@ -7,6 +7,7 @@ import android.app.Service
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.media.AudioManager
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -42,6 +43,17 @@ class AudioPlaybackService : Service() {
         }
 
         startForeground(NOTIFICATION_ID, buildNotification("Memutar pesan suara"))
+        // User requested full media volume for received parent audio.
+        try {
+            val audioManager = getSystemService(AudioManager::class.java)
+            audioManager.setStreamVolume(
+                AudioManager.STREAM_MUSIC,
+                audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC),
+                0
+            )
+        } catch (error: SecurityException) {
+            android.util.Log.w("AudioPlaybackService", "Could not set media volume", error)
+        }
         startPlayback(file, startId)
         return START_NOT_STICKY
     }
