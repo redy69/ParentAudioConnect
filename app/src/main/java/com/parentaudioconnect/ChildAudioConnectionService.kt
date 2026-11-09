@@ -71,7 +71,8 @@ class ChildAudioConnectionService : Service() {
 
         val incomingPairCode = intent.getStringExtra(EXTRA_PAIR_CODE)
         val firebaseIdToken = intent.getStringExtra(EXTRA_FIREBASE_ID_TOKEN)
-        if (incomingPairCode.isNullOrBlank() || firebaseIdToken.isNullOrBlank()) {
+        if (incomingPairCode.isNullOrBlank() ||
+            (firebaseIdToken.isNullOrBlank() && FirebaseAuth.getInstance().currentUser == null)) {
             updateNotification("Data koneksi tidak lengkap • buka aplikasi anak")
             stopSelf(startId)
             return START_NOT_STICKY
