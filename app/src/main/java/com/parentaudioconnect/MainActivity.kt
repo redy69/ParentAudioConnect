@@ -188,7 +188,7 @@ playMp3Button.setOnClickListener {
         setContentView(layout)
 
         connectFirebase()
-        val installedVersionCode = packageManager.getPackageInfo(packageName, 0).longVersionCode.toInt()
+        val installedVersionCode = packageManager.getPackageInfo(packageName, 0).versionCode
         AppUpdateManager.checkForUpdates(this, installedVersionCode)
     }
 
