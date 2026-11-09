@@ -49,8 +49,8 @@ class AudioPlaybackService : Service() {
     }
 
     private fun startPlayback(file: File, startId: Int) {
-        player?.release()
-        player = null
+        // Restore the previous media volume before replacing an active player.
+        releasePlayer()
 
         try {
             val nextPlayer = MediaPlayer()
