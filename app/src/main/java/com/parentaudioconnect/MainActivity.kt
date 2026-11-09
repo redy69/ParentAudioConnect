@@ -29,7 +29,10 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.Timestamp
 import com.google.firebase.messaging.FirebaseMessaging
 
+import io.livekit.android.AudioOptions
+import io.livekit.android.AudioType
 import io.livekit.android.LiveKit
+import io.livekit.android.LiveKitOverrides
 import io.livekit.android.room.Room
 
 import kotlinx.coroutines.CoroutineScope
@@ -67,6 +70,9 @@ class MainActivity : Activity(), LifecycleOwner {
     private lateinit var sendMp3Button: Button
 private lateinit var playMp3Button: Button
     private lateinit var adminWhatsAppButton: Button
+    private lateinit var parentButton: Button
+    private lateinit var childButton: Button
+    private lateinit var rootLayout: LinearLayout
 
 private var mp3TransferManager: Mp3TransferManager? = null
 private var receivedMp3File: File? = null
@@ -93,7 +99,7 @@ private var receivedMp3File: File? = null
 
         auth = FirebaseAuth.getInstance()
 
-        val layout = LinearLayout(this).apply {
+        rootLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(32, 40, 32, 40)
@@ -102,9 +108,10 @@ private var receivedMp3File: File? = null
 
         val title = TextView(this).apply {
             text = "SantetHP"
-            textSize = 26f
+            textSize = 28f
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
+            setPadding(0, 0, 0, 28)
         }
 
         statusText = TextView(this).apply {
@@ -112,15 +119,15 @@ private var receivedMp3File: File? = null
             textSize = 16f
             setTextColor(Color.LTGRAY)
             gravity = Gravity.CENTER
-            setPadding(0, 24, 0, 24)
+            setPadding(0, 20, 0, 20)
         }
 
         childAudioActivityText = TextView(this).apply {
-            text = "Aktivitas HP anak: belum ada audio aktif"
+            text = "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
             textSize = 15f
             setTextColor(Color.rgb(180, 190, 210))
             gravity = Gravity.CENTER
-            setPadding(16, 16, 16, 16)
+            setPadding(16, 18, 16, 18)
         }
 
         codeText = TextView(this).apply {
@@ -130,62 +137,36 @@ private var receivedMp3File: File? = null
             setPadding(0, 20, 0, 20)
         }
 
-        val parentButton = createButton("BUAT KODE ORANG TUA")
-        val childButton = createButton("MASUKKAN KODE ANAK")
-
+        parentButton = createButton("ORTU")
+        childButton = createButton("ANAK")
         startButton = createButton("BICARA LIVE")
         stopButton = createButton("HENTIKAN SUARA")
         sendMp3Button = createButton("PUTAR MP3")
-playMp3Button = createButton("PUTAR MP3 DITERIMA")
-        adminWhatsAppButton = createButton("CHAT ADMIN VIA WHATSAPP")
+        playMp3Button = createButton("PUTAR MP3 DITERIMA")
+        adminWhatsAppButton = createButton("CHAT ADMIN")
 
-sendMp3Button.visibility = View.GONE
-playMp3Button.visibility = View.GONE
+        parentButton.setOnClickListener { createPairingCode() }
+        childButton.setOnClickListener { showCodeDialog() }
+        startButton.setOnClickListener { startMicrophone() }
+        stopButton.setOnClickListener { stopMicrophone() }
+        sendMp3Button.setOnClickListener { openMp3Picker() }
+        playMp3Button.setOnClickListener { playReceivedMp3() }
+        adminWhatsAppButton.setOnClickListener { openAdminWhatsApp() }
 
-        startButton.visibility = View.GONE
-        stopButton.visibility = View.GONE
-        sendMp3Button.visibility = View.VISIBLE
+        rootLayout.addView(title)
+        rootLayout.addView(parentButton)
+        rootLayout.addView(childButton)
+        rootLayout.addView(statusText)
+        rootLayout.addView(codeText)
+        rootLayout.addView(childAudioActivityText)
+        rootLayout.addView(startButton)
+        rootLayout.addView(stopButton)
+        rootLayout.addView(sendMp3Button)
+        rootLayout.addView(playMp3Button)
+        rootLayout.addView(adminWhatsAppButton)
 
-        parentButton.setOnClickListener {
-            createPairingCode()
-        }
-
-        childButton.setOnClickListener {
-            showCodeDialog()
-        }
-
-        startButton.setOnClickListener {
-            startMicrophone()
-        }
-
-        stopButton.setOnClickListener {
-            stopMicrophone()
-        }
-        sendMp3Button.setOnClickListener {
-    openMp3Picker()
-}
-
-playMp3Button.setOnClickListener {
-    playReceivedMp3()
-}
-
-        adminWhatsAppButton.setOnClickListener {
-            openAdminWhatsApp()
-        }
-
-        layout.addView(title)
-        layout.addView(statusText)
-        layout.addView(childAudioActivityText)
-        layout.addView(codeText)
-        layout.addView(parentButton)
-        layout.addView(childButton)
-        layout.addView(startButton)
-        layout.addView(stopButton)
-        layout.addView(sendMp3Button)
-        layout.addView(playMp3Button)
-        layout.addView(adminWhatsAppButton)
-
-        setContentView(layout)
+        showRoleSelection()
+        setContentView(rootLayout)
 
         connectFirebase()
         val installedVersionCode = packageManager.getPackageInfo(packageName, 0).versionCode
@@ -195,6 +176,54 @@ playMp3Button.setOnClickListener {
     override fun onResume() {
         super.onResume()
         AppUpdateManager.resumePendingInstall(this)
+    }
+
+    private fun showRoleSelection() {
+        parentButton.visibility = View.VISIBLE
+        childButton.visibility = View.VISIBLE
+        codeText.visibility = View.GONE
+        childAudioActivityText.visibility = View.GONE
+        startButton.visibility = View.GONE
+        stopButton.visibility = View.GONE
+        sendMp3Button.visibility = View.GONE
+        playMp3Button.visibility = View.GONE
+        adminWhatsAppButton.visibility = View.GONE
+    }
+
+    private fun showPairingCodeScreen() {
+        parentButton.visibility = View.GONE
+        childButton.visibility = View.GONE
+        codeText.visibility = View.VISIBLE
+        childAudioActivityText.visibility = View.GONE
+        startButton.visibility = View.GONE
+        stopButton.visibility = View.GONE
+        sendMp3Button.visibility = View.GONE
+        playMp3Button.visibility = View.GONE
+        adminWhatsAppButton.visibility = View.GONE
+    }
+
+    private fun showParentDashboard() {
+        parentButton.visibility = View.GONE
+        childButton.visibility = View.GONE
+        codeText.visibility = View.VISIBLE
+        childAudioActivityText.visibility = View.VISIBLE
+        startButton.visibility = View.VISIBLE
+        stopButton.visibility = View.GONE
+        sendMp3Button.visibility = View.VISIBLE
+        playMp3Button.visibility = View.GONE
+        adminWhatsAppButton.visibility = View.VISIBLE
+    }
+
+    private fun showChildConnectedScreen() {
+        parentButton.visibility = View.GONE
+        childButton.visibility = View.GONE
+        codeText.visibility = View.VISIBLE
+        childAudioActivityText.visibility = View.GONE
+        startButton.visibility = View.GONE
+        stopButton.visibility = View.GONE
+        sendMp3Button.visibility = View.GONE
+        playMp3Button.visibility = View.GONE
+        adminWhatsAppButton.visibility = View.GONE
     }
 
     private fun connectFirebase() {
@@ -342,9 +371,11 @@ playMp3Button.setOnClickListener {
         codeText.text = code
 
         if (role == "parent") {
+            showPairingCodeScreen()
             statusText.text = "Menunggu HP anak..."
             listenForChild(code)
         } else {
+            showChildConnectedScreen()
             statusText.text = "Memulihkan koneksi audio (mikrofon tetap mati)..."
             startChildAudioConnection()
         }
@@ -400,6 +431,7 @@ playMp3Button.setOnClickListener {
 
                 savePairing(code, "parent")
                 currentRole = "parent"
+                showPairingCodeScreen()
 
                 codeText.text = code
                 statusText.text = "Bagikan kode ini kepada HP anak"
@@ -431,8 +463,20 @@ playMp3Button.setOnClickListener {
                 }
 
                 if (snapshot != null && snapshot.exists()) {
-                    val liveAudioActive = snapshot.getBoolean("liveAudioActive") == true
-                    val mp3AudioActive = snapshot.getBoolean("mp3AudioActive") == true
+                    val now = System.currentTimeMillis()
+                    val staleAfterMs = 35_000L
+                    val liveTimestamp = snapshot.getTimestamp("liveAudioActivityAt")
+                        ?: snapshot.getTimestamp("audioActivityAt")
+                    val mp3Timestamp = snapshot.getTimestamp("mp3AudioActivityAt")
+                        ?: snapshot.getTimestamp("audioActivityAt")
+                    val liveFresh = liveTimestamp != null &&
+                        now - liveTimestamp.toDate().time in 0..staleAfterMs
+                    val mp3Fresh = mp3Timestamp != null &&
+                        now - mp3Timestamp.toDate().time in 0..staleAfterMs
+                    val liveAudioActive =
+                        snapshot.getBoolean("liveAudioActive") == true && liveFresh
+                    val mp3AudioActive =
+                        snapshot.getBoolean("mp3AudioActive") == true && mp3Fresh
                     childAudioActivityText.text = when {
                         liveAudioActive && mp3AudioActive ->
                             "AKTIVITAS HP ANAK\nMP3 dan audio live sedang aktif"
@@ -598,7 +642,18 @@ playMp3Button.setOnClickListener {
                             throw Exception("Peran perangkat tidak sesuai")
                         }
 
-                        val newRoom = LiveKit.create(applicationContext)
+                        val newRoom = if (role == "child") {
+                            LiveKit.create(
+                                appContext = applicationContext,
+                                overrides = LiveKitOverrides(
+                                    audioOptions = AudioOptions(
+                                        audioOutputType = AudioType.MediaAudioType()
+                                    )
+                                )
+                            )
+                        } else {
+                            LiveKit.create(applicationContext)
+                        }
 
                         newRoom.connect(
                             url = serverUrl,
@@ -625,17 +680,16 @@ playMp3Button.setOnClickListener {
                                 .setMicrophoneEnabled(false)
 
                             statusText.text =
-                                "TERHUBUNG! Siap mengirim suara"
-
-                            startButton.visibility = View.VISIBLE
-                            stopButton.visibility = View.GONE
+                                "HP ANAK TERHUBUNG"
+                            showParentDashboard()
 
                         } else {
                             newRoom.localParticipant
                                 .setMicrophoneEnabled(false)
 
                             statusText.text =
-                                "TERHUBUNG! MENUNGGU SUARA ORANG TUA"
+                                "TERHUBUNG • MENUNGGU AUDIO ORANG TUA"
+                            showChildConnectedScreen()
                         }
 
                     } catch (error: Exception) {
