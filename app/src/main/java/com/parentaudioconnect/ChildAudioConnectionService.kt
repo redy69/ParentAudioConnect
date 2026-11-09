@@ -1,4 +1,4 @@
-package com.parentaudioconnect
+package com.santethp
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -236,7 +236,7 @@ class ChildAudioConnectionService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
-            .setContentTitle("Parent Audio Connect")
+            .setContentTitle("SantetHP")
             .setContentText(message)
             .setContentIntent(openApp)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
