@@ -1,5 +1,5 @@
 
-package com.parentaudioconnect
+package com.santethp
 import android.content.Intent
 import android.net.Uri
 import java.io.File
@@ -101,7 +101,7 @@ private var receivedMp3File: File? = null
         }
 
         val title = TextView(this).apply {
-            text = "Parent Audio Connect"
+            text = "SantetHP"
             textSize = 26f
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
