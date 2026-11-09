@@ -105,16 +105,27 @@ class ChildAudioConnectionService : Service() {
                                     if (event.track is RemoteAudioTrack) {
                                         activeRemoteAudioTrackIds.add(event.track.hashCode())
                                         maximizeLiveAudioVolume()
+                                        ChildAudioActivityReporter.setLiveAudioActive(
+                                            applicationContext, true
+                                        )
                                     }
                                 }
                                 is RoomEvent.TrackUnsubscribed -> {
                                     if (event.track is RemoteAudioTrack) {
                                         activeRemoteAudioTrackIds.remove(event.track.hashCode())
+                                        if (activeRemoteAudioTrackIds.isEmpty()) {
+                                            ChildAudioActivityReporter.setLiveAudioActive(
+                                                applicationContext, false
+                                            )
+                                        }
                                         // Keep the requested maximum volume after each audio session.
                                     }
                                 }
                                 is RoomEvent.Disconnected -> {
                                     activeRemoteAudioTrackIds.clear()
+                                    ChildAudioActivityReporter.setLiveAudioActive(
+                                        applicationContext, false
+                                    )
                                 }
                                 else -> Unit
                             }
@@ -257,6 +268,7 @@ class ChildAudioConnectionService : Service() {
         roomEventsJob?.cancel()
         roomEventsJob = null
         activeRemoteAudioTrackIds.clear()
+        ChildAudioActivityReporter.setLiveAudioActive(applicationContext, false)
         mp3TransferManager = null
         serviceScope.cancel()
         val activeRoom = room

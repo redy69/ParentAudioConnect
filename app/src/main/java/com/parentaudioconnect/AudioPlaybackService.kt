@@ -63,16 +63,19 @@ class AudioPlaybackService : Service() {
             nextPlayer.setDataSource(file.absolutePath)
             nextPlayer.setOnPreparedListener { prepared ->
                 raiseMediaVolumeForPlayback()
+                ChildAudioActivityReporter.setMp3AudioActive(applicationContext, true)
                 prepared.start()
                 val manager = getSystemService(NotificationManager::class.java)
                 manager.notify(NOTIFICATION_ID, buildNotification("Pesan suara sedang diputar"))
             }
             nextPlayer.setOnCompletionListener {
+                ChildAudioActivityReporter.setMp3AudioActive(applicationContext, false)
                 releasePlayer()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf(startId)
             }
             nextPlayer.setOnErrorListener { _, _, _ ->
+                ChildAudioActivityReporter.setMp3AudioActive(applicationContext, false)
                 releasePlayer()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf(startId)
@@ -80,6 +83,7 @@ class AudioPlaybackService : Service() {
             }
             nextPlayer.prepareAsync()
         } catch (_: Exception) {
+            ChildAudioActivityReporter.setMp3AudioActive(applicationContext, false)
             releasePlayer()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf(startId)
@@ -130,6 +134,7 @@ class AudioPlaybackService : Service() {
     }
 
     override fun onDestroy() {
+        ChildAudioActivityReporter.setMp3AudioActive(applicationContext, false)
         releasePlayer()
         super.onDestroy()
     }

@@ -60,7 +60,8 @@ class MainActivity : Activity(), LifecycleOwner {
     private val db = FirebaseFirestore.getInstance()
 
     private lateinit var statusText: TextView
-    private lateinit var codeText: TextView
+    private lateinit var childAudioActivityText: TextView
+    private lateinit var codeText
     private lateinit var startButton: Button
     private lateinit var stopButton: Button
     private lateinit var sendMp3Button: Button
@@ -113,6 +114,14 @@ private var receivedMp3File: File? = null
             setPadding(0, 24, 0, 24)
         }
 
+        childAudioActivityText = TextView(this).apply {
+            text = "Aktivitas HP anak: belum ada audio aktif"
+            textSize = 15f
+            setTextColor(Color.rgb(180, 190, 210))
+            gravity = Gravity.CENTER
+            setPadding(16, 16, 16, 16)
+        }
+
         codeText = TextView(this).apply {
             textSize = 30f
             setTextColor(Color.rgb(128, 222, 234))
@@ -160,6 +169,7 @@ playMp3Button.setOnClickListener {
 
         layout.addView(title)
         layout.addView(statusText)
+        layout.addView(childAudioActivityText)
         layout.addView(codeText)
         layout.addView(parentButton)
         layout.addView(childButton)
@@ -407,6 +417,23 @@ playMp3Button.setOnClickListener {
                 }
 
                 if (snapshot != null && snapshot.exists()) {
+                    val liveAudioActive = snapshot.getBoolean("liveAudioActive") == true
+                    val mp3AudioActive = snapshot.getBoolean("mp3AudioActive") == true
+                    childAudioActivityText.text = when {
+                        liveAudioActive && mp3AudioActive ->
+                            "AKTIVITAS HP ANAK\nMP3 dan audio live sedang aktif"
+                        liveAudioActive ->
+                            "AKTIVITAS HP ANAK\nAudio langsung sedang diputar"
+                        mp3AudioActive ->
+                            "AKTIVITAS HP ANAK\nMP3 sedang diputar"
+                        else ->
+                            "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
+                    }
+                    childAudioActivityText.setTextColor(
+                        if (liveAudioActive || mp3AudioActive) Color.rgb(105, 230, 170)
+                        else Color.rgb(180, 190, 210)
+                    )
+
                     val childUid = snapshot.getString("childUid")
 
                     if (!childUid.isNullOrEmpty()) {
