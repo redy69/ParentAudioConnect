@@ -840,9 +840,18 @@ private var receivedMp3File: File? = null
                 action = RemoteCameraService.ACTION_ARM
             }
             ContextCompat.startForegroundService(this, serviceIntent)
-            // Return to the original connected-child page; the foreground service remains active.
-            cameraStandbyButton.visibility = View.GONE
-            statusText.text = "Siaga kamera sedang disiapkan. Layanan berjalan di latar belakang."
+            // Return to the original connected-child page after the foreground service confirms arming.
+            statusText.text = "Menyiapkan siaga kamera..."
+            rootLayout.postDelayed({
+                updateCameraStandbyButton()
+                val armed = getSharedPreferences("parent_audio", MODE_PRIVATE)
+                    .getBoolean("remote_camera_armed", false)
+                statusText.text = if (armed) {
+                    "Siaga kamera aktif di latar belakang."
+                } else {
+                    "Siaga kamera belum berhasil aktif. Periksa izin kamera dan notifikasi."
+                }
+            }, 1000)
         } catch (error: Exception) {
             statusText.text = "Gagal mengaktifkan siaga kamera: ${error.localizedMessage ?: "izin Android"}"
         }
