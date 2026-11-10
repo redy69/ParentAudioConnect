@@ -74,6 +74,14 @@ private lateinit var playMp3Button: Button
     private lateinit var parentButton: Button
     private lateinit var childButton: Button
     private lateinit var rootLayout: LinearLayout
+    private lateinit var childrenContainer: LinearLayout
+    private lateinit var addChildButton: Button
+
+    private val childNames = linkedMapOf<String, String>()
+    private val childConnected = linkedMapOf<String, Boolean>()
+    private val childListeners = linkedMapOf<String, ListenerRegistration>()
+    private val renamePromptedCodes = mutableSetOf<String>()
+    private var selectedChildCode: String? = null
 
 private var mp3TransferManager: Mp3TransferManager? = null
 private var receivedMp3File: File? = null
@@ -149,6 +157,11 @@ private var receivedMp3File: File? = null
         sendMp3Button = createButton("PUTAR MP3")
         playMp3Button = createButton("PUTAR MP3 DITERIMA")
         adminWhatsAppButton = createButton("CHAT ADMIN")
+        addChildButton = createButton("TAMBAH ANAK")
+        childrenContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+        }
 
         parentButton.setOnClickListener { createPairingCode() }
         childButton.setOnClickListener { showCodeDialog() }
@@ -157,6 +170,7 @@ private var receivedMp3File: File? = null
         sendMp3Button.setOnClickListener { openMp3Picker() }
         playMp3Button.setOnClickListener { playReceivedMp3() }
         adminWhatsAppButton.setOnClickListener { openAdminWhatsApp() }
+        addChildButton.setOnClickListener { createPairingCode() }
 
         rootLayout.addView(title)
         rootLayout.addView(parentButton)
@@ -164,6 +178,8 @@ private var receivedMp3File: File? = null
         rootLayout.addView(statusText)
         rootLayout.addView(codeText)
         rootLayout.addView(childAudioActivityText)
+        rootLayout.addView(childrenContainer)
+        rootLayout.addView(addChildButton)
         rootLayout.addView(startButton)
         rootLayout.addView(stopButton)
         rootLayout.addView(sendMp3Button)
@@ -193,6 +209,8 @@ private var receivedMp3File: File? = null
         sendMp3Button.visibility = View.GONE
         playMp3Button.visibility = View.GONE
         adminWhatsAppButton.visibility = View.GONE
+        childrenContainer.visibility = View.GONE
+        addChildButton.visibility = View.GONE
     }
 
     private fun showPairingCodeScreen() {
@@ -205,6 +223,8 @@ private var receivedMp3File: File? = null
         sendMp3Button.visibility = View.GONE
         playMp3Button.visibility = View.GONE
         adminWhatsAppButton.visibility = View.GONE
+        childrenContainer.visibility = View.GONE
+        addChildButton.visibility = View.GONE
     }
 
     private fun showParentDashboard() {
@@ -217,6 +237,9 @@ private var receivedMp3File: File? = null
         sendMp3Button.visibility = View.VISIBLE
         playMp3Button.visibility = View.GONE
         adminWhatsAppButton.visibility = View.VISIBLE
+        childrenContainer.visibility = View.VISIBLE
+        addChildButton.visibility = View.VISIBLE
+        renderChildrenList()
     }
 
     private fun showChildConnectedScreen() {
@@ -229,6 +252,8 @@ private var receivedMp3File: File? = null
         sendMp3Button.visibility = View.GONE
         playMp3Button.visibility = View.GONE
         adminWhatsAppButton.visibility = View.GONE
+        childrenContainer.visibility = View.GONE
+        addChildButton.visibility = View.GONE
     }
 
     private fun connectFirebase() {
@@ -275,12 +300,16 @@ private var receivedMp3File: File? = null
                     .putString("fcm_token", token)
                     .apply()
                 statusText.text = "Firebase terhubung • notifikasi siap"
-                val savedCode = getSharedPreferences("parent_audio", MODE_PRIVATE)
-                    .getString("pair_code", null)
-                val savedRole = getSharedPreferences("parent_audio", MODE_PRIVATE)
-                    .getString("pair_role", null)
-                if (!savedCode.isNullOrBlank() && !savedRole.isNullOrBlank()) {
-                    registerDeviceToken(savedCode, savedRole, token)
+                val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+                val savedRole = prefs.getString("pair_role", null)
+                if (savedRole == "parent") {
+                    loadSavedChildren()
+                    childNames.keys.forEach { registerDeviceToken(it, "parent", token) }
+                } else {
+                    val savedCode = prefs.getString("pair_code", null)
+                    if (!savedCode.isNullOrBlank() && savedRole == "child") {
+                        registerDeviceToken(savedCode, savedRole, token)
+                    }
                 }
             }
             .addOnFailureListener {
@@ -304,16 +333,108 @@ private var receivedMp3File: File? = null
     }
 
     private fun savePairing(code: String, role: String) {
-        getSharedPreferences("parent_audio", MODE_PRIVATE)
-            .edit()
-            .putString("pair_code", code)
+        val editor = getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
             .putString("pair_role", role)
-            .apply()
+        if (role == "child") editor.putString("pair_code", code)
+        editor.apply()
 
         val token = getSharedPreferences("parent_audio", MODE_PRIVATE)
             .getString("fcm_token", null)
-        if (!token.isNullOrBlank()) {
-            registerDeviceToken(code, role, token)
+        if (!token.isNullOrBlank()) registerDeviceToken(code, role, token)
+    }
+
+    private fun loadSavedChildren() {
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        childNames.clear()
+        val stored = prefs.getString("parent_children", null)
+        if (!stored.isNullOrBlank()) {
+            try {
+                val json = JSONObject(stored)
+                json.keys().forEach { code -> childNames[code] = json.optString(code, "Anak") }
+            } catch (_: Exception) { }
+        }
+        // Migrate the single-child format used by earlier SantetHP builds.
+        val legacyCode = prefs.getString("pair_code", null)
+        if (childNames.isEmpty() && !legacyCode.isNullOrBlank()) {
+            childNames[legacyCode] = "Anak 1"
+            persistChildren()
+        }
+        childNames.keys.forEach { code ->
+            childConnected.putIfAbsent(code, false)
+            listenForChild(code)
+        }
+        renderChildrenList()
+    }
+
+    private fun persistChildren() {
+        val json = JSONObject()
+        childNames.forEach { (code, name) -> json.put(code, name) }
+        getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+            .putString("parent_children", json.toString()).apply()
+    }
+
+    private fun addParentChild(code: String) {
+        val index = childNames.size + 1
+        childNames[code] = "Anak $index"
+        childConnected[code] = false
+        selectedChildCode = code
+        persistChildren()
+        renderChildrenList()
+    }
+
+    private fun renderChildrenList() {
+        if (!::childrenContainer.isInitialized) return
+        childrenContainer.removeAllViews()
+        childNames.forEach { (code, name) ->
+            val connected = childConnected[code] == true
+            val item = createButton("$name  •  ${if (connected) "TERHUBUNG" else "MENUNGGU / OFFLINE"}")
+            item.setOnClickListener { selectChild(code) }
+            item.setOnLongClickListener { promptRenameChild(code); true }
+            childrenContainer.addView(item)
+        }
+    }
+
+    private fun promptRenameChild(code: String) {
+        val input = EditText(this).apply {
+            setText(childNames[code] ?: "Anak")
+            setSelection(text.length)
+            hint = "Nama anak"
+            isSingleLine = true
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Beri nama anak")
+            .setView(input)
+            .setNegativeButton("Batal", null)
+            .setPositiveButton("Simpan") { _, _ ->
+                val name = input.text.toString().trim()
+                if (name.isNotEmpty()) {
+                    childNames[code] = name
+                    persistChildren()
+                    renderChildrenList()
+                }
+            }.show()
+    }
+
+    private fun selectChild(code: String) {
+        if (childConnected[code] != true) {
+            selectedChildCode = code
+            codeText.text = code
+            statusText.text = "Menunggu HP ${childNames[code] ?: "anak"} terhubung..."
+            return
+        }
+        if (selectedChildCode == code && room != null) return
+        selectedChildCode = code
+        codeText.text = code
+        statusText.text = "Menghubungkan ke ${childNames[code] ?: "anak"}..."
+        activityScope.launch {
+            try {
+                room?.disconnect()
+                room?.release()
+            } catch (_: Exception) { }
+            room = null
+            mp3TransferManager = null
+            isConnecting = false
+            connectToLiveKit(code)
         }
     }
 
@@ -364,22 +485,22 @@ private var receivedMp3File: File? = null
 
     private fun restoreSavedPairing() {
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
-
-        val code = prefs.getString("pair_code", null)
-        val role = prefs.getString("pair_role", null)
-
-        if (code.isNullOrEmpty() || role.isNullOrEmpty()) {
-            return
-        }
-
+        val role = prefs.getString("pair_role", null) ?: return
         currentRole = role
-        codeText.text = code
-
         if (role == "parent") {
-            showPairingCodeScreen()
-            statusText.text = "Menunggu HP anak..."
-            listenForChild(code)
+            loadSavedChildren()
+            if (childNames.isEmpty()) {
+                showRoleSelection()
+                statusText.text = "Buat kode untuk menghubungkan anak pertama"
+            } else {
+                showParentDashboard()
+                selectedChildCode = childNames.keys.first()
+                codeText.text = selectedChildCode
+                statusText.text = "Pilih anak yang ingin dihubungkan"
+            }
         } else {
+            val code = prefs.getString("pair_code", null) ?: return
+            codeText.text = code
             showChildConnectedScreen()
             statusText.text = "Memulihkan koneksi audio (mikrofon tetap mati)..."
             startChildAudioConnection()
@@ -434,8 +555,10 @@ private var receivedMp3File: File? = null
             .set(data)
             .addOnSuccessListener {
 
+                val wasParent = currentRole == "parent"
                 savePairing(code, "parent")
                 currentRole = "parent"
+                addParentChild(code)
                 showPairingCodeScreen()
 
                 codeText.text = code
@@ -488,9 +611,9 @@ private var receivedMp3File: File? = null
     }
 
     private fun listenForChild(code: String) {
-        pairingListener?.remove()
+        childListeners[code]?.remove()
 
-        pairingListener = db.collection("pairings")
+        childListeners[code] = db.collection("pairings")
             .document(code)
             .addSnapshotListener { snapshot, error ->
 
@@ -500,15 +623,28 @@ private var receivedMp3File: File? = null
                 }
 
                 if (snapshot != null && snapshot.exists()) {
-                    latestPairingSnapshot = snapshot
-                    renderChildAudioActivity(snapshot)
-                    childAudioActivityText.removeCallbacks(staleStatusRunnable)
-                    childAudioActivityText.postDelayed(staleStatusRunnable, 36_000L)
-
                     val childUid = snapshot.getString("childUid")
-                    if (!childUid.isNullOrEmpty()) {
-                        statusText.text = "HP ANAK BERHASIL TERHUBUNG!"
-                        connectToLiveKit(code)
+                    val connected = !childUid.isNullOrEmpty()
+                    childConnected[code] = connected
+                    renderChildrenList()
+                    if (selectedChildCode == code) {
+                        latestPairingSnapshot = snapshot
+                        renderChildAudioActivity(snapshot)
+                        childAudioActivityText.removeCallbacks(staleStatusRunnable)
+                        childAudioActivityText.postDelayed(staleStatusRunnable, 36_000L)
+                    }
+                    if (connected) {
+                        if (selectedChildCode == null) selectedChildCode = code
+                        if (selectedChildCode == code && room == null && !isConnecting) {
+                            statusText.text = "HP ${childNames[code] ?: "ANAK"} BERHASIL TERHUBUNG!"
+                            codeText.text = code
+                            connectToLiveKit(code)
+                        }
+                        if (!childNames[code].isNullOrBlank() &&
+                            childNames[code]?.startsWith("Anak ") == true &&
+                            renamePromptedCodes.add(code) && selectedChildCode == code
+                        ) promptRenameChild(code)
+                        if (currentRole == "parent") showParentDashboard()
                     }
                 }
             }
@@ -925,6 +1061,8 @@ private fun playReceivedMp3() {
 
     override fun onDestroy() {
         pairingListener?.remove()
+        childListeners.values.forEach { it.remove() }
+        childListeners.clear()
         childAudioActivityText.removeCallbacks(staleStatusRunnable)
 
         activityScope.launch {
