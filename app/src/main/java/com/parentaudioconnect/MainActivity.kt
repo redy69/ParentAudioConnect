@@ -84,6 +84,8 @@ private lateinit var playMp3Button: Button
     private lateinit var updateButton: Button
     private lateinit var cameraStandbyButton: Button
     private lateinit var cameraLiveButton: LinearLayout
+    private lateinit var childModePanel: TextView
+    private val parentOnlyViews = mutableListOf<View>()
     private var pendingPairingCode: String? = null
 
     private val childNames = linkedMapOf<String, String>()
@@ -250,6 +252,17 @@ private var receivedMp3File: File? = null
         rootLayout.addView(title, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
         ).apply { bottomMargin = dp(18) })
+        childModePanel = TextView(this).apply {
+            text = "HP ANAK SIAP\nMenunggu perintah dari HP orang tua"
+            textSize = 16f
+            setTextColor(Color.rgb(42, 54, 76))
+            gravity = Gravity.CENTER
+            setPadding(dp(20), dp(26), dp(20), dp(26))
+            background = roundedPanel(Color.WHITE, 20)
+            elevation = dp(2).toFloat()
+            visibility = View.GONE
+        }
+        rootLayout.addView(childModePanel)
         val deviceSectionTitle = TextView(this).apply {
             text = "PERANGKAT ANAK"
             textSize = 12f
@@ -258,6 +271,7 @@ private var receivedMp3File: File? = null
             setPadding(dp(4), dp(3), dp(4), dp(7))
         }
         rootLayout.addView(deviceSectionTitle)
+        parentOnlyViews.add(deviceSectionTitle)
         val childHeaderRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -265,8 +279,11 @@ private var receivedMp3File: File? = null
         childHeaderRow.addView(selectedChildButton, LinearLayout.LayoutParams(0, dp(52), 1f))
         childHeaderRow.addView(addChildButton)
         rootLayout.addView(childHeaderRow)
+        parentOnlyViews.add(childHeaderRow)
         rootLayout.addView(childrenContainer)
+        parentOnlyViews.add(childrenContainer)
         rootLayout.addView(updateButton)
+        parentOnlyViews.add(updateButton)
         rootLayout.addView(parentButton)
         rootLayout.addView(childButton)
         val statusHeading = TextView(this).apply {
@@ -277,6 +294,7 @@ private var receivedMp3File: File? = null
             setPadding(dp(4), dp(12), dp(4), dp(7))
         }
         rootLayout.addView(statusHeading)
+        parentOnlyViews.add(statusHeading)
         rootLayout.addView(statusText)
         rootLayout.addView(codeText)
         val activityHeading = TextView(this).apply {
@@ -287,7 +305,9 @@ private var receivedMp3File: File? = null
             setPadding(dp(12), dp(14), dp(4), dp(7))
         }
         rootLayout.addView(activityHeading)
+        parentOnlyViews.add(activityHeading)
         rootLayout.addView(childAudioActivityText)
+        parentOnlyViews.add(childAudioActivityText)
         rootLayout.addView(cancelPairingButton)
         val controlHeading = TextView(this).apply {
             text = "KONTROL UTAMA"
@@ -297,6 +317,7 @@ private var receivedMp3File: File? = null
             setPadding(dp(4), dp(16), dp(4), dp(5))
         }
         rootLayout.addView(controlHeading)
+        parentOnlyViews.add(controlHeading)
         rootLayout.addView(actionButtonsRow)
         rootLayout.addView(playMp3Button)
         rootLayout.addView(cameraStandbyButton)
@@ -326,6 +347,8 @@ private var receivedMp3File: File? = null
     }
 
     private fun showRoleSelection() {
+        childModePanel.visibility = View.GONE
+        parentOnlyViews.forEach { it.visibility = View.GONE }
         actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.VISIBLE
         childButton.visibility = View.VISIBLE
@@ -345,6 +368,8 @@ private var receivedMp3File: File? = null
     }
 
     private fun showPairingCodeScreen() {
+        childModePanel.visibility = View.GONE
+        parentOnlyViews.forEach { it.visibility = View.GONE }
         actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.GONE
         childButton.visibility = View.GONE
@@ -364,6 +389,8 @@ private var receivedMp3File: File? = null
     }
 
     private fun showParentDashboard() {
+        childModePanel.visibility = View.GONE
+        parentOnlyViews.forEach { it.visibility = View.VISIBLE }
         actionButtonsRow.visibility = View.VISIBLE
         parentButton.visibility = View.GONE
         childButton.visibility = View.GONE
@@ -385,6 +412,8 @@ private var receivedMp3File: File? = null
     }
 
     private fun showChildConnectedScreen() {
+        parentOnlyViews.forEach { it.visibility = View.GONE }
+        childModePanel.visibility = View.VISIBLE
         actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.GONE
         childButton.visibility = View.GONE
