@@ -263,9 +263,11 @@ private var receivedMp3File: File? = null
         super.onResume()
         AppUpdateManager.resumePendingInstall(this)
         // Retry registration whenever the child app returns to foreground.
-        if (getSharedPreferences("parent_audio", MODE_PRIVATE).getString("pair_role", null) == "child") {
+        val childPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        if (childPrefs.getString("pair_role", null) == "child") {
             updateCameraStandbyButton()
             refreshFcmToken()
+            restoreCameraStandbyIfNeeded()
         }
     }
 
@@ -932,6 +934,36 @@ private var receivedMp3File: File? = null
             }
         }.addOnFailureListener {
             statusText.text = "Tidak dapat mengambil token autentikasi"
+        }
+    }
+
+    /**
+     * Restore an explicitly enabled camera standby only while the child app is visible.
+     * This repairs a stale preference when Android has stopped the foreground service.
+     */
+    private fun restoreCameraStandbyIfNeeded() {
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        if (prefs.getString("pair_role", null) != "child" ||
+            !prefs.getBoolean("remote_camera_armed", false)
+        ) return
+
+        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            prefs.edit().putBoolean("remote_camera_armed", false).apply()
+            updateCameraStandbyButton()
+            statusText.text = "Izin kamera tidak tersedia. Aktifkan siaga kamera kembali."
+            return
+        }
+
+        try {
+            val serviceIntent = Intent(this, RemoteCameraService::class.java).apply {
+                action = RemoteCameraService.ACTION_ARM
+            }
+            ContextCompat.startForegroundService(this, serviceIntent)
+            rootLayout.postDelayed({
+                if (!isFinishing && !isDestroyed) updateCameraStandbyButton()
+            }, 1200)
+        } catch (error: Exception) {
+            statusText.text = "Pemulihan siaga kamera gagal: ${error.localizedMessage ?: "izin Android"}"
         }
     }
 
