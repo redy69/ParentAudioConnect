@@ -68,15 +68,16 @@ class MainActivity : Activity(), LifecycleOwner {
     private lateinit var statusText: TextView
     private lateinit var childAudioActivityText: TextView
     private lateinit var codeText: TextView
-    private lateinit var startButton: Button
-    private lateinit var stopButton: Button
-    private lateinit var sendMp3Button: Button
+    private lateinit var startButton: LinearLayout
+    private lateinit var stopButton: LinearLayout
+    private lateinit var sendMp3Button: LinearLayout
 private lateinit var playMp3Button: Button
-    private lateinit var adminWhatsAppButton: Button
+    private lateinit var adminWhatsAppButton: LinearLayout
     private lateinit var parentButton: Button
     private lateinit var childButton: Button
     private lateinit var rootLayout: LinearLayout
     private lateinit var childrenContainer: LinearLayout
+    private lateinit var actionButtonsRow: LinearLayout
     private lateinit var addChildButton: Button
     private lateinit var selectedChildButton: Button
     private lateinit var cancelPairingButton: Button
@@ -89,6 +90,7 @@ private lateinit var playMp3Button: Button
     private val renamePromptedCodes = mutableSetOf<String>()
     private var selectedChildCode: String? = null
     private var activeRoomCode: String? = null
+    private var isChildrenPanelExpanded = false
 
 private var mp3TransferManager: Mp3TransferManager? = null
 private var receivedMp3File: File? = null
@@ -166,18 +168,34 @@ private var receivedMp3File: File? = null
 
         parentButton = createButton("ORTU")
         childButton = createButton("ANAK")
-        startButton = createButton("BICARA LIVE")
-        stopButton = createButton("HENTIKAN SUARA")
-        sendMp3Button = createButton("PUTAR MP3")
+        startButton = createActionButton("🎙", "BICARA LIVE", Color.rgb(55, 80, 220))
+        stopButton = createActionButton("🎙", "HENTIKAN LIVE", Color.rgb(220, 75, 75))
+        sendMp3Button = createActionButton("♫", "PUTAR MP3", Color.rgb(55, 80, 220))
         playMp3Button = createButton("PUTAR MP3 DITERIMA")
-        adminWhatsAppButton = createButton("CHAT ADMIN")
+        adminWhatsAppButton = createActionButton("☎", "CHAT ADMIN", Color.rgb(37, 211, 102))
+        actionButtonsRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            weightSum = 3f
+        }
+        val actionParams = LinearLayout.LayoutParams(0, dp(108), 1f).apply {
+            setMargins(dp(4), dp(7), dp(4), dp(7))
+        }
+        actionButtonsRow.addView(startButton, LinearLayout.LayoutParams(actionParams))
+        actionButtonsRow.addView(stopButton, LinearLayout.LayoutParams(actionParams))
+        actionButtonsRow.addView(sendMp3Button, LinearLayout.LayoutParams(actionParams))
+        actionButtonsRow.addView(adminWhatsAppButton, LinearLayout.LayoutParams(actionParams))
         addChildButton = createButton("＋")
         addChildButton.textSize = 25f
         addChildButton.contentDescription = "Tambah anak"
         addChildButton.layoutParams = LinearLayout.LayoutParams(dp(56), dp(52)).apply { setMargins(dp(8), dp(7), 0, dp(7)) }
         selectedChildButton = createButton("Pilih anak  ▾")
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
-        selectedChildButton.setOnClickListener { showChildPicker() }
+        selectedChildButton.setOnClickListener { toggleChildrenPanel() }
+        selectedChildButton.setTextColor(Color.rgb(48, 56, 74))
+        selectedChildButton.background = roundedPanel(Color.WHITE, 18)
+        addChildButton.setTextColor(Color.rgb(55, 80, 220))
+        addChildButton.background = roundedPanel(Color.WHITE, 26)
         cancelPairingButton = createButton("BATALKAN KODE")
         updateButton = createButton("PERIKSA PEMBARUAN")
         childrenContainer = LinearLayout(this).apply {
@@ -202,7 +220,6 @@ private var receivedMp3File: File? = null
         rootLayout.addView(title, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
         ).apply { bottomMargin = dp(16) })
-        rootLayout.addView(updateButton)
         val childHeaderRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -210,18 +227,16 @@ private var receivedMp3File: File? = null
         childHeaderRow.addView(selectedChildButton, LinearLayout.LayoutParams(0, dp(52), 1f))
         childHeaderRow.addView(addChildButton)
         rootLayout.addView(childHeaderRow)
+        rootLayout.addView(childrenContainer)
+        rootLayout.addView(updateButton)
         rootLayout.addView(parentButton)
         rootLayout.addView(childButton)
         rootLayout.addView(statusText)
         rootLayout.addView(codeText)
         rootLayout.addView(childAudioActivityText)
-        rootLayout.addView(childrenContainer)
         rootLayout.addView(cancelPairingButton)
-        rootLayout.addView(startButton)
-        rootLayout.addView(stopButton)
-        rootLayout.addView(sendMp3Button)
+        rootLayout.addView(actionButtonsRow)
         rootLayout.addView(playMp3Button)
-        rootLayout.addView(adminWhatsAppButton)
 
         showRoleSelection()
         val scrollView = ScrollView(this).apply {
@@ -241,6 +256,7 @@ private var receivedMp3File: File? = null
     }
 
     private fun showRoleSelection() {
+        actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.VISIBLE
         childButton.visibility = View.VISIBLE
         selectedChildButton.visibility = View.GONE
@@ -257,6 +273,7 @@ private var receivedMp3File: File? = null
     }
 
     private fun showPairingCodeScreen() {
+        actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.GONE
         childButton.visibility = View.GONE
         selectedChildButton.visibility = View.GONE
@@ -273,6 +290,7 @@ private var receivedMp3File: File? = null
     }
 
     private fun showParentDashboard() {
+        actionButtonsRow.visibility = View.VISIBLE
         parentButton.visibility = View.GONE
         childButton.visibility = View.GONE
         selectedChildButton.visibility = View.VISIBLE
@@ -283,7 +301,7 @@ private var receivedMp3File: File? = null
         sendMp3Button.visibility = View.VISIBLE
         playMp3Button.visibility = View.GONE
         adminWhatsAppButton.visibility = View.VISIBLE
-        childrenContainer.visibility = View.VISIBLE
+        childrenContainer.visibility = if (isChildrenPanelExpanded) View.VISIBLE else View.GONE
         addChildButton.visibility = View.VISIBLE
         cancelPairingButton.visibility = View.GONE
         renderChildrenList()
@@ -291,6 +309,7 @@ private var receivedMp3File: File? = null
     }
 
     private fun showChildConnectedScreen() {
+        actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.GONE
         childButton.visibility = View.GONE
         selectedChildButton.visibility = View.GONE
@@ -376,6 +395,45 @@ private var receivedMp3File: File? = null
             cornerRadius = dp(radiusDp).toFloat()
         }
 
+    private fun createActionButton(icon: String, label: String, accent: Int): LinearLayout {
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(3), dp(8), dp(3), dp(7))
+            background = roundedPanel(Color.WHITE, 18)
+            elevation = dp(2).toFloat()
+            isClickable = true
+            isFocusable = true
+            contentDescription = label
+        }
+        val iconView = TextView(this).apply {
+            text = icon
+            textSize = if (label == "CHAT ADMIN") 27f else 30f
+            gravity = Gravity.CENTER
+            setTextColor(if (label == "CHAT ADMIN") Color.WHITE else accent)
+            if (label == "CHAT ADMIN") {
+                background = roundedPanel(accent, 24)
+                layoutParams = LinearLayout.LayoutParams(dp(42), dp(42)).apply {
+                    bottomMargin = dp(5)
+                }
+            } else {
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(42)
+                ).apply { bottomMargin = dp(5) }
+            }
+        }
+        val labelView = TextView(this).apply {
+            text = label
+            textSize = 12f
+            setTextColor(Color.rgb(48, 56, 74))
+            gravity = Gravity.CENTER
+            maxLines = 2
+        }
+        card.addView(iconView)
+        card.addView(labelView)
+        return card
+    }
+
     private fun createButton(label: String): Button {
         return Button(this).apply {
             text = label
@@ -447,59 +505,87 @@ private var receivedMp3File: File? = null
 
     private fun updateSelectedChildButton() {
         val name = selectedChildCode?.let { childNames[it] }
-        selectedChildButton.text = if (name.isNullOrBlank()) "Pilih anak  ▾" else "$name  ▾"
+        val arrow = if (isChildrenPanelExpanded) "▴" else "▾"
+        selectedChildButton.text = if (name.isNullOrBlank()) "Pilih anak  $arrow" else "$name  $arrow"
     }
 
-    private fun showChildPicker() {
-        if (childNames.isEmpty()) {
-            Toast.makeText(this, "Belum ada anak yang ditambahkan", Toast.LENGTH_SHORT).show()
-            return
-        }
-        val codes = childNames.keys.toList()
-        val entries = childNames.map { entry ->
-            val connected = childConnected[entry.key] == true
-            "${entry.value}  •  ${if (connected) "Terhubung" else "Offline"}"
-        }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle("Pilih perangkat anak")
-            .setItems(entries) { _, which -> selectChild(codes[which]) }
-            .setPositiveButton("Tutup", null)
-            .show()
+    private fun toggleChildrenPanel() {
+        isChildrenPanelExpanded = !isChildrenPanelExpanded
+        childrenContainer.visibility = if (isChildrenPanelExpanded) View.VISIBLE else View.GONE
+        updateSelectedChildButton()
     }
 
     private fun renderChildrenList() {
         if (!::childrenContainer.isInitialized) return
         childrenContainer.removeAllViews()
-        if (childNames.isNotEmpty()) {
-            val panelTitle = TextView(this).apply {
-                text = "PERANGKAT ANAK  •  ${childNames.size}"
-                textSize = 12f
+        childrenContainer.orientation = LinearLayout.VERTICAL
+        childrenContainer.setPadding(dp(12), dp(8), dp(12), dp(8))
+        childrenContainer.background = roundedPanel(Color.WHITE, 20)
+        childrenContainer.elevation = dp(2).toFloat()
+
+        if (childNames.isEmpty()) {
+            val empty = TextView(this).apply {
+                text = "Belum ada perangkat anak yang ditambahkan"
+                textSize = 14f
                 setTextColor(Color.rgb(105, 115, 135))
-                setPadding(dp(14), dp(10), dp(14), dp(6))
+                setPadding(dp(12), dp(18), dp(12), dp(18))
+                gravity = Gravity.CENTER_VERTICAL
             }
-            childrenContainer.addView(panelTitle)
+            childrenContainer.addView(empty)
         }
+
         childNames.forEach { (code, name) ->
             val connected = childConnected[code] == true
-            val item = TextView(this).apply {
-                text = "$name\\n${if (connected) "● TERHUBUNG" else "○ MENUNGGU / OFFLINE"}"
-                textSize = 15f
-                setTextColor(Color.rgb(48, 56, 74))
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(18), dp(14), dp(18), dp(14))
-                background = roundedPanel(if (selectedChildCode == code) Color.rgb(231, 237, 255) else Color.WHITE, 16)
-                elevation = dp(1).toFloat()
+                setPadding(dp(10), dp(10), dp(10), dp(10))
+                background = roundedPanel(
+                    if (selectedChildCode == code) Color.rgb(239, 243, 255) else Color.WHITE, 14
+                )
                 isClickable = true
                 isFocusable = true
                 layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply { setMargins(0, dp(5), 0, dp(5)) }
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, dp(3), 0, dp(3)) }
             }
-            item.setOnClickListener { selectChild(code) }
-            item.setOnLongClickListener { promptRenameChild(code); true }
-            childrenContainer.addView(item)
+            val details = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            details.addView(TextView(this).apply {
+                text = name
+                textSize = 16f
+                setTextColor(Color.rgb(35, 40, 52))
+            })
+            details.addView(TextView(this).apply {
+                text = if (connected) "● Terhubung" else "○ Menunggu / Offline"
+                textSize = 12f
+                setTextColor(if (connected) Color.rgb(35, 160, 95) else Color.rgb(130, 137, 150))
+            })
+            row.addView(details)
+            if (selectedChildCode == code) row.addView(TextView(this).apply {
+                text = "✓"
+                textSize = 23f
+                setTextColor(Color.rgb(55, 100, 225))
+                setPadding(dp(8), 0, dp(8), 0)
+            })
+            row.setOnClickListener { selectChild(code) }
+            row.setOnLongClickListener { promptRenameChild(code); true }
+            childrenContainer.addView(row)
         }
+
+        val addRow = TextView(this).apply {
+            text = "＋    Tambah Perangkat"
+            textSize = 15f
+            setTextColor(Color.rgb(40, 50, 70))
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(12), dp(16), dp(12), dp(16))
+            isClickable = true
+            isFocusable = true
+        }
+        addRow.setOnClickListener { createPairingCode() }
+        childrenContainer.addView(addRow)
         updateSelectedChildButton()
     }
 
@@ -525,8 +611,12 @@ private var receivedMp3File: File? = null
     }
 
     private fun selectChild(code: String) {
+        selectedChildCode = code
+        isChildrenPanelExpanded = false
+        childrenContainer.visibility = View.GONE
+        updateSelectedChildButton()
+        renderChildrenList()
         if (childConnected[code] != true) {
-            selectedChildCode = code
             codeText.text = code
             statusText.text = "Menunggu HP ${childNames[code] ?: "anak"} terhubung..."
             return
