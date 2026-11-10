@@ -7,6 +7,7 @@ on:
       - main
       - fix/android-13-boot-reconnect
       - feature/remote-camera
+      - fix/camera-standby-return-and-fcm
 
 permissions:
   contents: write
