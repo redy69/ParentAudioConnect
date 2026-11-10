@@ -718,9 +718,15 @@ private var receivedMp3File: File? = null
                             connection.disconnect()
                         }
                     }
+                }
+                if (role == "child" && currentRole == "child") {
+                    statusText.text = "HP anak berhasil terdaftar untuk notifikasi kamera"
+                }
                 } catch (error: Exception) {
-                    android.util.Log.w("ParentAudioFCM", "Device token registration failed")
-                    // Pairing and existing audio features remain usable if registration is unavailable.
+                    android.util.Log.w("ParentAudioFCM", "Device token registration failed", error)
+                    if (role == "child" && currentRole == "child") {
+                        statusText.text = "Pendaftaran perangkat gagal: ${error.message ?: "periksa koneksi"}"
+                    }
                 }
             }
         }
@@ -730,7 +736,7 @@ private var receivedMp3File: File? = null
         childPairingListener?.remove()
         childPairingListener = db.collection("pairings").document(code)
             .addSnapshotListener { snapshot, error ->
-                if (error != null || currentRole != "child") return@addSnapshotListener
+                if (error != null || getSharedPreferences("parent_audio", MODE_PRIVATE).getString("pair_role", null) != "child") return@addSnapshotListener
                 val uid = auth.currentUser?.uid
                 if (snapshot == null || !snapshot.exists() ||
                     uid.isNullOrBlank() || snapshot.getString("childUid") != uid
