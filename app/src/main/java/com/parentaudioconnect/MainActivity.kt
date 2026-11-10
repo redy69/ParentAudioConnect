@@ -248,7 +248,7 @@ private var receivedMp3File: File? = null
         }
 
         childDeviceStatusText = TextView(this).apply {
-            text = "KONDISI HP ANAK\\nMenunggu laporan pertama dari perangkat anak..."
+            text = "KONDISI HP ANAK\nMenunggu laporan pertama dari perangkat anak..."
             textSize = 12.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(104, 117, 140))
@@ -1680,11 +1680,11 @@ private var receivedMp3File: File? = null
         val internetLabel = if (internetValidated) "Internet aktif" else "Internet belum terverifikasi"
 
         childDeviceStatusText.text = buildString {
-            append("KONDISI HP ANAK\\n")
-            append("Baterai: $batteryLabel$chargeLabel$temperatureLabel\\n")
-            append("Jaringan: $network\\n")
-            append("Operator SIM: $operator\\n")
-            append("$internetLabel\\n")
+            append("KONDISI HP ANAK\n")
+            append("Baterai: $batteryLabel$chargeLabel$temperatureLabel\n")
+            append("Jaringan: $network\n")
+            append("Operator SIM: $operator\n")
+            append("$internetLabel\n")
             append(if (fresh) "Diperbarui: $updateLabel" else "Data mungkin sudah lama • terakhir: $updateLabel")
         }
         childDeviceStatusText.setTextColor(
