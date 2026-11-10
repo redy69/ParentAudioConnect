@@ -9,6 +9,10 @@ import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.graphics.Color
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Path
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
@@ -137,14 +141,18 @@ private var receivedMp3File: File? = null
         val title = TextView(this).apply {
             text = "SantetHP\nKONTROL PERANGKAT KELUARGA"
             textSize = 21f
+            setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(22), dp(25), dp(22), dp(25))
-            background = GradientDrawable().apply {
-                setColor(Color.rgb(24, 39, 75))
+            letterSpacing = 0.015f
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(19, 37, 79), Color.rgb(48, 83, 160))
+            ).apply {
                 cornerRadius = dp(22).toFloat()
             }
-            elevation = dp(4).toFloat()
+            elevation = dp(5).toFloat()
         }
 
         statusText = TextView(this).apply {
@@ -500,6 +508,64 @@ private var receivedMp3File: File? = null
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
 
+    private fun blendWithWhite(color: Int, amount: Float): Int {
+        val inverse = 1f - amount
+        return Color.rgb(
+            (Color.red(color) * inverse + 255 * amount).toInt(),
+            (Color.green(color) * inverse + 255 * amount).toInt(),
+            (Color.blue(color) * inverse + 255 * amount).toInt()
+        )
+    }
+
+    private inner class ChildAvatarView : View(this@MainActivity) {
+        private val brush = Paint(Paint.ANTI_ALIAS_FLAG)
+
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val side = minOf(width, height).toFloat()
+            if (side <= 0f) return
+            val cx = width / 2f
+            val cy = height / 2f
+            val scale = side / 100f
+
+            canvas.save()
+            canvas.translate(cx - 50f * scale, cy - 50f * scale)
+            canvas.scale(scale, scale)
+
+            brush.style = Paint.Style.FILL
+            brush.color = Color.rgb(231, 239, 255)
+            canvas.drawCircle(50f, 50f, 49f, brush)
+
+            brush.color = Color.rgb(55, 91, 190)
+            canvas.drawRoundRect(RectF(13f, 61f, 87f, 105f), 25f, 25f, brush)
+
+            brush.color = Color.rgb(225, 171, 133)
+            canvas.drawRoundRect(RectF(42f, 53f, 58f, 72f), 7f, 7f, brush)
+            canvas.drawCircle(50f, 39f, 23f, brush)
+
+            brush.color = Color.rgb(48, 43, 47)
+            val hair = Path().apply {
+                moveTo(27f, 39f)
+                cubicTo(24f, 12f, 40f, 8f, 53f, 14f)
+                cubicTo(70f, 13f, 79f, 28f, 73f, 43f)
+                lineTo(67f, 34f)
+                cubicTo(55f, 27f, 43f, 28f, 32f, 38f)
+                close()
+            }
+            canvas.drawPath(hair, brush)
+
+            brush.color = Color.rgb(55, 45, 42)
+            canvas.drawCircle(42f, 43f, 1.8f, brush)
+            canvas.drawCircle(58f, 43f, 1.8f, brush)
+            brush.style = Paint.Style.STROKE
+            brush.strokeWidth = 2f
+            brush.strokeCap = Paint.Cap.ROUND
+            canvas.drawArc(RectF(43f, 46f, 57f, 58f), 15f, 150f, false, brush)
+            brush.style = Paint.Style.FILL
+            canvas.restore()
+        }
+    }
+
     private fun roundedPanel(color: Int, radiusDp: Int): GradientDrawable =
         GradientDrawable().apply {
             // Lapisan kaca transparan dengan garis putih seperti widget referensi.
@@ -528,24 +594,47 @@ private var receivedMp3File: File? = null
         }
         val iconView = TextView(this).apply {
             text = icon
-            textSize = 25f
+            textSize = 27f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
-            background = roundedPanel(accent, 28)
-            layoutParams = LinearLayout.LayoutParams(dp(46), dp(46)).apply {
-                rightMargin = dp(9)
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(accent, blendWithWhite(accent, 0.22f))
+            ).apply { cornerRadius = dp(17).toFloat() }
+            layoutParams = LinearLayout.LayoutParams(dp(50), dp(50)).apply {
+                rightMargin = dp(11)
             }
+        }
+        val helper = when (label) {
+            "BICARA LIVE" -> "Dengarkan suara sekitar"
+            "HENTIKAN LIVE" -> "Akhiri sesi audio"
+            "PUTAR MP3" -> "Kirim audio ke perangkat"
+            "KAMERA LIVE" -> "Lihat kamera perangkat"
+            "CHAT ADMIN" -> "Bantuan dan dukungan"
+            else -> "Kontrol perangkat"
+        }
+        val textStack = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
         }
         val labelView = TextView(this).apply {
             text = label
             textSize = 12f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(30, 45, 72))
-            gravity = Gravity.CENTER_VERTICAL
             maxLines = 2
         }
+        val helperView = TextView(this).apply {
+            text = helper
+            textSize = 10f
+            setTextColor(Color.rgb(125, 136, 155))
+            setPadding(0, dp(3), 0, 0)
+            maxLines = 2
+        }
+        textStack.addView(labelView)
+        textStack.addView(helperView)
         card.addView(iconView)
-        card.addView(labelView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        card.addView(textStack, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         return card
     }
 
@@ -664,15 +753,11 @@ private var receivedMp3File: File? = null
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
                 ).apply { setMargins(0, dp(5), 0, dp(5)) }
             }
-            val phoneIcon = TextView(this).apply {
-                text = "🧒"
-                textSize = 27f
-                gravity = Gravity.CENTER
-                setTextColor(Color.rgb(45, 91, 210))
-                background = roundedPanel(Color.rgb(232, 239, 255), 24)
-                layoutParams = LinearLayout.LayoutParams(dp(48), dp(48)).apply {
+            val phoneIcon = ChildAvatarView().apply {
+                layoutParams = LinearLayout.LayoutParams(dp(54), dp(54)).apply {
                     rightMargin = dp(12)
                 }
+                contentDescription = "Ilustrasi profil perangkat anak"
             }
             row.addView(phoneIcon)
             val details = LinearLayout(this).apply {
