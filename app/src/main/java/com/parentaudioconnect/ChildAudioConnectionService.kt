@@ -10,6 +10,8 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.android.gms.tasks.Task
 import io.livekit.android.AudioOptions
 import io.livekit.android.AudioType
@@ -57,6 +59,7 @@ class ChildAudioConnectionService : Service() {
     private var mp3TransferManager: Mp3TransferManager? = null
     private val activeRemoteAudioTrackIds = ConcurrentHashMap.newKeySet<Int>()
     private var liveHeartbeatJob: Job? = null
+    private var pairingRemovalListener: ListenerRegistration? = null
     @Volatile private var connecting = false
 
     override fun onCreate() {
@@ -66,11 +69,35 @@ class ChildAudioConnectionService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIFICATION_ID, notification("Memulihkan koneksi audio…"))
+        watchForPairingRemoval()
         if (!connecting && room == null) {
             connecting = true
             serviceScope.launch { connectWithRetry() }
         }
         return START_STICKY
+    }
+
+    private fun watchForPairingRemoval() {
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        val code = prefs.getString("pair_code", null)
+        if (code.isNullOrBlank() || prefs.getString("pair_role", null) != "child") return
+        pairingRemovalListener?.remove()
+        pairingRemovalListener = FirebaseFirestore.getInstance()
+            .collection("pairings")
+            .document(code)
+            .addSnapshotListener { snapshot, error ->
+                if (error == null && snapshot != null && !snapshot.exists()) {
+                    prefs.edit()
+                        .remove("pair_role")
+                        .remove("pair_code")
+                        .putBoolean("remote_camera_armed", false)
+                        .apply()
+                    stopService(Intent(this, RemoteCameraService::class.java))
+                    stopService(Intent(this, AudioPlaybackService::class.java))
+                    updateNotification("Hubungan dengan orang tua telah dilepaskan")
+                    stopSelf()
+                }
+            }
     }
 
     private suspend fun connectWithRetry() {
@@ -340,6 +367,8 @@ class ChildAudioConnectionService : Service() {
     }
 
     override fun onDestroy() {
+        pairingRemovalListener?.remove()
+        pairingRemovalListener = null
         roomEventsJob?.cancel()
         roomEventsJob = null
         activeRemoteAudioTrackIds.clear()
