@@ -500,11 +500,12 @@ private var receivedMp3File: File? = null
         currentRole = role
         if (role == "parent") {
             loadSavedChildren()
+            showParentDashboard()
             if (childNames.isEmpty()) {
-                showRoleSelection()
-                statusText.text = "Buat kode untuk menghubungkan anak pertama"
+                selectedChildCode = null
+                codeText.text = ""
+                statusText.text = "Belum ada HP anak terhubung. Tekan TAMBAH ANAK untuk membuat kode."
             } else {
-                showParentDashboard()
                 selectedChildCode = childNames.keys.first()
                 codeText.text = selectedChildCode
                 statusText.text = "Pilih anak yang ingin dihubungkan"
@@ -621,11 +622,17 @@ private var receivedMp3File: File? = null
                             codeText.text = nextCode
                             statusText.text = "Kode dibatalkan. Pilih anak yang ingin dihubungkan."
                         } else {
+                            // Tetap di mode orang tua dan kembali ke menu utama,
+                            // meskipun belum ada HP anak yang berhasil dipasangkan.
                             getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
-                                .remove("pair_role").remove("pair_code").apply()
-                            currentRole = ""
-                            showRoleSelection()
-                            statusText.text = "Pembuatan kode dibatalkan."
+                                .putString("pair_role", "parent")
+                                .remove("pair_code")
+                                .apply()
+                            currentRole = "parent"
+                            selectedChildCode = null
+                            codeText.text = ""
+                            showParentDashboard()
+                            statusText.text = "Kode dibatalkan. Anda kembali ke menu utama."
                         }
                     }
                     .addOnFailureListener { error ->
