@@ -71,6 +71,7 @@ class MainActivity : Activity(), LifecycleOwner {
 
     private lateinit var statusText: TextView
     private lateinit var childAudioActivityText: TextView
+    private lateinit var childDeviceStatusText: TextView
     private lateinit var codeText: TextView
     private lateinit var pairingInstructionText: TextView
     private lateinit var roleIntroText: TextView
@@ -108,7 +109,10 @@ private var receivedMp3File: File? = null
     private var pairingListener: ListenerRegistration? = null
     private var latestPairingSnapshot: DocumentSnapshot? = null
     private val staleStatusRunnable = Runnable {
-        latestPairingSnapshot?.let { renderChildAudioActivity(it) }
+        latestPairingSnapshot?.let {
+            renderChildAudioActivity(it)
+            renderChildDeviceStatus(it)
+        }
     }
     private var room: Room? = null
     private var isConnecting = false
@@ -233,6 +237,27 @@ private var receivedMp3File: File? = null
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(237, 245, 255))
+            ).apply {
+                cornerRadius = dp(20).toFloat()
+                setStroke(dp(1), Color.rgb(194, 215, 246))
+            }
+            elevation = dp(2).toFloat()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(4), 0, dp(6)) }
+        }
+
+        childDeviceStatusText = TextView(this).apply {
+            text = "KONDISI HP ANAK\\nMenunggu laporan pertama dari perangkat anak..."
+            textSize = 12.5f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(104, 117, 140))
+            gravity = Gravity.CENTER_VERTICAL
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(dp(17), dp(16), dp(17), dp(16))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
             ).apply {
                 cornerRadius = dp(20).toFloat()
                 setStroke(dp(1), Color.rgb(194, 215, 246))
@@ -484,6 +509,8 @@ private var receivedMp3File: File? = null
         parentOnlyViews.add(activityHeading)
         rootLayout.addView(childAudioActivityText)
         parentOnlyViews.add(childAudioActivityText)
+        rootLayout.addView(childDeviceStatusText)
+        parentOnlyViews.add(childDeviceStatusText)
         rootLayout.addView(cancelPairingButton)
         val controlHeading = TextView(this).apply {
             text = "KONTROL UTAMA"
@@ -1631,6 +1658,40 @@ private var receivedMp3File: File? = null
         )
     }
 
+    private fun renderChildDeviceStatus(snapshot: DocumentSnapshot) {
+        val battery = snapshot.getLong("deviceBatteryPercent")?.toInt() ?: -1
+        val charging = snapshot.getBoolean("deviceCharging") == true
+        val temperature = snapshot.getDouble("deviceBatteryTempC")
+        val network = snapshot.getString("deviceNetworkType") ?: "Belum diketahui"
+        val operator = snapshot.getString("deviceOperatorName")?.takeIf { it.isNotBlank() }
+            ?: "Tidak terdeteksi / tanpa SIM"
+        val internetValidated = snapshot.getBoolean("deviceInternetValidated") == true
+        val updatedAt = snapshot.getTimestamp("deviceStatusAt")
+        val ageMs = updatedAt?.toDate()?.time?.let { System.currentTimeMillis() - it }
+        val fresh = ageMs != null && ageMs in -60_000L..15 * 60 * 1000L
+        val updateLabel = updatedAt?.let {
+            android.text.format.DateFormat.getTimeFormat(this).format(it.toDate())
+        } ?: "belum tersedia"
+        val batteryLabel = if (battery in 0..100) "$battery%" else "Tidak tersedia"
+        val chargeLabel = if (charging) " • Mengisi daya" else ""
+        val temperatureLabel = temperature?.takeIf { it >= 0.0 }?.let {
+            " • ${"%.1f".format(java.util.Locale.US, it)}°C"
+        } ?: ""
+        val internetLabel = if (internetValidated) "Internet aktif" else "Internet belum terverifikasi"
+
+        childDeviceStatusText.text = buildString {
+            append("KONDISI HP ANAK\\n")
+            append("Baterai: $batteryLabel$chargeLabel$temperatureLabel\\n")
+            append("Jaringan: $network\\n")
+            append("Operator SIM: $operator\\n")
+            append("$internetLabel\\n")
+            append(if (fresh) "Diperbarui: $updateLabel" else "Data mungkin sudah lama • terakhir: $updateLabel")
+        }
+        childDeviceStatusText.setTextColor(
+            if (fresh) Color.rgb(38, 59, 99) else Color.rgb(104, 117, 140)
+        )
+    }
+
     private fun listenForChild(code: String) {
         childListeners[code]?.remove()
 
@@ -1651,6 +1712,7 @@ private var receivedMp3File: File? = null
                     if (selectedChildCode == code) {
                         latestPairingSnapshot = snapshot
                         renderChildAudioActivity(snapshot)
+                        renderChildDeviceStatus(snapshot)
                         childAudioActivityText.removeCallbacks(staleStatusRunnable)
                         childAudioActivityText.postDelayed(staleStatusRunnable, 36_000L)
                     }
