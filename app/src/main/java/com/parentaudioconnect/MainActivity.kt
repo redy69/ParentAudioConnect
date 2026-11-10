@@ -773,15 +773,19 @@ private var receivedMp3File: File? = null
         }
         val iconView = TextView(this).apply {
             text = icon
-            textSize = 24f
+            textSize = 23f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(accent, blendWithWhite(accent, 0.22f))
-            ).apply { cornerRadius = dp(17).toFloat() }
-            layoutParams = LinearLayout.LayoutParams(dp(44), dp(44)).apply {
-                rightMargin = dp(8)
+            ).apply {
+                cornerRadius = dp(15).toFloat()
+                setStroke(dp(1), Color.argb(48, 255, 255, 255))
+            }
+            elevation = dp(1).toFloat()
+            layoutParams = LinearLayout.LayoutParams(dp(43), dp(43)).apply {
+                rightMargin = dp(9)
             }
         }
         val helper = when (label) {
@@ -795,21 +799,24 @@ private var receivedMp3File: File? = null
         val textStack = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(1), 0, dp(1))
         }
         val labelView = TextView(this).apply {
             text = label
             textSize = 11.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.005f
+            letterSpacing = 0.012f
             setTextColor(Color.rgb(27, 43, 73))
             maxLines = 2
+            setLineSpacing(dp(1).toFloat(), 1f)
         }
         val helperView = TextView(this).apply {
             text = helper
             textSize = 9.5f
             setTextColor(Color.rgb(105, 120, 146))
-            setPadding(0, dp(3), 0, 0)
+            setPadding(0, dp(4), 0, 0)
             maxLines = 2
+            setLineSpacing(dp(1).toFloat(), 1f)
         }
         textStack.addView(labelView)
         textStack.addView(helperView)
@@ -917,19 +924,40 @@ private var receivedMp3File: File? = null
         childrenContainer.elevation = dp(3).toFloat()
 
         if (childNames.isEmpty()) {
-            val empty = TextView(this).apply {
-                text = "Belum ada perangkat anak yang ditambahkan\nTambahkan HP anak untuk mulai menghubungkan keluarga."
-                textSize = 13f
-                setLineSpacing(dp(3).toFloat(), 1f)
-                setTextColor(Color.rgb(91, 108, 139))
-                setPadding(dp(14), dp(20), dp(14), dp(20))
+            val empty = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                background = GradientDrawable().apply {
-                    setColor(Color.rgb(247, 250, 255))
-                    cornerRadius = dp(15).toFloat()
+                setPadding(dp(14), dp(18), dp(14), dp(18))
+                background = GradientDrawable(
+                    GradientDrawable.Orientation.TL_BR,
+                    intArrayOf(Color.WHITE, Color.rgb(247, 250, 255))
+                ).apply {
+                    cornerRadius = dp(16).toFloat()
                     setStroke(dp(1), Color.rgb(225, 233, 247))
                 }
             }
+            empty.addView(TextView(this).apply {
+                text = "📱"
+                textSize = 30f
+                gravity = Gravity.CENTER
+                setPadding(0, 0, 0, dp(7))
+                contentDescription = "Ilustrasi perangkat anak"
+            })
+            empty.addView(TextView(this).apply {
+                text = "Belum ada perangkat anak"
+                textSize = 13f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.rgb(48, 68, 105))
+                gravity = Gravity.CENTER
+            })
+            empty.addView(TextView(this).apply {
+                text = "Tekan tombol + untuk mulai menghubungkan HP anak."
+                textSize = 11f
+                setLineSpacing(dp(2).toFloat(), 1f)
+                setTextColor(Color.rgb(105, 120, 146))
+                setPadding(0, dp(5), 0, 0)
+                gravity = Gravity.CENTER
+            })
             childrenContainer.addView(empty)
         }
 
