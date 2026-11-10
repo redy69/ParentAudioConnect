@@ -459,6 +459,24 @@ private var receivedMp3File: File? = null
             ).apply { setMargins(0, dp(12), 0, dp(14)) }
             visibility = View.GONE
         }
+        childModePanel.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Riwayat penggunaan aplikasi")
+                .setMessage(
+                    "Fitur ini membagikan nama aplikasi dan perkiraan durasi penggunaan 24 jam terakhir kepada HP orang tua. Isi pesan, kata sandi, dan aktivitas di dalam aplikasi tidak dibaca. Izin Usage Access harus diaktifkan secara sadar melalui Pengaturan Android."
+                )
+                .setNegativeButton("Nanti", null)
+                .setPositiveButton("Buka pengaturan") { _, _ ->
+                    try {
+                        startActivity(Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                    } catch (_: Exception) {
+                        Toast.makeText(this, "Pengaturan Usage Access tidak tersedia di perangkat ini", Toast.LENGTH_LONG).show()
+                    }
+                }
+                .show()
+        }
+        childModePanel.text =
+            "🛡️  HP ANAK SIAP\n\nPerangkat berhasil terhubung\nMenunggu perintah dari HP orang tua\n\nKetuk di sini untuk membaca penjelasan dan mengatur izin riwayat aplikasi (opsional)."
         rootLayout.addView(roleIntroText)
         rootLayout.addView(childModePanel)
         val deviceSectionTitle = TextView(this).apply {
@@ -1693,6 +1711,27 @@ private var receivedMp3File: File? = null
             append("Operator SIM: $operator\n")
             append("$internetLabel\n")
             append(if (fresh) "Diperbarui: $updateLabel" else "Data mungkin sudah lama • terakhir: $updateLabel")
+            append("\n\nRIWAYAT PENGGUNAAN APLIKASI (24 JAM)")
+            val permissionGranted = snapshot.getBoolean("appUsagePermissionGranted") == true
+            val usageAt = snapshot.getTimestamp("appUsageAt")
+            val usageAge = usageAt?.toDate()?.time?.let { System.currentTimeMillis() - it }
+            val usageFresh = usageAge != null && usageAge in -60_000L..30 * 60 * 1000L
+            if (!permissionGranted) {
+                append("\nMenunggu izin Usage Access dari HP anak")
+            } else {
+                val apps = snapshot.get("appUsageSummary") as? List<*>
+                if (apps.isNullOrEmpty()) {
+                    append("\nBelum ada data penggunaan yang tercatat")
+                } else {
+                    apps.take(8).forEach { item ->
+                        val app = item as? Map<*, *> ?: return@forEach
+                        val name = app["appName"] as? String ?: "Aplikasi"
+                        val minutes = (app["foregroundMinutes"] as? Number)?.toInt() ?: 0
+                        append("\n" + name + ": " + (minutes / 60) + " jam " + (minutes % 60) + " menit")
+                    }
+                }
+                append(if (usageFresh) "\nData penggunaan diperbarui" else "\nData penggunaan mungkin sudah lama")
+            }
         }
         childDeviceStatusText.setTextColor(
             if (fresh) Color.rgb(38, 59, 99) else Color.rgb(104, 117, 140)
