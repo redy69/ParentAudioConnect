@@ -127,8 +127,14 @@ class RemoteCameraService : Service() {
     private fun scheduleCameraReconnect() {
         if (!isArmed() || reconnectJob?.isActive == true) return
         reconnectJob = scope.launch {
-            delay(2500)
-            if (isArmed() && room == null) ensureCameraRoomConnected()
+            // Keep retrying while standby remains enabled; network may take longer to return.
+            while (isArmed() && room == null) {
+                delay(3000)
+                if (isArmed() && room == null && !connecting) {
+                    connecting = true
+                    connectCameraRoom()
+                }
+            }
         }
     }
 
