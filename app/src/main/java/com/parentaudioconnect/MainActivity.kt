@@ -135,7 +135,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(22), dp(24), dp(22), dp(24))
-            background = roundedPanel(Color.rgb(55, 80, 220), 24)
+            background = getDrawable(R.drawable.bg_glass_panel)
             elevation = dp(3).toFloat()
         }
 
@@ -145,7 +145,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(75, 83, 102))
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(16), dp(14), dp(16), dp(14))
-            background = roundedPanel(Color.WHITE, 16)
+            background = getDrawable(R.drawable.bg_glass_panel)
         }
 
         childAudioActivityText = TextView(this).apply {
@@ -154,7 +154,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(55, 63, 80))
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(18), dp(20), dp(18), dp(20))
-            background = roundedPanel(Color.WHITE, 18)
+            background = getDrawable(R.drawable.bg_glass_panel)
             elevation = dp(1).toFloat()
         }
 
@@ -163,7 +163,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(55, 80, 220))
             gravity = Gravity.CENTER
             setPadding(dp(16), dp(16), dp(16), dp(16))
-            background = roundedPanel(Color.WHITE, 18)
+            background = getDrawable(R.drawable.bg_glass_panel)
         }
 
         parentButton = createButton("ORTU")
@@ -193,9 +193,9 @@ private var receivedMp3File: File? = null
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
         selectedChildButton.setOnClickListener { toggleChildrenPanel() }
         selectedChildButton.setTextColor(Color.rgb(48, 56, 74))
-        selectedChildButton.background = roundedPanel(Color.WHITE, 18)
+        selectedChildButton.background = getDrawable(R.drawable.bg_glass_panel)
         addChildButton.setTextColor(Color.rgb(55, 80, 220))
-        addChildButton.background = roundedPanel(Color.WHITE, 26)
+        addChildButton.background = getDrawable(R.drawable.bg_app_tile)
         cancelPairingButton = createButton("BATALKAN KODE")
         updateButton = createButton("PERIKSA PEMBARUAN")
         childrenContainer = LinearLayout(this).apply {
@@ -277,7 +277,7 @@ private var receivedMp3File: File? = null
         parentButton.visibility = View.GONE
         childButton.visibility = View.GONE
         selectedChildButton.visibility = View.GONE
-        codeText.visibility = View.VISIBLE
+        codeText.visibility = View.GONE
         childAudioActivityText.visibility = View.GONE
         startButton.visibility = View.GONE
         stopButton.visibility = View.GONE
@@ -294,7 +294,7 @@ private var receivedMp3File: File? = null
         parentButton.visibility = View.GONE
         childButton.visibility = View.GONE
         selectedChildButton.visibility = View.VISIBLE
-        codeText.visibility = View.VISIBLE
+        codeText.visibility = View.GONE
         childAudioActivityText.visibility = View.VISIBLE
         startButton.visibility = if (isMicrophoneActive) View.GONE else View.VISIBLE
         stopButton.visibility = if (isMicrophoneActive) View.VISIBLE else View.GONE
@@ -409,7 +409,7 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(dp(3), dp(8), dp(3), dp(7))
-            background = roundedPanel(Color.WHITE, 18)
+            background = getDrawable(R.drawable.bg_app_tile)
             elevation = dp(2).toFloat()
             isClickable = true
             isFocusable = true
