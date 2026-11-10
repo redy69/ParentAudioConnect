@@ -286,7 +286,7 @@ private var receivedMp3File: File? = null
         }
 
         roleIntroText = TextView(this).apply {
-            text = "SELAMAT DATANG DI SANTETHP\\nPilih jenis perangkat untuk melanjutkan. Pastikan Anda memilih peran yang sesuai dengan HP ini."
+            text = "SELAMAT DATANG DI SANTETHP\nPilih jenis perangkat untuk melanjutkan. Pastikan Anda memilih peran yang sesuai dengan HP ini."
             textSize = 14f
             setTextColor(Color.rgb(55, 72, 105))
             gravity = Gravity.CENTER
@@ -305,8 +305,8 @@ private var receivedMp3File: File? = null
             ).apply { setMargins(0, dp(24), 0, dp(12)) }
             visibility = View.GONE
         }
-        parentButton = createButton("👨‍👩‍👧  ORANG TUA\\nKelola perangkat anak")
-        childButton = createButton("📱  PERANGKAT ANAK\\nHubungkan ke orang tua")
+        parentButton = createButton("👨‍👩‍👧  ORANG TUA\nKelola perangkat anak")
+        childButton = createButton("📱  PERANGKAT ANAK\nHubungkan ke orang tua")
         listOf(parentButton, childButton).forEach { button ->
             button.textSize = 14f
             button.gravity = Gravity.CENTER
