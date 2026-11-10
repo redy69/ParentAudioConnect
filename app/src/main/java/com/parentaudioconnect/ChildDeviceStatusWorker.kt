@@ -21,6 +21,7 @@ class ChildDeviceStatusWorker(
         return try {
             ChildDeviceStatusReporter.publish(applicationContext)
             AppUsageReporter.publish(applicationContext)
+            ChildUsageScheduleReporter.syncAndNotify(applicationContext)
             Result.success()
         } catch (error: Exception) {
             Result.retry()

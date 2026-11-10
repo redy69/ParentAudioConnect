@@ -6,6 +6,7 @@ import java.io.File
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.TimePickerDialog
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.graphics.Color
@@ -18,6 +19,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -94,6 +96,7 @@ private lateinit var playMp3Button: Button
     private lateinit var childModePanel: TextView
     private lateinit var childLocationPanel: TextView
     private lateinit var childLocationMapView: ChildLocationMapView
+    private lateinit var childSchedulePanel: TextView
     private var pendingLocationStart = false
     private val parentOnlyViews = mutableListOf<View>()
     private var pendingPairingCode: String? = null
@@ -559,6 +562,29 @@ private var receivedMp3File: File? = null
         parentOnlyViews.add(childDeviceStatusText)
         rootLayout.addView(childLocationMapView)
         parentOnlyViews.add(childLocationMapView)
+        childSchedulePanel = TextView(this).apply {
+            text = "🕒  JADWAL PENGGUNAAN HP\nBelum ada jadwal • Ketuk untuk mengatur jam belajar dan istirahat"
+            textSize = 12.5f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(35, 53, 88))
+            gravity = Gravity.CENTER_VERTICAL
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(dp(17), dp(16), dp(17), dp(16))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
+            ).apply {
+                cornerRadius = dp(19).toFloat()
+                setStroke(dp(1), Color.rgb(190, 218, 245))
+            }
+            elevation = dp(2).toFloat()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(4), 0, dp(8)) }
+            setOnClickListener { showChildScheduleDialog() }
+        }
+        rootLayout.addView(childSchedulePanel)
+        parentOnlyViews.add(childSchedulePanel)
         rootLayout.addView(cancelPairingButton)
         val controlHeading = TextView(this).apply {
             text = "KONTROL UTAMA"
@@ -1518,6 +1544,129 @@ private var receivedMp3File: File? = null
         Toast.makeText(this, "Berbagi lokasi dihentikan.", Toast.LENGTH_SHORT).show()
     }
 
+    private fun showChildScheduleDialog() {
+        val code = selectedChildCode
+        if (currentRole != "parent" || code.isNullOrBlank()) {
+            Toast.makeText(this, "Pilih perangkat anak terlebih dahulu.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        db.collection("pairings").document(code).get()
+            .addOnSuccessListener { snapshot ->
+                val currentEnabled = snapshot.getBoolean("usageScheduleEnabled") == true
+                var startMinutes = snapshot.getLong("usageScheduleStartMinutes")?.toInt() ?: 21 * 60
+                var endMinutes = snapshot.getLong("usageScheduleEndMinutes")?.toInt() ?: 6 * 60
+                val currentDays = (snapshot.get("usageScheduleDays") as? List<*>)
+                    ?.mapNotNull { (it as? Number)?.toInt() }?.toSet()
+                    ?: setOf(1, 2, 3, 4, 5, 6, 7)
+
+                val content = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(20), dp(10), dp(20), dp(4))
+                }
+                content.addView(TextView(this).apply {
+                    text = "Atur rentang waktu istirahat. HP anak akan menampilkan pengingat yang jelas saat jadwal dimulai dan selesai."
+                    textSize = 13f
+                    setTextColor(Color.rgb(65, 79, 105))
+                    setPadding(0, 0, 0, dp(12))
+                })
+
+                val startButton = Button(this).apply { text = "Mulai istirahat: %02d:%02d".format(startMinutes / 60, startMinutes % 60) }
+                val endButton = Button(this).apply { text = "Selesai istirahat: %02d:%02d".format(endMinutes / 60, endMinutes % 60) }
+                startButton.setOnClickListener {
+                    TimePickerDialog(this, { _, hour, minute ->
+                        startMinutes = hour * 60 + minute
+                        startButton.text = "Mulai istirahat: %02d:%02d".format(hour, minute)
+                    }, startMinutes / 60, startMinutes % 60, true).show()
+                }
+                endButton.setOnClickListener {
+                    TimePickerDialog(this, { _, hour, minute ->
+                        endMinutes = hour * 60 + minute
+                        endButton.text = "Selesai istirahat: %02d:%02d".format(hour, minute)
+                    }, endMinutes / 60, endMinutes % 60, true).show()
+                }
+                content.addView(startButton)
+                content.addView(endButton)
+
+                content.addView(TextView(this).apply {
+                    text = "Berlaku pada hari:"
+                    textSize = 13f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.rgb(48, 68, 105))
+                    setPadding(0, dp(13), 0, dp(5))
+                })
+                val dayChecks = linkedMapOf<Int, CheckBox>()
+                val days = listOf(
+                    2 to "Senin", 3 to "Selasa", 4 to "Rabu", 5 to "Kamis",
+                    6 to "Jumat", 7 to "Sabtu", 1 to "Minggu"
+                )
+                days.forEach { (day, label) ->
+                    val check = CheckBox(this).apply {
+                        text = label
+                        textSize = 13f
+                        setTextColor(Color.rgb(48, 68, 105))
+                        isChecked = day in currentDays
+                    }
+                    dayChecks[day] = check
+                    content.addView(check)
+                }
+
+                val dialog = AlertDialog.Builder(this)
+                    .setTitle("Jadwal istirahat HP anak")
+                    .setView(content)
+                    .setNegativeButton("Batal", null)
+                    .setPositiveButton("Simpan jadwal", null)
+                    .setNeutralButton(if (currentEnabled) "Matikan jadwal" else "Nonaktif", null)
+                    .create()
+                dialog.setOnShowListener {
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                        val selectedDays = dayChecks.filterValues { it.isChecked }.keys.toList()
+                        when {
+                            startMinutes == endMinutes ->
+                                Toast.makeText(this, "Jam mulai dan selesai tidak boleh sama.", Toast.LENGTH_LONG).show()
+                            selectedDays.isEmpty() ->
+                                Toast.makeText(this, "Pilih minimal satu hari.", Toast.LENGTH_LONG).show()
+                            else -> {
+                                val values = hashMapOf<String, Any>(
+                                    "usageScheduleEnabled" to true,
+                                    "usageScheduleStartMinutes" to startMinutes,
+                                    "usageScheduleEndMinutes" to endMinutes,
+                                    "usageScheduleDays" to selectedDays,
+                                    "usageScheduleTimeZone" to java.util.TimeZone.getDefault().id,
+                                    "usageScheduleUpdatedAt" to Timestamp(Date())
+                                )
+                                db.collection("pairings").document(code).update(values)
+                                    .addOnSuccessListener {
+                                        Toast.makeText(this, "Jadwal istirahat berhasil disimpan.", Toast.LENGTH_LONG).show()
+                                        dialog.dismiss()
+                                    }
+                                    .addOnFailureListener { error ->
+                                        Toast.makeText(this, "Gagal menyimpan jadwal: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
+                                    }
+                            }
+                        }
+                    }
+                    dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                        db.collection("pairings").document(code).update(
+                            mapOf(
+                                "usageScheduleEnabled" to false,
+                                "usageScheduleUpdatedAt" to Timestamp(Date())
+                            )
+                        ).addOnSuccessListener {
+                            Toast.makeText(this, "Jadwal istirahat dinonaktifkan.", Toast.LENGTH_SHORT).show()
+                            dialog.dismiss()
+                        }.addOnFailureListener { error ->
+                            Toast.makeText(this, "Gagal mematikan jadwal: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+                dialog.show()
+            }
+            .addOnFailureListener { error ->
+                Toast.makeText(this, "Tidak dapat membaca jadwal: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
+            }
+    }
+
     private fun requestRemoteCamera() {
         if (currentRole != "parent") return
         val code = selectedChildCode
@@ -1869,6 +2018,30 @@ private var receivedMp3File: File? = null
         childDeviceStatusText.setTextColor(
             if (fresh) Color.rgb(38, 59, 99) else Color.rgb(104, 117, 140)
         )
+
+        val scheduleEnabled = snapshot.getBoolean("usageScheduleEnabled") == true
+        val scheduleStart = snapshot.getLong("usageScheduleStartMinutes")?.toInt() ?: 21 * 60
+        val scheduleEnd = snapshot.getLong("usageScheduleEndMinutes")?.toInt() ?: 6 * 60
+        val scheduleDays = (snapshot.get("usageScheduleDays") as? List<*>)
+            ?.mapNotNull { (it as? Number)?.toInt() }?.toSet().orEmpty()
+        val scheduleQuiet = snapshot.getBoolean("childScheduleQuietNow") == true
+        val scheduleAt = snapshot.getTimestamp("childScheduleCheckedAt")
+        val scheduleFresh = scheduleAt?.toDate()?.time?.let {
+            System.currentTimeMillis() - it in -60_000L..30 * 60 * 1000L
+        } == true
+        childSchedulePanel.text = if (!scheduleEnabled) {
+            "🕒  JADWAL PENGGUNAAN HP\nBelum diatur • Ketuk untuk membuat jadwal belajar dan istirahat"
+        } else {
+            val dayNames = listOf("Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab")
+            val selectedDays = dayNames.filterIndexed { index, _ ->
+                (index + 1) in scheduleDays
+            }.joinToString(", ")
+            val startLabel = "%02d:%02d".format(scheduleStart / 60, scheduleStart % 60)
+            val endLabel = "%02d:%02d".format(scheduleEnd / 60, scheduleEnd % 60)
+            "🕒  JADWAL PENGGUNAAN HP\nIstirahat: $startLabel–$endLabel\nHari: $selectedDays\n" +
+                (if (scheduleQuiet) "Waktu istirahat sedang berlangsung" else "Di luar waktu istirahat") +
+                (if (scheduleFresh) "" else " • Status belum diperbarui")
+        }
 
         val latitude = snapshot.getDouble("childLatitude")
         val longitude = snapshot.getDouble("childLongitude")
