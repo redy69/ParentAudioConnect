@@ -98,6 +98,7 @@ private var mp3TransferManager: Mp3TransferManager? = null
 private var receivedMp3File: File? = null
 
     private var pairingListener: ListenerRegistration? = null
+    private var childPairingListener: ListenerRegistration? = null
     private var latestPairingSnapshot: DocumentSnapshot? = null
     private val staleStatusRunnable = Runnable {
         latestPairingSnapshot?.let { renderChildAudioActivity(it) }
@@ -489,6 +490,7 @@ private var receivedMp3File: File? = null
         val token = getSharedPreferences("parent_audio", MODE_PRIVATE)
             .getString("fcm_token", null)
         if (!token.isNullOrBlank()) registerDeviceToken(code, role, token)
+        if (role == "child") listenForOwnPairing(code)
     }
 
     private fun loadSavedChildren() {
@@ -591,6 +593,16 @@ private var receivedMp3File: File? = null
                 setTextColor(if (connected) Color.rgb(35, 160, 95) else Color.rgb(130, 137, 150))
             })
             row.addView(details)
+            val unlinkButton = TextView(this).apply {
+                text = "Lepas"
+                textSize = 12f
+                setTextColor(Color.rgb(205, 55, 65))
+                setPadding(dp(10), dp(8), dp(10), dp(8))
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { confirmUnlinkChild(code, name) }
+            }
+            row.addView(unlinkButton)
             if (selectedChildCode == code) row.addView(TextView(this).apply {
                 text = "✓"
                 textSize = 23f
@@ -714,6 +726,107 @@ private var receivedMp3File: File? = null
         }
     }
 
+    private fun listenForOwnPairing(code: String) {
+        childPairingListener?.remove()
+        childPairingListener = db.collection("pairings").document(code)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || currentRole != "child") return@addSnapshotListener
+                val uid = auth.currentUser?.uid
+                if (snapshot == null || !snapshot.exists() ||
+                    uid.isNullOrBlank() || snapshot.getString("childUid") != uid
+                ) {
+                    handleChildUnpaired(code)
+                }
+            }
+    }
+
+    private fun handleChildUnpaired(code: String) {
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        if (prefs.getString("pair_role", null) != "child" ||
+            prefs.getString("pair_code", null) != code
+        ) return
+
+        childPairingListener?.remove()
+        childPairingListener = null
+        prefs.edit()
+            .remove("pair_role")
+            .remove("pair_code")
+            .putBoolean("remote_camera_armed", false)
+            .apply()
+        currentRole = ""
+        isMicrophoneActive = false
+        activeRoomCode = null
+        isConnecting = false
+        mp3TransferManager = null
+
+        try {
+            stopService(Intent(this, RemoteCameraService::class.java))
+        } catch (_: Exception) { }
+
+        activityScope.launch {
+            try {
+                room?.localParticipant?.setMicrophoneEnabled(false)
+                room?.disconnect()
+                room?.release()
+            } catch (_: Exception) { }
+            room = null
+            showRoleSelection()
+            statusText.text = "Hubungan dengan HP orang tua telah dilepas. Masukkan kode orang tua untuk terhubung kembali."
+            codeText.text = ""
+            Toast.makeText(this@MainActivity, "Perangkat telah dilepas", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun confirmUnlinkChild(code: String, name: String) {
+        AlertDialog.Builder(this)
+            .setTitle("Lepas perangkat anak?")
+            .setMessage("Hubungan dengan $name akan diputus. Perangkat anak tersebut akan kembali ke halaman awal. Perangkat anak lain tidak terpengaruh.")
+            .setNegativeButton("Batal", null)
+            .setPositiveButton("Ya, lepas") { _, _ -> unlinkChild(code) }
+            .show()
+    }
+
+    private fun unlinkChild(code: String) {
+        statusText.text = "Memutus hubungan perangkat anak..."
+        db.collection("pairings").document(code).delete()
+            .addOnSuccessListener {
+                childListeners.remove(code)?.remove()
+                childNames.remove(code)
+                childConnected.remove(code)
+                renamePromptedCodes.remove(code)
+                persistChildren()
+
+                if (selectedChildCode == code) {
+                    selectedChildCode = childNames.keys.firstOrNull()
+                    activityScope.launch {
+                        try {
+                            room?.localParticipant?.setMicrophoneEnabled(false)
+                            room?.disconnect()
+                            room?.release()
+                        } catch (_: Exception) { }
+                        room = null
+                        activeRoomCode = null
+                        mp3TransferManager = null
+                        isMicrophoneActive = false
+                        if (childNames.isNotEmpty()) {
+                            val nextCode = selectedChildCode!!
+                            selectChild(nextCode)
+                        } else {
+                            showParentDashboard()
+                            statusText.text = "Perangkat anak telah dilepas. Tambahkan perangkat jika diperlukan."
+                        }
+                    }
+                } else {
+                    showParentDashboard()
+                    statusText.text = "Perangkat $code berhasil dilepas."
+                }
+            }
+            .addOnFailureListener { error ->
+                statusText.text = "Gagal melepas perangkat anak"
+                Toast.makeText(this, error.localizedMessage ?: "Gagal memutus hubungan", Toast.LENGTH_LONG).show()
+            }
+    }
+
     private fun restoreSavedPairing() {
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         val role = prefs.getString("pair_role", null) ?: return
@@ -732,6 +845,7 @@ private var receivedMp3File: File? = null
             }
         } else {
             val code = prefs.getString("pair_code", null) ?: return
+            listenForOwnPairing(code)
             codeText.text = code
             showChildConnectedScreen()
             statusText.text = "Memulihkan koneksi audio (mikrofon tetap mati)..."
@@ -1459,6 +1573,7 @@ private fun playReceivedMp3() {
 
     override fun onDestroy() {
         pairingListener?.remove()
+        childPairingListener?.remove()
         childListeners.values.forEach { it.remove() }
         childListeners.clear()
         childAudioActivityText.removeCallbacks(staleStatusRunnable)
