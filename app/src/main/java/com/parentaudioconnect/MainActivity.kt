@@ -143,19 +143,19 @@ private var receivedMp3File: File? = null
         val title = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(22), dp(19), dp(22), dp(20))
+            setPadding(dp(23), dp(20), dp(23), dp(21))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.rgb(15, 29, 64), Color.rgb(35, 69, 139), Color.rgb(67, 104, 183))
             ).apply {
-                cornerRadius = dp(24).toFloat()
-                setStroke(dp(1), Color.argb(55, 255, 255, 255))
+                cornerRadius = dp(25).toFloat()
+                setStroke(dp(1), Color.argb(68, 255, 255, 255))
             }
             elevation = dp(5).toFloat()
 
             addView(TextView(this@MainActivity).apply {
                 text = "PARENTAL CARE  •  FAMILY CONNECT"
-                textSize = 9.5f
+                textSize = 10f
                 letterSpacing = 0.13f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.rgb(190, 211, 255))
@@ -168,7 +168,7 @@ private var receivedMp3File: File? = null
             }
             brandRow.addView(TextView(this@MainActivity).apply {
                 text = "SantetHP"
-                textSize = 29f
+                textSize = 30f
                 letterSpacing = 0.005f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE)
@@ -181,9 +181,9 @@ private var receivedMp3File: File? = null
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE)
                 gravity = Gravity.CENTER
-                setPadding(dp(12), dp(7), dp(12), dp(7))
+                setPadding(dp(13), dp(7), dp(13), dp(7))
                 background = GradientDrawable().apply {
-                    setColor(Color.argb(38, 255, 255, 255))
+                    setColor(Color.argb(46, 255, 255, 255))
                     cornerRadius = dp(20).toFloat()
                     setStroke(dp(1), Color.argb(85, 255, 255, 255))
                 }
@@ -192,7 +192,7 @@ private var receivedMp3File: File? = null
 
             addView(TextView(this@MainActivity).apply {
                 text = "Ruang kendali orang tua"
-                textSize = 13f
+                textSize = 13.5f
                 setTextColor(Color.rgb(224, 234, 255))
                 letterSpacing = 0.015f
             })
@@ -362,17 +362,19 @@ private var receivedMp3File: File? = null
         addChildButton = createButton("＋")
         addChildButton.textSize = 25f
         addChildButton.contentDescription = "Tambah anak"
-        addChildButton.layoutParams = LinearLayout.LayoutParams(dp(56), dp(52)).apply { setMargins(dp(8), dp(7), 0, dp(7)) }
+        addChildButton.layoutParams = LinearLayout.LayoutParams(dp(52), dp(52)).apply { setMargins(dp(8), dp(7), 0, dp(7)) }
         selectedChildButton = createButton("Pilih anak  ▾")
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
         selectedChildButton.setOnClickListener { toggleChildrenPanel() }
-        selectedChildButton.setTextColor(Color.rgb(48, 56, 74))
+        selectedChildButton.setTextColor(Color.rgb(35, 57, 96))
+        selectedChildButton.textSize = 13.5f
+        selectedChildButton.contentDescription = "Pilih perangkat anak"
         selectedChildButton.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
             intArrayOf(Color.WHITE, Color.rgb(246, 249, 255))
         ).apply {
-            cornerRadius = dp(16).toFloat()
-            setStroke(dp(1), Color.rgb(222, 230, 245))
+            cornerRadius = dp(17).toFloat()
+            setStroke(dp(1), Color.rgb(211, 224, 246))
         }
         selectedChildButton.elevation = dp(2).toFloat()
         selectedChildButton.setTypeface(null, android.graphics.Typeface.BOLD)
@@ -408,7 +410,7 @@ private var receivedMp3File: File? = null
 
         rootLayout.addView(title, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply { bottomMargin = dp(16) })
+        ).apply { bottomMargin = dp(15) })
         childModePanel = TextView(this).apply {
             text = "🛡️  HP ANAK SIAP\n\nPerangkat berhasil terhubung\nMenunggu perintah dari HP orang tua"
             textSize = 16f
