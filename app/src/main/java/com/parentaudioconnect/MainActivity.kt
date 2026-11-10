@@ -148,9 +148,11 @@ private var receivedMp3File: File? = null
         childAudioActivityText = TextView(this).apply {
             text = "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
             textSize = 15f
-            setTextColor(Color.rgb(180, 190, 210))
-            gravity = Gravity.CENTER
-            setPadding(16, 18, 16, 18)
+            setTextColor(Color.rgb(55, 63, 80))
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(18), dp(20), dp(18), dp(20))
+            background = roundedPanel(Color.WHITE, 18)
+            elevation = dp(1).toFloat()
         }
 
         codeText = TextView(this).apply {
