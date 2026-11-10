@@ -212,7 +212,7 @@ private var receivedMp3File: File? = null
 
         showRoleSelection()
         val scrollView = ScrollView(this).apply {
-            fillViewport = true
+            isFillViewport = true
             isVerticalScrollBarEnabled = false
             setBackgroundColor(Color.rgb(244, 246, 250))
             addView(rootLayout)
