@@ -29,18 +29,20 @@ class ParentAudioMessagingService : FirebaseMessagingService() {
         val isChild = prefs.getString("pair_role", null) == "child"
         val isArmed = prefs.getBoolean("remote_camera_armed", false)
 
-        if (command == "CAMERA_START" && isChild && isArmed &&
-            !code.isNullOrBlank() && code == savedCode
+        if (command in setOf("CAMERA_START", "CAMERA_SWITCH", "CAMERA_STOP") &&
+            isChild && isArmed && !code.isNullOrBlank() && code == savedCode
         ) {
             try {
                 val cameraIntent = android.content.Intent(
                     this, RemoteCameraService::class.java
                 ).apply {
-                    action = RemoteCameraService.ACTION_START_CAMERA
-                    putExtra(
-                        RemoteCameraService.EXTRA_REQUEST_ID,
-                        message.data["requestId"]
-                    )
+                    action = when (command) {
+                        "CAMERA_SWITCH" -> RemoteCameraService.ACTION_SWITCH_CAMERA
+                        "CAMERA_STOP" -> RemoteCameraService.ACTION_STOP_CAMERA
+                        else -> RemoteCameraService.ACTION_START_CAMERA
+                    }
+                    putExtra(RemoteCameraService.EXTRA_REQUEST_ID, message.data["requestId"])
+                    putExtra("facing", message.data["facing"] ?: "back")
                 }
                 // This command only reaches an already armed camera service.
                 // If Android has stopped that service, no background camera
