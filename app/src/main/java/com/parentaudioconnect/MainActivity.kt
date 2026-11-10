@@ -706,10 +706,14 @@ private var receivedMp3File: File? = null
                             val status = connection.responseCode
                             if (status !in 200..299) {
                                 val detail = connection.errorStream?.bufferedReader()?.use { it.readText() }
+                                val errorJson = JSONObject(detail ?: "{}")
+                                val message = errorJson.optString(
+                                    "error", "Server menolak pendaftaran perangkat"
+                                )
+                                val serverDetails = errorJson.optString("details")
                                 throw Exception(
-                                    JSONObject(detail ?: "{}").optString(
-                                        "error", "Server menolak pendaftaran perangkat"
-                                    )
+                                    if (serverDetails.isNotBlank()) "$message: $serverDetails (HTTP $status)"
+                                    else "$message (HTTP $status)"
                                 )
                             }
                         } finally {
