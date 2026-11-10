@@ -9,6 +9,7 @@ import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -16,6 +17,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.ScrollView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 
@@ -119,25 +121,28 @@ private var receivedMp3File: File? = null
 
         rootLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(32, 40, 32, 40)
-            setBackgroundColor(Color.rgb(15, 20, 35))
+            gravity = Gravity.TOP
+            setPadding(dp(18), dp(18), dp(18), dp(28))
+            setBackgroundColor(Color.rgb(244, 246, 250))
         }
 
         val title = TextView(this).apply {
-            text = "SantetHP"
-            textSize = 28f
+            text = "SantetHP\\nKontrol Perangkat Keluarga"
+            textSize = 23f
             setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, 28)
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(22), dp(24), dp(22), dp(24))
+            background = roundedPanel(Color.rgb(55, 80, 220), 24)
+            elevation = dp(3).toFloat()
         }
 
         statusText = TextView(this).apply {
             text = "Memeriksa koneksi..."
-            textSize = 16f
-            setTextColor(Color.LTGRAY)
-            gravity = Gravity.CENTER
-            setPadding(0, 20, 0, 20)
+            textSize = 14f
+            setTextColor(Color.rgb(75, 83, 102))
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            background = roundedPanel(Color.WHITE, 16)
         }
 
         childAudioActivityText = TextView(this).apply {
@@ -149,10 +154,11 @@ private var receivedMp3File: File? = null
         }
 
         codeText = TextView(this).apply {
-            textSize = 30f
-            setTextColor(Color.rgb(128, 222, 234))
+            textSize = 26f
+            setTextColor(Color.rgb(55, 80, 220))
             gravity = Gravity.CENTER
-            setPadding(0, 20, 0, 20)
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+            background = roundedPanel(Color.WHITE, 18)
         }
 
         parentButton = createButton("ORTU")
@@ -184,7 +190,9 @@ private var receivedMp3File: File? = null
             AppUpdateManager.checkForUpdates(this, versionCode) { message -> statusText.text = message }
         }
 
-        rootLayout.addView(title)
+        rootLayout.addView(title, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply { bottomMargin = dp(16) })
         rootLayout.addView(updateButton)
         rootLayout.addView(parentButton)
         rootLayout.addView(childButton)
@@ -201,7 +209,13 @@ private var receivedMp3File: File? = null
         rootLayout.addView(adminWhatsAppButton)
 
         showRoleSelection()
-        setContentView(rootLayout)
+        val scrollView = ScrollView(this).apply {
+            fillViewport = true
+            isVerticalScrollBarEnabled = false
+            setBackgroundColor(Color.rgb(244, 246, 250))
+            addView(rootLayout)
+        }
+        setContentView(scrollView)
 
         connectFirebase()
     }
@@ -333,17 +347,30 @@ private var receivedMp3File: File? = null
             }
     }
 
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
+
+    private fun roundedPanel(color: Int, radiusDp: Int): GradientDrawable =
+        GradientDrawable().apply {
+            setColor(color)
+            cornerRadius = dp(radiusDp).toFloat()
+        }
+
     private fun createButton(label: String): Button {
         return Button(this).apply {
             text = label
-            textSize = 15f
+            textSize = 14f
             isAllCaps = false
-
+            setTextColor(Color.WHITE)
+            background = roundedPanel(Color.rgb(66, 95, 235), 16)
+            elevation = dp(2).toFloat()
+            minHeight = dp(52)
+            stateListAnimator = null
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply {
-                setMargins(0, 12, 0, 12)
+                setMargins(0, dp(7), 0, dp(7))
             }
         }
     }
@@ -403,7 +430,21 @@ private var receivedMp3File: File? = null
         childrenContainer.removeAllViews()
         childNames.forEach { (code, name) ->
             val connected = childConnected[code] == true
-            val item = createButton("$name  •  ${if (connected) "TERHUBUNG" else "MENUNGGU / OFFLINE"}")
+            val item = TextView(this).apply {
+                text = "$name\\n${if (connected) "● TERHUBUNG" else "○ MENUNGGU / OFFLINE"}"
+                textSize = 15f
+                setTextColor(Color.rgb(48, 56, 74))
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(18), dp(14), dp(18), dp(14))
+                background = roundedPanel(Color.WHITE, 16)
+                elevation = dp(1).toFloat()
+                isClickable = true
+                isFocusable = true
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, dp(5), 0, dp(5)) }
+            }
             item.setOnClickListener { selectChild(code) }
             item.setOnLongClickListener { promptRenameChild(code); true }
             childrenContainer.addView(item)
