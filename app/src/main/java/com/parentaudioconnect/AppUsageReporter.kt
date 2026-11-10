@@ -31,9 +31,20 @@ object AppUsageReporter {
         val prefs = context.getSharedPreferences("parent_audio", Context.MODE_PRIVATE)
         val code = prefs.getString("pair_code", null)
         if (code.isNullOrBlank() || prefs.getString("pair_role", null) != "child") return
-        if (!hasUsageAccess(context)) return
 
         try {
+            if (!hasUsageAccess(context)) {
+                withContext(Dispatchers.IO) {
+                    Tasks.await(
+                        FirebaseFirestore.getInstance().collection("pairings").document(code)
+                            .set(
+                                mapOf("appUsagePermissionGranted" to false, "appUsageAt" to FieldValue.serverTimestamp()),
+                                SetOptions.merge()
+                            )
+                    )
+                }
+                return
+            }
             val now = System.currentTimeMillis()
             val manager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
             val usage = manager.queryUsageStats(
@@ -73,6 +84,7 @@ object AppUsageReporter {
                         .set(
                             mapOf(
                                 "appUsageSummary" to summary,
+                                "appUsagePermissionGranted" to true,
                                 "appUsageAt" to FieldValue.serverTimestamp()
                             ),
                             SetOptions.merge()
