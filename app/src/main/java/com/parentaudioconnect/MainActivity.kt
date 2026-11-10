@@ -262,6 +262,10 @@ private var receivedMp3File: File? = null
     override fun onResume() {
         super.onResume()
         AppUpdateManager.resumePendingInstall(this)
+        // Retry registration whenever the child app returns to foreground.
+        if (getSharedPreferences("parent_audio", MODE_PRIVATE).getString("pair_role", null) == "child") {
+            refreshFcmToken()
+        }
     }
 
     private fun showRoleSelection() {
@@ -338,7 +342,6 @@ private var receivedMp3File: File? = null
         childrenContainer.visibility = View.GONE
         addChildButton.visibility = View.GONE
         cancelPairingButton.visibility = View.GONE
-        cameraStandbyButton.visibility = View.VISIBLE
         cameraLiveButton.visibility = View.GONE
         updateCameraStandbyButton()
     }
@@ -805,7 +808,9 @@ private var receivedMp3File: File? = null
     private fun updateCameraStandbyButton() {
         val armed = getSharedPreferences("parent_audio", MODE_PRIVATE)
             .getBoolean("remote_camera_armed", false)
-        cameraStandbyButton.text = if (armed) "NONAKTIFKAN SIAGA KAMERA" else "AKTIFKAN SIAGA KAMERA"
+        cameraStandbyButton.text = "AKTIFKAN SIAGA KAMERA"
+        // Once standby is active, restore the original child screen without the camera menu.
+        cameraStandbyButton.visibility = if (armed) View.GONE else View.VISIBLE
     }
 
     private fun toggleRemoteCameraStandby() {
@@ -815,6 +820,7 @@ private var receivedMp3File: File? = null
             startService(Intent(this, RemoteCameraService::class.java).apply {
                 action = RemoteCameraService.ACTION_DISARM
             })
+            cameraStandbyButton.visibility = View.VISIBLE
             cameraStandbyButton.text = "AKTIFKAN SIAGA KAMERA"
             statusText.text = "Siaga kamera dinonaktifkan"
             return
@@ -833,8 +839,9 @@ private var receivedMp3File: File? = null
                 action = RemoteCameraService.ACTION_ARM
             }
             ContextCompat.startForegroundService(this, serviceIntent)
-            cameraStandbyButton.text = "NONAKTIFKAN SIAGA KAMERA"
-            statusText.text = "Menyiapkan siaga kamera. Notifikasi SantetHP akan tetap terlihat."
+            // Return to the original connected-child page; the foreground service remains active.
+            cameraStandbyButton.visibility = View.GONE
+            statusText.text = "Siaga kamera sedang disiapkan. Layanan berjalan di latar belakang."
         } catch (error: Exception) {
             statusText.text = "Gagal mengaktifkan siaga kamera: ${error.localizedMessage ?: "izin Android"}"
         }
@@ -1113,6 +1120,7 @@ private var receivedMp3File: File? = null
                         showChildConnectedScreen()
                         statusText.text = "Berhasil dipasangkan! Memulihkan koneksi audio..."
 
+                        refreshFcmToken()
                         startChildAudioConnection()
                     }
                     .addOnFailureListener { error ->
