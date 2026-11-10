@@ -121,16 +121,27 @@ class ChildAudioConnectionService : Service() {
                                         ChildAudioActivityReporter.setLiveAudioActive(
                                             applicationContext, true
                                         )
+                                        updateNotification("Audio live sedang diputar • mikrofon anak mati")
                                         startLiveAudioHeartbeat()
                                     }
                                 }
                                 is RoomEvent.TrackMuted -> {
                                     if (event.publication.kind == Track.Kind.AUDIO) {
-                                        // The publisher can mute without unsubscribing the track.
-                                        activeRemoteAudioTrackIds.clear()
-                                        stopLiveAudioHeartbeat()
+                                        // Keep other subscribed audio tracks active if any remain.
+                                        val mutedTrack = event.publication.track
+                                        if (mutedTrack is RemoteAudioTrack) {
+                                            activeRemoteAudioTrackIds.remove(mutedTrack.hashCode())
+                                        } else {
+                                            activeRemoteAudioTrackIds.clear()
+                                        }
+                                        val stillActive = activeRemoteAudioTrackIds.isNotEmpty()
+                                        if (!stillActive) stopLiveAudioHeartbeat()
                                         ChildAudioActivityReporter.setLiveAudioActive(
-                                            applicationContext, false
+                                            applicationContext, stillActive
+                                        )
+                                        updateNotification(
+                                            if (stillActive) "Audio live masih diputar"
+                                            else "Audio live berhenti • menunggu orang tua"
                                         )
                                     }
                                 }
@@ -144,6 +155,7 @@ class ChildAudioConnectionService : Service() {
                                         ChildAudioActivityReporter.setLiveAudioActive(
                                             applicationContext, true
                                         )
+                                        updateNotification("Audio live sedang diputar • mikrofon anak mati")
                                         startLiveAudioHeartbeat()
                                     }
                                 }
@@ -155,6 +167,7 @@ class ChildAudioConnectionService : Service() {
                                             ChildAudioActivityReporter.setLiveAudioActive(
                                                 applicationContext, false
                                             )
+                                            updateNotification("Audio live berhenti • koneksi tetap aktif")
                                         }
                                         // Keep the requested maximum volume after each audio session.
                                     }
@@ -165,6 +178,7 @@ class ChildAudioConnectionService : Service() {
                                     ChildAudioActivityReporter.setLiveAudioActive(
                                         applicationContext, false
                                     )
+                                    updateNotification("Koneksi audio terputus • mencoba kembali")
                                 }
                                 else -> Unit
                             }
@@ -183,7 +197,11 @@ class ChildAudioConnectionService : Service() {
                         context = applicationContext,
                         room = newRoom,
                         scope = serviceScope,
-                        onStatus = { message -> updateNotification(message) },
+                        onStatus = { message ->
+                            // onReceived starts playback and sets its own notification.
+                            // Do not overwrite that state with the generic transfer-complete text.
+                            if (message != "MP3 berhasil diterima!") updateNotification(message)
+                        },
                         onReceived = { file ->
                             maximizeMediaVolume()
                             val playbackIntent = Intent(applicationContext, AudioPlaybackService::class.java).apply {
