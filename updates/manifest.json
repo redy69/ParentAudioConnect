@@ -1,0 +1,5 @@
+{
+  "dataVersion": 1,
+  "dataFiles": [],
+  "notes": "SantetHP hybrid update manifest. Tambahkan file data non-executable dengan menaikkan dataVersion dan mengisi path, url HTTPS, serta sha256."
+}
