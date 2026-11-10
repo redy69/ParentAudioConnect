@@ -264,6 +264,7 @@ private var receivedMp3File: File? = null
         AppUpdateManager.resumePendingInstall(this)
         // Retry registration whenever the child app returns to foreground.
         if (getSharedPreferences("parent_audio", MODE_PRIVATE).getString("pair_role", null) == "child") {
+            updateCameraStandbyButton()
             refreshFcmToken()
         }
     }
