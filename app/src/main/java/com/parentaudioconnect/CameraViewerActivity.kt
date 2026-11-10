@@ -194,6 +194,11 @@ class CameraViewerActivity : Activity() {
         }
     }
 
+    @Deprecated("Deprecated in Android API")
+    override fun onBackPressed() {
+        stopCameraAndClose()
+    }
+
     override fun onDestroy() {
         scope.cancel()
         val activeRoom = room
