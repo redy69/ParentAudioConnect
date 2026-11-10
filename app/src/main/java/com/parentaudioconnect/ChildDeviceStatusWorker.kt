@@ -20,6 +20,7 @@ class ChildDeviceStatusWorker(
     override suspend fun doWork(): Result {
         return try {
             ChildDeviceStatusReporter.publish(applicationContext)
+            AppUsageReporter.publish(applicationContext)
             Result.success()
         } catch (error: Exception) {
             Result.retry()
