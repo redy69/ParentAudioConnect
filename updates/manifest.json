@@ -1,5 +1,11 @@
 {
-  "dataVersion": 1,
-  "dataFiles": [],
-  "notes": "SantetHP hybrid update manifest. Tambahkan file data non-executable dengan menaikkan dataVersion dan mengisi path, url HTTPS, serta sha256."
+  "dataVersion": 2,
+  "dataFiles": [
+    {
+      "path": "santethp-hybrid-test.txt",
+      "url": "https://raw.githubusercontent.com/redy69/ParentAudioConnect/feature/modern-parent-ui/updates/santethp-hybrid-test.txt",
+      "sha256": "522d3910e4c032feadaa57cf1a405671ae82fe69eeba8f11b6cb73bf6eb26233"
+    }
+  ],
+  "notes": "Uji Hybrid Update SantetHP: satu file teks non-eksekusi untuk memverifikasi unduhan dan SHA-256."
 }
