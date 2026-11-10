@@ -14,6 +14,9 @@ import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
 import io.livekit.android.LiveKit
 import io.livekit.android.room.Room
+import io.livekit.android.room.track.CameraPosition
+import io.livekit.android.room.track.LocalVideoTrack
+import io.livekit.android.room.track.Track
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +44,7 @@ class RemoteCameraService : Service() {
         const val ACTION_ARM = "com.santethp.camera.ARM"
         const val ACTION_START_CAMERA = "com.santethp.camera.START"
         const val ACTION_STOP_CAMERA = "com.santethp.camera.STOP"
+        const val ACTION_SWITCH_CAMERA = "com.santethp.camera.SWITCH"
         const val ACTION_DISARM = "com.santethp.camera.DISARM"
         const val EXTRA_REQUEST_ID = "request_id"
         private const val CHANNEL_ID = "remote_camera"
@@ -51,6 +55,7 @@ class RemoteCameraService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var room: Room? = null
+    private var cameraTrack: LocalVideoTrack? = null
     private var cameraStopJob: Job? = null
     @Volatile private var connecting = false
 
@@ -63,17 +68,14 @@ class RemoteCameraService : Service() {
         when (intent?.action) {
             ACTION_ARM -> armFromVisibleApp()
             ACTION_START_CAMERA -> {
-                if (isArmed()) {
-                    if (room == null) {
-                        updateNotification("Siaga kamera terputus. Buka aplikasi anak untuk mengaktifkan ulang.")
-                    } else {
-                        startCamera(intent.getStringExtra(EXTRA_REQUEST_ID))
-                    }
+                if (isArmed() && room != null) {
+                    startCamera(intent.getStringExtra(EXTRA_REQUEST_ID), intent.getStringExtra("facing") ?: "back")
                 } else {
-                    stopSelf()
+                    updateNotification("Siaga kamera tidak aktif atau koneksi terputus. Buka aplikasi anak.")
                 }
             }
             ACTION_STOP_CAMERA -> stopCamera("Kamera dihentikan")
+            ACTION_SWITCH_CAMERA -> switchCamera(intent.getStringExtra("facing") ?: "back")
             ACTION_DISARM -> disarm()
             else -> {
                 if (!isArmed()) stopSelf()
@@ -138,14 +140,19 @@ class RemoteCameraService : Service() {
         }
     }
 
-    private fun startCamera(requestId: String?) {
+    private fun startCamera(requestId: String?, facing: String) {
         if (cameraStopJob?.isActive == true) return
         cameraStopJob = scope.launch {
             try {
                 val activeRoom = room ?: throw IllegalStateException("Ruang kamera belum terhubung")
                 updateNotification("Permintaan diterima • kamera sedang diaktifkan")
+                activeRoom.localParticipant.videoTrackCaptureDefaults =
+                    activeRoom.localParticipant.videoTrackCaptureDefaults.copy(
+                        position = if (facing == "front") CameraPosition.FRONT else CameraPosition.BACK
+                    )
                 val enabled = activeRoom.localParticipant.setCameraEnabled(true)
                 if (!enabled) throw IllegalStateException("Android tidak dapat mengaktifkan kamera")
+                cameraTrack = activeRoom.localParticipant.getTrackPublication(Track.Source.CAMERA)?.track as? LocalVideoTrack
                 updateNotification("KAMERA AKTIF • tayangan dibagikan ke orang tua")
                 delay(MAX_CAMERA_SESSION_MS)
                 stopCamera("Sesi kamera berakhir otomatis setelah 10 menit")
@@ -157,11 +164,29 @@ class RemoteCameraService : Service() {
         }
     }
 
+    private fun switchCamera(facing: String) {
+        scope.launch {
+            try {
+                val track = cameraTrack
+                if (track == null) {
+                    startCamera(null, facing)
+                } else {
+                    track.switchCamera(position = if (facing == "front") CameraPosition.FRONT else CameraPosition.BACK)
+                    val side = if (facing == "front") "depan" else "belakang"
+                    updateNotification("Kamera " + side + " aktif")
+                }
+            } catch (error: Exception) {
+                updateNotification("Gagal mengganti kamera: " + (error.localizedMessage ?: "kesalahan"))
+            }
+        }
+    }
+
     private fun stopCamera(message: String) {
         cameraStopJob?.cancel()
         cameraStopJob = null
         scope.launch {
             try { room?.localParticipant?.setCameraEnabled(false) } catch (_: Exception) { }
+            cameraTrack = null
             updateNotification(message + " • layanan tetap siaga")
         }
     }
@@ -176,6 +201,7 @@ class RemoteCameraService : Service() {
             try { room?.disconnect() } catch (_: Exception) { }
             try { room?.release() } catch (_: Exception) { }
             room = null
+            cameraTrack = null
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
@@ -243,6 +269,7 @@ class RemoteCameraService : Service() {
         scope.cancel()
         val activeRoom = room
         room = null
+        cameraTrack = null
         if (activeRoom != null) {
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
                 try { activeRoom.localParticipant.setCameraEnabled(false) } catch (_: Exception) { }
