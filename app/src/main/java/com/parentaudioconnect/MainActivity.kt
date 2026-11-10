@@ -706,8 +706,7 @@ private var receivedMp3File: File? = null
                             }
                             val status = connection.responseCode
                             if (status !in 200..299) {
-                                val stream = connection.errorStream
-                                val detail = stream?.bufferedReader()?.use { it.readText() }
+                                val detail = connection.errorStream?.bufferedReader()?.use { it.readText() }
                                 throw Exception(
                                     JSONObject(detail ?: "{}").optString(
                                         "error", "Server menolak pendaftaran perangkat"
@@ -718,16 +717,19 @@ private var receivedMp3File: File? = null
                             connection.disconnect()
                         }
                     }
-                }
-                if (role == "child" && currentRole == "child") {
-                    statusText.text = "HP anak berhasil terdaftar untuk notifikasi kamera"
-                }
+                    if (role == "child" && currentRole == "child") {
+                        statusText.text = "HP anak berhasil terdaftar untuk notifikasi kamera"
+                    }
                 } catch (error: Exception) {
                     android.util.Log.w("ParentAudioFCM", "Device token registration failed", error)
                     if (role == "child" && currentRole == "child") {
                         statusText.text = "Pendaftaran perangkat gagal: ${error.message ?: "periksa koneksi"}"
                     }
                 }
+            }
+        }.addOnFailureListener { error ->
+            if (role == "child" && currentRole == "child") {
+                statusText.text = "Gagal mengambil token Firebase: ${error.message ?: "coba lagi"}"
             }
         }
     }
