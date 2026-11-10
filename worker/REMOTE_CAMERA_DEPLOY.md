@@ -19,7 +19,7 @@ Add one new **secret** (not a plain text variable):
 - Name: `FCM_SERVICE_ACCOUNT_JSON`
 - Value: the complete JSON content of a Firebase service-account key for project `parentaudioconnect`.
 
-The service account must have permission to send Firebase Cloud Messaging messages (Firebase Cloud Messaging API enabled). Do not commit the JSON key to GitHub and do not paste it into chat.
+The service account must have permission to send Firebase Cloud Messaging messages (Firebase Cloud Messaging API enabled) and read/write the Firestore `pairings` collection. Grant the service account a Firestore-capable IAM role such as **Cloud Datastore User** (`roles/datastore.user`) in the Google Cloud project. The Worker uses this service-account access for pairing-token storage, so registration does not depend on client Firestore security-rule writes. Do not commit the JSON key to GitHub and do not paste it into chat.
 
 ## Endpoints
 
