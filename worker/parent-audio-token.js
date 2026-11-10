@@ -47,14 +47,79 @@ function pairingUrl(code) {
     "/databases/(default)/documents/pairings/" + encodeURIComponent(code);
 }
 
+function pemToArrayBuffer(pem) {
+  const body = pem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g, "");
+  const binary = atob(body);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+async function getFcmAccessToken(env) {
+  if (!env.FCM_SERVICE_ACCOUNT_JSON) throw new Error("FCM service account is not configured");
+  const account = JSON.parse(env.FCM_SERVICE_ACCOUNT_JSON);
+  if (!account.client_email || !account.private_key || !account.project_id) {
+    throw new Error("FCM service account is invalid");
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const unsigned = base64url(encoder.encode(JSON.stringify({ alg: "RS256", typ: "JWT" }))) + "." +
+    base64url(encoder.encode(JSON.stringify({
+      iss: account.client_email,
+      scope: "https://www.googleapis.com/auth/firebase.messaging",
+      aud: "https://oauth2.googleapis.com/token",
+      iat: now,
+      exp: now + 3600
+    })));
+  const key = await crypto.subtle.importKey(
+    "pkcs8", pemToArrayBuffer(account.private_key),
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]
+  );
+  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, encoder.encode(unsigned));
+  const assertion = unsigned + "." + base64url(new Uint8Array(signature));
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion
+    })
+  });
+  if (!response.ok) throw new Error("Could not obtain FCM access token");
+  const result = await response.json();
+  if (!result.access_token) throw new Error("FCM access token missing");
+  return { accessToken: result.access_token, projectId: account.project_id };
+}
+
+async function sendCameraRequest(env, fcmToken, code, requestId) {
+  const credentials = await getFcmAccessToken(env);
+  const response = await fetch(
+    "https://fcm.googleapis.com/v1/projects/" + encodeURIComponent(credentials.projectId) + "/messages:send",
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + credentials.accessToken,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: {
+          token: fcmToken,
+          data: { command: "CAMERA_START", code, requestId, facing: "back" },
+          android: { priority: "HIGH", ttl: "30s" }
+        }
+      })
+    }
+  );
+  if (!response.ok) throw new Error("FCM rejected camera request");
+  return await response.json();
+}
+
 export default {
   async fetch(request, env) {
     try {
       if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
       const url = new URL(request.url);
-      if (url.pathname !== "/token" && url.pathname !== "/register-device") {
-        return jsonResponse({ error: "Not found" }, 404);
-      }
+      const allowedPaths = ["/token", "/register-device", "/request-camera", "/camera-token"];
+      if (!allowedPaths.includes(url.pathname)) return jsonResponse({ error: "Not found" }, 404);
 
       const body = await request.json();
       const code = String(body.code || "").trim().toUpperCase();
@@ -99,14 +164,35 @@ export default {
         return jsonResponse({ registered: true, role: callerUid === parentUid ? "parent" : "child" });
       }
 
+      if (url.pathname === "/request-camera") {
+        if (callerUid !== parentUid) return jsonResponse({ error: "Only the parent can request the camera" }, 403);
+        const childFcmToken = fields.childFcmToken?.stringValue;
+        if (!childFcmToken) return jsonResponse({ error: "Child device has not registered for notifications" }, 409);
+        if (typeof body.requestId !== "string" || !/^[A-Za-z0-9_-]{8,80}$/.test(body.requestId)) {
+          return jsonResponse({ error: "Invalid request ID" }, 400);
+        }
+        await sendCameraRequest(env, childFcmToken, code, body.requestId);
+        return jsonResponse({ sent: true, requestId: body.requestId });
+      }
+
       if (!env.LIVEKIT_API_KEY || !env.LIVEKIT_API_SECRET || !env.LIVEKIT_URL) {
         return jsonResponse({ error: "Server configuration error" }, 500);
       }
       const digest = await crypto.subtle.digest("SHA-256", encoder.encode(code));
-      const room = "pair_" + Array.from(new Uint8Array(digest))
+      const roomBase = "pair_" + Array.from(new Uint8Array(digest))
         .map(byte => byte.toString(16).padStart(2, "0")).join("");
       const isParent = callerUid === parentUid;
-      const token = await createLiveKitToken(env, callerUid, room, isParent);
+
+      if (url.pathname === "/camera-token") {
+        const cameraRoom = roomBase + "_camera";
+        const token = await createLiveKitToken(env, callerUid, cameraRoom, !isParent);
+        return jsonResponse({
+          token, serverUrl: env.LIVEKIT_URL,
+          role: isParent ? "parent" : "child", expiresIn: 600
+        });
+      }
+
+      const token = await createLiveKitToken(env, callerUid, roomBase, isParent);
       return jsonResponse({ token, serverUrl: env.LIVEKIT_URL, role: isParent ? "parent" : "child", expiresIn: 600 });
     } catch (error) {
       return jsonResponse({ error: "Internal server error" }, 500);
