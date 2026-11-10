@@ -31,6 +31,16 @@
         </activity>
 
         <service
+            android:name=".RemoteCameraService"
+            android:exported="false"
+            android:foregroundServiceType="camera" />
+
+        <activity
+            android:name=".CameraViewerActivity"
+            android:exported="false"
+            android:screenOrientation="sensor" />
+
+        <service
             android:name=".ChildAudioConnectionService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
