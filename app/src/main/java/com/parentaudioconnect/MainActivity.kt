@@ -202,20 +202,20 @@ private var receivedMp3File: File? = null
             text = "Memeriksa koneksi..."
             textSize = 13.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.01f
-            setTextColor(Color.rgb(48, 65, 96))
+            letterSpacing = 0.008f
+            setTextColor(Color.rgb(39, 61, 101))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(16), dp(14), dp(16), dp(14))
+            setPadding(dp(16), dp(15), dp(16), dp(15))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
             ).apply {
-                cornerRadius = dp(18).toFloat()
-                setStroke(dp(1), Color.rgb(211, 224, 246))
+                cornerRadius = dp(19).toFloat()
+                setStroke(dp(1), Color.rgb(204, 220, 246))
             }
             elevation = dp(2).toFloat()
-            minHeight = dp(52)
+            minHeight = dp(56)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { setMargins(0, dp(5), 0, dp(7)) }
@@ -223,19 +223,19 @@ private var receivedMp3File: File? = null
 
         childAudioActivityText = TextView(this).apply {
             text = "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
-            textSize = 13.5f
+            textSize = 13f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.005f
-            setTextColor(Color.rgb(35, 53, 88))
+            letterSpacing = 0.008f
+            setTextColor(Color.rgb(35, 57, 91))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(16), dp(17), dp(16), dp(17))
+            setPadding(dp(16), dp(16), dp(16), dp(16))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(240, 246, 255))
+                intArrayOf(Color.WHITE, Color.rgb(237, 245, 255))
             ).apply {
-                cornerRadius = dp(18).toFloat()
-                setStroke(dp(1), Color.rgb(211, 225, 248))
+                cornerRadius = dp(19).toFloat()
+                setStroke(dp(1), Color.rgb(203, 220, 247))
             }
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
@@ -434,10 +434,10 @@ private var receivedMp3File: File? = null
         rootLayout.addView(childModePanel)
         val deviceSectionTitle = TextView(this).apply {
             text = "PERANGKAT ANAK"
-            textSize = 12f
-            setTextColor(Color.rgb(57, 88, 151))
+            textSize = 11.5f
+            setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.12f
+            letterSpacing = 0.105f
             setPadding(dp(4), dp(7), dp(4), dp(8))
         }
         rootLayout.addView(deviceSectionTitle)
@@ -457,10 +457,10 @@ private var receivedMp3File: File? = null
         rootLayout.addView(childButton)
         val statusHeading = TextView(this).apply {
             text = "STATUS KONEKSI"
-            textSize = 12f
-            setTextColor(Color.rgb(57, 88, 151))
+            textSize = 11.5f
+            setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.12f
+            letterSpacing = 0.105f
             setPadding(dp(4), dp(13), dp(4), dp(8))
         }
         rootLayout.addView(statusHeading)
@@ -470,10 +470,10 @@ private var receivedMp3File: File? = null
         rootLayout.addView(codeText)
         val activityHeading = TextView(this).apply {
             text = "AKTIVITAS PERANGKAT"
-            textSize = 12f
-            setTextColor(Color.rgb(57, 88, 151))
+            textSize = 11.5f
+            setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.12f
+            letterSpacing = 0.105f
             setPadding(dp(4), dp(14), dp(4), dp(8))
         }
         rootLayout.addView(activityHeading)
@@ -483,10 +483,10 @@ private var receivedMp3File: File? = null
         rootLayout.addView(cancelPairingButton)
         val controlHeading = TextView(this).apply {
             text = "KONTROL UTAMA"
-            textSize = 12f
-            setTextColor(Color.rgb(57, 88, 151))
+            textSize = 11.5f
+            setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.12f
+            letterSpacing = 0.105f
             setPadding(dp(4), dp(15), dp(4), dp(8))
         }
         rootLayout.addView(controlHeading)
