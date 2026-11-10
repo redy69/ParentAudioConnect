@@ -77,6 +77,7 @@ private lateinit var playMp3Button: Button
     private lateinit var childrenContainer: LinearLayout
     private lateinit var addChildButton: Button
     private lateinit var cancelPairingButton: Button
+    private lateinit var updateButton: Button
     private var pendingPairingCode: String? = null
 
     private val childNames = linkedMapOf<String, String>()
@@ -163,6 +164,7 @@ private var receivedMp3File: File? = null
         adminWhatsAppButton = createButton("CHAT ADMIN")
         addChildButton = createButton("TAMBAH ANAK")
         cancelPairingButton = createButton("BATALKAN KODE")
+        updateButton = createButton("PERIKSA PEMBARUAN")
         childrenContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
@@ -177,8 +179,13 @@ private var receivedMp3File: File? = null
         adminWhatsAppButton.setOnClickListener { openAdminWhatsApp() }
         addChildButton.setOnClickListener { createPairingCode() }
         cancelPairingButton.setOnClickListener { cancelPendingPairingCode() }
+        updateButton.setOnClickListener {
+            val versionCode = packageManager.getPackageInfo(packageName, 0).versionCode
+            AppUpdateManager.checkForUpdates(this, versionCode) { message -> statusText.text = message }
+        }
 
         rootLayout.addView(title)
+        rootLayout.addView(updateButton)
         rootLayout.addView(parentButton)
         rootLayout.addView(childButton)
         rootLayout.addView(statusText)
@@ -197,8 +204,6 @@ private var receivedMp3File: File? = null
         setContentView(rootLayout)
 
         connectFirebase()
-        val installedVersionCode = packageManager.getPackageInfo(packageName, 0).versionCode
-        AppUpdateManager.checkForUpdates(this, installedVersionCode)
     }
 
     override fun onResume() {
