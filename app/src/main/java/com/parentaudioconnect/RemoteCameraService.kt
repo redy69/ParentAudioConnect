@@ -125,7 +125,7 @@ class RemoteCameraService : Service() {
                 throw IllegalStateException("Server tidak memberikan akses kamera anak")
             }
             val newRoom = LiveKit.create(applicationContext)
-            newRoom.connect(response.getString("serverUrl"), response.getString("token"))
+            newRoom.connect(url = response.getString("serverUrl"), token = response.getString("token"))
             newRoom.localParticipant.setMicrophoneEnabled(false)
             room = newRoom
             updateNotification("Siaga kamera aktif • menunggu permintaan orang tua")
