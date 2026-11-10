@@ -198,16 +198,19 @@ private var receivedMp3File: File? = null
 
         statusText = TextView(this).apply {
             text = "Memeriksa koneksi..."
-            textSize = 14f
-            setTextColor(Color.rgb(76, 88, 110))
+            textSize = 13.5f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            letterSpacing = 0.01f
+            setTextColor(Color.rgb(48, 65, 96))
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(14), dp(16), dp(14))
+            setLineSpacing(dp(2).toFloat(), 1f)
+            setPadding(dp(17), dp(15), dp(17), dp(15))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(247, 250, 255))
+                intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
             ).apply {
-                cornerRadius = dp(16).toFloat()
-                setStroke(dp(1), Color.rgb(225, 232, 244))
+                cornerRadius = dp(17).toFloat()
+                setStroke(dp(1), Color.rgb(211, 224, 246))
             }
             elevation = dp(2).toFloat()
             minHeight = dp(54)
@@ -218,16 +221,19 @@ private var receivedMp3File: File? = null
 
         childAudioActivityText = TextView(this).apply {
             text = "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
-            textSize = 15f
-            setTextColor(Color.rgb(42, 54, 76))
+            textSize = 14f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            letterSpacing = 0.005f
+            setTextColor(Color.rgb(35, 53, 88))
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(18), dp(20), dp(18), dp(20))
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(dp(18), dp(19), dp(18), dp(19))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(247, 250, 255))
+                intArrayOf(Color.WHITE, Color.rgb(240, 246, 255))
             ).apply {
                 cornerRadius = dp(18).toFloat()
-                setStroke(dp(1), Color.rgb(226, 233, 246))
+                setStroke(dp(1), Color.rgb(211, 225, 248))
             }
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
@@ -236,11 +242,23 @@ private var receivedMp3File: File? = null
         }
 
         codeText = TextView(this).apply {
-            textSize = 26f
-            setTextColor(Color.rgb(45, 91, 210))
+            textSize = 27f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            letterSpacing = 0.12f
+            setTextColor(Color.rgb(39, 78, 180))
             gravity = Gravity.CENTER
-            setPadding(dp(16), dp(16), dp(16), dp(16))
-            background = roundedPanel(Color.WHITE, 18)
+            setPadding(dp(16), dp(18), dp(16), dp(18))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(232, 240, 255))
+            ).apply {
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), Color.rgb(207, 222, 248))
+            }
+            elevation = dp(2).toFloat()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(5), 0, dp(7)) }
         }
 
         parentButton = createButton("ORTU")
@@ -357,9 +375,10 @@ private var receivedMp3File: File? = null
         val deviceSectionTitle = TextView(this).apply {
             text = "PERANGKAT ANAK"
             textSize = 12f
-            setTextColor(Color.rgb(104, 117, 140))
+            setTextColor(Color.rgb(57, 88, 151))
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setPadding(dp(4), dp(3), dp(4), dp(7))
+            letterSpacing = 0.12f
+            setPadding(dp(4), dp(5), dp(4), dp(9))
         }
         rootLayout.addView(deviceSectionTitle)
         parentOnlyViews.add(deviceSectionTitle)
@@ -379,9 +398,10 @@ private var receivedMp3File: File? = null
         val statusHeading = TextView(this).apply {
             text = "STATUS KONEKSI"
             textSize = 12f
-            setTextColor(Color.rgb(104, 117, 140))
+            setTextColor(Color.rgb(57, 88, 151))
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setPadding(dp(4), dp(12), dp(4), dp(7))
+            letterSpacing = 0.12f
+            setPadding(dp(4), dp(14), dp(4), dp(9))
         }
         rootLayout.addView(statusHeading)
         parentOnlyViews.add(statusHeading)
@@ -390,9 +410,10 @@ private var receivedMp3File: File? = null
         val activityHeading = TextView(this).apply {
             text = "AKTIVITAS PERANGKAT"
             textSize = 12f
-            setTextColor(Color.rgb(104, 117, 140))
+            setTextColor(Color.rgb(57, 88, 151))
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setPadding(dp(12), dp(14), dp(4), dp(7))
+            letterSpacing = 0.12f
+            setPadding(dp(4), dp(15), dp(4), dp(9))
         }
         rootLayout.addView(activityHeading)
         parentOnlyViews.add(activityHeading)
@@ -402,9 +423,10 @@ private var receivedMp3File: File? = null
         val controlHeading = TextView(this).apply {
             text = "KONTROL UTAMA"
             textSize = 12f
-            setTextColor(Color.rgb(104, 117, 140))
+            setTextColor(Color.rgb(57, 88, 151))
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setPadding(dp(4), dp(16), dp(4), dp(5))
+            letterSpacing = 0.12f
+            setPadding(dp(4), dp(17), dp(4), dp(8))
         }
         rootLayout.addView(controlHeading)
         parentOnlyViews.add(controlHeading)
@@ -668,8 +690,14 @@ private var receivedMp3File: File? = null
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(10), dp(10), dp(8), dp(10))
-            background = roundedPanel(Color.WHITE, 18)
+            setPadding(dp(8), dp(9), dp(7), dp(9))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(246, 249, 255))
+            ).apply {
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), Color.rgb(222, 231, 247))
+            }
             elevation = dp(2).toFloat()
             isClickable = true
             isFocusable = true
@@ -677,15 +705,15 @@ private var receivedMp3File: File? = null
         }
         val iconView = TextView(this).apply {
             text = icon
-            textSize = 27f
+            textSize = 24f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(accent, blendWithWhite(accent, 0.22f))
             ).apply { cornerRadius = dp(17).toFloat() }
-            layoutParams = LinearLayout.LayoutParams(dp(50), dp(50)).apply {
-                rightMargin = dp(11)
+            layoutParams = LinearLayout.LayoutParams(dp(44), dp(44)).apply {
+                rightMargin = dp(8)
             }
         }
         val helper = when (label) {
@@ -702,15 +730,16 @@ private var receivedMp3File: File? = null
         }
         val labelView = TextView(this).apply {
             text = label
-            textSize = 12f
+            textSize = 11.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(30, 45, 72))
+            letterSpacing = 0.005f
+            setTextColor(Color.rgb(27, 43, 73))
             maxLines = 2
         }
         val helperView = TextView(this).apply {
             text = helper
-            textSize = 10f
-            setTextColor(Color.rgb(125, 136, 155))
+            textSize = 9.5f
+            setTextColor(Color.rgb(105, 120, 146))
             setPadding(0, dp(3), 0, 0)
             maxLines = 2
         }
