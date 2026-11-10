@@ -126,7 +126,7 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.TOP
             setPadding(dp(18), dp(18), dp(18), dp(28))
-            setBackgroundColor(Color.rgb(244, 246, 250))
+            setBackgroundResource(R.drawable.santethp_wallpaper)
         }
 
         val title = TextView(this).apply {
@@ -242,7 +242,7 @@ private var receivedMp3File: File? = null
         val scrollView = ScrollView(this).apply {
             isFillViewport = true
             isVerticalScrollBarEnabled = false
-            setBackgroundColor(Color.rgb(244, 246, 250))
+            setBackgroundColor(Color.TRANSPARENT)
             addView(rootLayout)
         }
         setContentView(scrollView)
@@ -391,8 +391,17 @@ private var receivedMp3File: File? = null
 
     private fun roundedPanel(color: Int, radiusDp: Int): GradientDrawable =
         GradientDrawable().apply {
-            setColor(color)
+            // Lapisan kaca transparan dengan garis putih seperti widget referensi.
+            val glassColor = when (Color.alpha(color)) {
+                255 -> Color.argb(
+                    if (color == Color.WHITE) 174 else 190,
+                    Color.red(color), Color.green(color), Color.blue(color)
+                )
+                else -> color
+            }
+            setColor(glassColor)
             cornerRadius = dp(radiusDp).toFloat()
+            setStroke(dp(1), Color.argb(185, 255, 255, 255))
         }
 
     private fun createActionButton(icon: String, label: String, accent: Int): LinearLayout {
