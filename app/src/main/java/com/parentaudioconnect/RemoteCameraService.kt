@@ -153,6 +153,7 @@ class RemoteCameraService : Service() {
                 val enabled = activeRoom.localParticipant.setCameraEnabled(true)
                 if (!enabled) throw IllegalStateException("Android tidak dapat mengaktifkan kamera")
                 cameraTrack = activeRoom.localParticipant.getTrackPublication(Track.Source.CAMERA)?.track as? LocalVideoTrack
+                cameraTrack?.switchCamera(position = if (facing == "front") CameraPosition.FRONT else CameraPosition.BACK)
                 updateNotification("KAMERA AKTIF • tayangan dibagikan ke orang tua")
                 delay(MAX_CAMERA_SESSION_MS)
                 stopCamera("Sesi kamera berakhir otomatis setelah 10 menit")
