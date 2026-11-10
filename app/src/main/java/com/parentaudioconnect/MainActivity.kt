@@ -283,7 +283,6 @@ private var receivedMp3File: File? = null
         rootLayout.addView(childrenContainer)
         parentOnlyViews.add(childrenContainer)
         rootLayout.addView(updateButton)
-        parentOnlyViews.add(updateButton)
         rootLayout.addView(parentButton)
         rootLayout.addView(childButton)
         val statusHeading = TextView(this).apply {
@@ -365,6 +364,7 @@ private var receivedMp3File: File? = null
         cancelPairingButton.visibility = View.GONE
         cameraStandbyButton.visibility = View.GONE
         cameraLiveButton.visibility = View.GONE
+        updateButton.visibility = View.GONE
     }
 
     private fun showPairingCodeScreen() {
@@ -386,11 +386,13 @@ private var receivedMp3File: File? = null
         cancelPairingButton.visibility = View.VISIBLE
         cameraStandbyButton.visibility = View.GONE
         cameraLiveButton.visibility = View.GONE
+        updateButton.visibility = View.GONE
     }
 
     private fun showParentDashboard() {
         childModePanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.VISIBLE }
+        updateButton.visibility = View.VISIBLE
         actionButtonsRow.visibility = View.VISIBLE
         parentButton.visibility = View.GONE
         childButton.visibility = View.GONE
@@ -414,6 +416,8 @@ private var receivedMp3File: File? = null
     private fun showChildConnectedScreen() {
         parentOnlyViews.forEach { it.visibility = View.GONE }
         childModePanel.visibility = View.VISIBLE
+        updateButton.visibility = View.VISIBLE
+        updateButton.text = "PERIKSA PEMBARUAN APLIKASI"
         actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.GONE
         childButton.visibility = View.GONE
@@ -513,10 +517,10 @@ private var receivedMp3File: File? = null
 
     private fun createActionButton(icon: String, label: String, accent: Int): LinearLayout {
         val card = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(dp(3), dp(8), dp(3), dp(7))
-            background = getDrawable(R.drawable.bg_app_tile)
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(10), dp(10), dp(8), dp(10))
+            background = roundedPanel(Color.WHITE, 18)
             elevation = dp(2).toFloat()
             isClickable = true
             isFocusable = true
@@ -524,29 +528,24 @@ private var receivedMp3File: File? = null
         }
         val iconView = TextView(this).apply {
             text = icon
-            textSize = if (label == "CHAT ADMIN") 27f else 30f
+            textSize = 25f
             gravity = Gravity.CENTER
-            setTextColor(if (label == "CHAT ADMIN") Color.WHITE else accent)
-            if (label == "CHAT ADMIN") {
-                background = roundedPanel(accent, 24)
-                layoutParams = LinearLayout.LayoutParams(dp(42), dp(42)).apply {
-                    bottomMargin = dp(5)
-                }
-            } else {
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, dp(42)
-                ).apply { bottomMargin = dp(5) }
+            setTextColor(Color.WHITE)
+            background = roundedPanel(accent, 28)
+            layoutParams = LinearLayout.LayoutParams(dp(46), dp(46)).apply {
+                rightMargin = dp(9)
             }
         }
         val labelView = TextView(this).apply {
             text = label
             textSize = 12f
-            setTextColor(Color.rgb(48, 56, 74))
-            gravity = Gravity.CENTER
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(30, 45, 72))
+            gravity = Gravity.CENTER_VERTICAL
             maxLines = 2
         }
         card.addView(iconView)
-        card.addView(labelView)
+        card.addView(labelView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         return card
     }
 
@@ -666,11 +665,11 @@ private var receivedMp3File: File? = null
                 ).apply { setMargins(0, dp(5), 0, dp(5)) }
             }
             val phoneIcon = TextView(this).apply {
-                text = "▣"
-                textSize = 25f
+                text = "🧒"
+                textSize = 27f
                 gravity = Gravity.CENTER
                 setTextColor(Color.rgb(45, 91, 210))
-                background = roundedPanel(Color.rgb(232, 239, 255), 14)
+                background = roundedPanel(Color.rgb(232, 239, 255), 24)
                 layoutParams = LinearLayout.LayoutParams(dp(48), dp(48)).apply {
                     rightMargin = dp(12)
                 }
