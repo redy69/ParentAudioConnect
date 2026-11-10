@@ -883,6 +883,11 @@ private var receivedMp3File: File? = null
             .putString("pair_role", role)
         if (role == "child") editor.putString("pair_code", code)
         editor.apply()
+        if (role == "child") {
+            ChildDeviceStatusWorker.schedule(this)
+        } else {
+            ChildDeviceStatusWorker.cancel(this)
+        }
 
         val token = getSharedPreferences("parent_audio", MODE_PRIVATE)
             .getString("fcm_token", null)
@@ -1229,6 +1234,7 @@ private var receivedMp3File: File? = null
             .remove("pair_code")
             .putBoolean("remote_camera_armed", false)
             .apply()
+        ChildDeviceStatusWorker.cancel(this)
 
         try {
             startService(Intent(this, RemoteCameraService::class.java).apply {
@@ -1350,6 +1356,7 @@ private var receivedMp3File: File? = null
             }
         } else {
             val code = prefs.getString("pair_code", null) ?: return
+            ChildDeviceStatusWorker.schedule(this)
             codeText.text = code
             showChildConnectedScreen()
             watchChildPairingRemoval(code)
