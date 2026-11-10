@@ -726,14 +726,15 @@ private var receivedMp3File: File? = null
         pairingListener?.remove()
         pairingListener = db.collection("pairings").document(code)
             .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null) return@addSnapshotListener
+                if (error != null || snapshot == null || snapshot.metadata.isFromCache) return@addSnapshotListener
                 if (!snapshot.exists()) handleChildPairingRemoved(code)
             }
     }
 
     private fun handleChildPairingRemoved(code: String) {
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
-        if (currentRole != "child" || prefs.getString("pair_code", null) != code) return
+        val savedCode = prefs.getString("pair_code", null)
+        if (currentRole != "child" || (!savedCode.isNullOrBlank() && savedCode != code)) return
 
         pairingListener?.remove()
         pairingListener = null
