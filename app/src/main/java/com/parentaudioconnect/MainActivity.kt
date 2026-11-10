@@ -73,6 +73,7 @@ class MainActivity : Activity(), LifecycleOwner {
     private lateinit var childAudioActivityText: TextView
     private lateinit var codeText: TextView
     private lateinit var pairingInstructionText: TextView
+    private lateinit var roleIntroText: TextView
     private lateinit var startButton: LinearLayout
     private lateinit var stopButton: LinearLayout
     private lateinit var sendMp3Button: LinearLayout
@@ -284,8 +285,43 @@ private var receivedMp3File: File? = null
             visibility = View.GONE
         }
 
-        parentButton = createButton("ORTU")
-        childButton = createButton("ANAK")
+        roleIntroText = TextView(this).apply {
+            text = "SELAMAT DATANG DI SANTETHP\\nPilih jenis perangkat untuk melanjutkan. Pastikan Anda memilih peran yang sesuai dengan HP ini."
+            textSize = 14f
+            setTextColor(Color.rgb(55, 72, 105))
+            gravity = Gravity.CENTER
+            setLineSpacing(dp(4).toFloat(), 1f)
+            setPadding(dp(18), dp(20), dp(18), dp(20))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(237, 244, 255))
+            ).apply {
+                cornerRadius = dp(20).toFloat()
+                setStroke(dp(1), Color.rgb(215, 227, 247))
+            }
+            elevation = dp(2).toFloat()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(24), 0, dp(12)) }
+            visibility = View.GONE
+        }
+        parentButton = createButton("👨‍👩‍👧  ORANG TUA\\nKelola perangkat anak")
+        childButton = createButton("📱  PERANGKAT ANAK\\nHubungkan ke orang tua")
+        listOf(parentButton, childButton).forEach { button ->
+            button.textSize = 14f
+            button.gravity = Gravity.CENTER
+            button.setLineSpacing(dp(3).toFloat(), 1f)
+            button.minHeight = dp(76)
+            button.setPadding(dp(12), dp(10), dp(12), dp(10))
+        }
+        parentButton.background = GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            intArrayOf(Color.rgb(35, 73, 174), Color.rgb(55, 105, 220))
+        ).apply { cornerRadius = dp(18).toFloat() }
+        childButton.background = GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            intArrayOf(Color.rgb(20, 135, 163), Color.rgb(34, 105, 190))
+        ).apply { cornerRadius = dp(18).toFloat() }
         startButton = createActionButton("🎙", "BICARA LIVE", Color.rgb(55, 80, 220))
         stopButton = createActionButton("🎙", "HENTIKAN LIVE", Color.rgb(220, 75, 75))
         sendMp3Button = createActionButton("♫", "PUTAR MP3", Color.rgb(55, 80, 220))
@@ -394,6 +430,7 @@ private var receivedMp3File: File? = null
             ).apply { setMargins(0, dp(12), 0, dp(14)) }
             visibility = View.GONE
         }
+        rootLayout.addView(roleIntroText)
         rootLayout.addView(childModePanel)
         val deviceSectionTitle = TextView(this).apply {
             text = "PERANGKAT ANAK"
@@ -483,6 +520,7 @@ private var receivedMp3File: File? = null
     }
 
     private fun showRoleSelection() {
+        roleIntroText.visibility = View.VISIBLE
         childModePanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
         actionButtonsRow.visibility = View.GONE
@@ -506,6 +544,7 @@ private var receivedMp3File: File? = null
     }
 
     private fun showPairingCodeScreen() {
+        roleIntroText.visibility = View.GONE
         childModePanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
         actionButtonsRow.visibility = View.GONE
@@ -529,6 +568,7 @@ private var receivedMp3File: File? = null
     }
 
     private fun showParentDashboard() {
+        roleIntroText.visibility = View.GONE
         childModePanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.VISIBLE }
         updateButton.visibility = View.VISIBLE
@@ -554,6 +594,7 @@ private var receivedMp3File: File? = null
     }
 
     private fun showChildConnectedScreen() {
+        roleIntroText.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
         childModePanel.visibility = View.VISIBLE
         updateButton.visibility = View.VISIBLE
