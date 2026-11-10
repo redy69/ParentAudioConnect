@@ -92,6 +92,9 @@ private lateinit var playMp3Button: Button
     private lateinit var cameraStandbyButton: Button
     private lateinit var cameraLiveButton: LinearLayout
     private lateinit var childModePanel: TextView
+    private lateinit var childLocationPanel: TextView
+    private lateinit var childLocationMapView: ChildLocationMapView
+    private var pendingLocationStart = false
     private val parentOnlyViews = mutableListOf<View>()
     private var pendingPairingCode: String? = null
 
@@ -128,6 +131,8 @@ private var receivedMp3File: File? = null
     private const val MIC_PERMISSION = 1001
     private const val MP3_PICKER = 1002
     private const val CAMERA_PERMISSION = 1003
+    private const val LOCATION_PERMISSION = 1004
+    private const val LOCATION_NOTIFICATION_PERMISSION = 1005
 }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -268,6 +273,7 @@ private var receivedMp3File: File? = null
             ).apply { setMargins(0, dp(4), 0, dp(6)) }
         }
 
+        childLocationMapView = ChildLocationMapView(this)
         codeText = TextView(this).apply {
             textSize = 28f
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -479,6 +485,28 @@ private var receivedMp3File: File? = null
             "🛡️  HP ANAK SIAP\n\nPerangkat berhasil terhubung\nMenunggu perintah dari HP orang tua\n\nKetuk di sini untuk membaca penjelasan dan mengatur izin riwayat aplikasi (opsional)."
         rootLayout.addView(roleIntroText)
         rootLayout.addView(childModePanel)
+        childLocationPanel = TextView(this).apply {
+            text = "📍  BERBAGI LOKASI HP INI\nNonaktif • Ketuk untuk membaca penjelasan dan mengaktifkan berbagi lokasi"
+            textSize = 13f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(35, 53, 88))
+            gravity = Gravity.CENTER
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(dp(18), dp(18), dp(18), dp(18))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(236, 246, 255))
+            ).apply {
+                cornerRadius = dp(19).toFloat()
+                setStroke(dp(1), Color.rgb(190, 218, 245))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(3), 0, dp(12)) }
+            visibility = View.GONE
+            setOnClickListener { showChildLocationConsentDialog() }
+        }
+        rootLayout.addView(childLocationPanel)
         val deviceSectionTitle = TextView(this).apply {
             text = "PERANGKAT ANAK"
             textSize = 11.5f
@@ -529,6 +557,8 @@ private var receivedMp3File: File? = null
         parentOnlyViews.add(childAudioActivityText)
         rootLayout.addView(childDeviceStatusText)
         parentOnlyViews.add(childDeviceStatusText)
+        rootLayout.addView(childLocationMapView)
+        parentOnlyViews.add(childLocationMapView)
         rootLayout.addView(cancelPairingButton)
         val controlHeading = TextView(this).apply {
             text = "KONTROL UTAMA"
@@ -571,6 +601,7 @@ private var receivedMp3File: File? = null
     private fun showRoleSelection() {
         roleIntroText.visibility = View.VISIBLE
         childModePanel.visibility = View.GONE
+        childLocationPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
         actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.VISIBLE
@@ -595,6 +626,7 @@ private var receivedMp3File: File? = null
     private fun showPairingCodeScreen() {
         roleIntroText.visibility = View.GONE
         childModePanel.visibility = View.GONE
+        childLocationPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
         actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.GONE
@@ -619,6 +651,7 @@ private var receivedMp3File: File? = null
     private fun showParentDashboard() {
         roleIntroText.visibility = View.GONE
         childModePanel.visibility = View.GONE
+        childLocationPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.VISIBLE }
         updateButton.visibility = View.VISIBLE
         actionButtonsRow.visibility = View.VISIBLE
@@ -646,6 +679,8 @@ private var receivedMp3File: File? = null
         roleIntroText.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
         childModePanel.visibility = View.VISIBLE
+        childLocationPanel.visibility = View.VISIBLE
+        updateChildLocationPanel()
         updateButton.visibility = View.VISIBLE
         updateButton.text = "PERIKSA PEMBARUAN APLIKASI"
         actionButtonsRow.visibility = View.GONE
@@ -1253,6 +1288,8 @@ private var receivedMp3File: File? = null
             .putBoolean("remote_camera_armed", false)
             .apply()
         ChildDeviceStatusWorker.cancel(this)
+        stopService(Intent(this, ChildLocationSharingService::class.java))
+        prefs.edit().putBoolean("child_location_sharing_enabled", false).apply()
 
         try {
             startService(Intent(this, RemoteCameraService::class.java).apply {
@@ -1384,6 +1421,102 @@ private var receivedMp3File: File? = null
     }
 
 
+
+    private fun updateChildLocationPanel() {
+        if (!::childLocationPanel.isInitialized) return
+        val enabled = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            .getBoolean("child_location_sharing_enabled", false)
+        childLocationPanel.text = if (enabled) {
+            "📍  BERBAGI LOKASI AKTIF\nLokasi perangkat ini dibagikan ke HP orang tua. Ketuk untuk menghentikan."
+        } else {
+            "📍  BERBAGI LOKASI HP INI\nNonaktif • Ketuk untuk membaca penjelasan dan mengaktifkan berbagi lokasi"
+        }
+        childLocationPanel.setTextColor(
+            if (enabled) Color.rgb(28, 130, 83) else Color.rgb(35, 53, 88)
+        )
+    }
+
+    private fun showChildLocationConsentDialog() {
+        if (currentRole != "child") return
+        val enabled = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            .getBoolean("child_location_sharing_enabled", false)
+        val message = "Berbagi lokasi mengirim koordinat perangkat ini ke HP orang tua yang sudah dipasangkan, kira-kira setiap 15 menit saat layanan aktif. Akurasi mengikuti izin lokasi Android (perkiraan atau presisi). Notifikasi SantetHP akan terlihat selama berbagi berlangsung. Lokasi tidak dikirim sebelum Anda mengaktifkannya dan Anda dapat menghentikannya kapan saja."
+        AlertDialog.Builder(this)
+            .setTitle(if (enabled) "Berbagi lokasi sedang aktif" else "Izin berbagi lokasi")
+            .setMessage(message)
+            .setNegativeButton("Tutup", null)
+            .setPositiveButton(if (enabled) "Hentikan berbagi" else "Aktifkan berbagi") { _, _ ->
+                if (enabled) stopChildLocationSharing() else requestChildLocationSharing()
+            }
+            .show()
+    }
+
+    private fun requestChildLocationSharing() {
+        if (currentRole != "child") return
+        pendingLocationStart = true
+        val fineGranted = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        val coarseGranted = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!fineGranted && !coarseGranted) {
+            requestPermissions(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ),
+                LOCATION_PERMISSION
+            )
+            return
+        }
+        continueStartingChildLocationSharing()
+    }
+
+    private fun continueStartingChildLocationSharing() {
+        if (!pendingLocationStart) return
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                LOCATION_NOTIFICATION_PERMISSION
+            )
+            return
+        }
+        pendingLocationStart = false
+        try {
+            val intent = Intent(this, ChildLocationSharingService::class.java).apply {
+                action = ChildLocationSharingService.ACTION_START
+            }
+            ContextCompat.startForegroundService(this, intent)
+            getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                .putBoolean("child_location_sharing_enabled", true).apply()
+            updateChildLocationPanel()
+            Toast.makeText(this, "Berbagi lokasi dimulai. Notifikasi SantetHP akan tetap terlihat.", Toast.LENGTH_LONG).show()
+        } catch (error: Exception) {
+            getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                .putBoolean("child_location_sharing_enabled", false).apply()
+            updateChildLocationPanel()
+            Toast.makeText(this, "Tidak dapat memulai berbagi lokasi: ${error.localizedMessage ?: "coba lagi"}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun stopChildLocationSharing() {
+        pendingLocationStart = false
+        try {
+            startService(Intent(this, ChildLocationSharingService::class.java).apply {
+                action = ChildLocationSharingService.ACTION_STOP
+            })
+        } catch (_: Exception) {
+            stopService(Intent(this, ChildLocationSharingService::class.java))
+        }
+        getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+            .putBoolean("child_location_sharing_enabled", false).apply()
+        updateChildLocationPanel()
+        Toast.makeText(this, "Berbagi lokasi dihentikan.", Toast.LENGTH_SHORT).show()
+    }
 
     private fun requestRemoteCamera() {
         if (currentRole != "parent") return
@@ -1736,6 +1869,21 @@ private var receivedMp3File: File? = null
         childDeviceStatusText.setTextColor(
             if (fresh) Color.rgb(38, 59, 99) else Color.rgb(104, 117, 140)
         )
+
+        val latitude = snapshot.getDouble("childLatitude")
+        val longitude = snapshot.getDouble("childLongitude")
+        val accuracy = snapshot.getDouble("childLocationAccuracyM")
+        val locationAt = snapshot.getTimestamp("childLocationAt")
+        val sharingEnabled = snapshot.getBoolean("childLocationSharingEnabled") == true
+        val locationAge = locationAt?.toDate()?.time?.let { System.currentTimeMillis() - it }
+        val locationFresh = locationAge != null && locationAge in -60_000L..45 * 60 * 1000L
+        if (latitude != null && longitude != null) {
+            childLocationMapView.showLocation(
+                latitude, longitude, accuracy, locationAt, sharingEnabled, locationFresh
+            )
+        } else {
+            childLocationMapView.showUnavailable(sharingEnabled)
+        }
     }
 
     private fun listenForChild(code: String) {
@@ -2199,6 +2347,23 @@ private fun playReceivedMp3() {
             } else {
                 statusText.text = "Izin mikrofon tidak diberikan"
             }
+        }
+
+        if (requestCode == LOCATION_PERMISSION) {
+            val locationGranted =
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            if (locationGranted) {
+                continueStartingChildLocationSharing()
+            } else {
+                pendingLocationStart = false
+                Toast.makeText(this, "Izin lokasi tidak diberikan. Berbagi lokasi tetap nonaktif.", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        if (requestCode == LOCATION_NOTIFICATION_PERMISSION) {
+            // Location sharing remains user-visible through its foreground-service notification.
+            continueStartingChildLocationSharing()
         }
     }
 
