@@ -76,6 +76,8 @@ private lateinit var playMp3Button: Button
     private lateinit var rootLayout: LinearLayout
     private lateinit var childrenContainer: LinearLayout
     private lateinit var addChildButton: Button
+    private lateinit var cancelPairingButton: Button
+    private var pendingPairingCode: String? = null
 
     private val childNames = linkedMapOf<String, String>()
     private val childConnected = linkedMapOf<String, Boolean>()
@@ -159,6 +161,7 @@ private var receivedMp3File: File? = null
         playMp3Button = createButton("PUTAR MP3 DITERIMA")
         adminWhatsAppButton = createButton("CHAT ADMIN")
         addChildButton = createButton("TAMBAH ANAK")
+        cancelPairingButton = createButton("BATALKAN KODE")
         childrenContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
@@ -172,6 +175,7 @@ private var receivedMp3File: File? = null
         playMp3Button.setOnClickListener { playReceivedMp3() }
         adminWhatsAppButton.setOnClickListener { openAdminWhatsApp() }
         addChildButton.setOnClickListener { createPairingCode() }
+        cancelPairingButton.setOnClickListener { cancelPendingPairingCode() }
 
         rootLayout.addView(title)
         rootLayout.addView(parentButton)
@@ -181,6 +185,7 @@ private var receivedMp3File: File? = null
         rootLayout.addView(childAudioActivityText)
         rootLayout.addView(childrenContainer)
         rootLayout.addView(addChildButton)
+        rootLayout.addView(cancelPairingButton)
         rootLayout.addView(startButton)
         rootLayout.addView(stopButton)
         rootLayout.addView(sendMp3Button)
@@ -212,6 +217,7 @@ private var receivedMp3File: File? = null
         adminWhatsAppButton.visibility = View.GONE
         childrenContainer.visibility = View.GONE
         addChildButton.visibility = View.GONE
+        cancelPairingButton.visibility = View.GONE
     }
 
     private fun showPairingCodeScreen() {
@@ -226,6 +232,7 @@ private var receivedMp3File: File? = null
         adminWhatsAppButton.visibility = View.GONE
         childrenContainer.visibility = View.GONE
         addChildButton.visibility = View.GONE
+        cancelPairingButton.visibility = View.VISIBLE
     }
 
     private fun showParentDashboard() {
@@ -240,6 +247,7 @@ private var receivedMp3File: File? = null
         adminWhatsAppButton.visibility = View.VISIBLE
         childrenContainer.visibility = View.VISIBLE
         addChildButton.visibility = View.VISIBLE
+        cancelPairingButton.visibility = View.GONE
         renderChildrenList()
     }
 
@@ -255,6 +263,7 @@ private var receivedMp3File: File? = null
         adminWhatsAppButton.visibility = View.GONE
         childrenContainer.visibility = View.GONE
         addChildButton.visibility = View.GONE
+        cancelPairingButton.visibility = View.GONE
     }
 
     private fun connectFirebase() {
@@ -561,6 +570,7 @@ private var receivedMp3File: File? = null
                 savePairing(code, "parent")
                 currentRole = "parent"
                 addParentChild(code)
+                pendingPairingCode = code
                 showPairingCodeScreen()
 
                 codeText.text = code
@@ -578,6 +588,52 @@ private var receivedMp3File: File? = null
                     Toast.LENGTH_LONG
                 ).show()
             }
+    }
+
+    private fun cancelPendingPairingCode() {
+        val code = pendingPairingCode ?: return
+        if (childConnected[code] == true) {
+            Toast.makeText(this, "Anak sudah terhubung. Kode tidak dapat dibatalkan dari layar ini.", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Batalkan kode anak?")
+            .setMessage("Kode $code akan dihapus dan tidak bisa digunakan lagi untuk memasangkan HP anak.")
+            .setNegativeButton("Kembali", null)
+            .setPositiveButton("Ya, batalkan") { _, _ ->
+                statusText.text = "Membatalkan kode..."
+                db.collection("pairings").document(code)
+                    .delete()
+                    .addOnSuccessListener {
+                        childListeners.remove(code)?.remove()
+                        childNames.remove(code)
+                        childConnected.remove(code)
+                        renamePromptedCodes.remove(code)
+                        persistChildren()
+                        pendingPairingCode = null
+
+                        if (selectedChildCode == code) selectedChildCode = childNames.keys.firstOrNull()
+                        if (childNames.isNotEmpty()) {
+                            showParentDashboard()
+                            val nextCode = selectedChildCode ?: childNames.keys.first()
+                            selectedChildCode = nextCode
+                            codeText.text = nextCode
+                            statusText.text = "Kode dibatalkan. Pilih anak yang ingin dihubungkan."
+                        } else {
+                            getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                                .remove("pair_role").remove("pair_code").apply()
+                            currentRole = ""
+                            showRoleSelection()
+                            statusText.text = "Pembuatan kode dibatalkan."
+                        }
+                    }
+                    .addOnFailureListener { error ->
+                        statusText.text = "Gagal membatalkan kode"
+                        Toast.makeText(this, error.localizedMessage ?: "Tidak dapat menghapus kode. Periksa izin Firestore.", Toast.LENGTH_LONG).show()
+                    }
+            }
+            .show()
     }
 
     private fun renderChildAudioActivity(snapshot: DocumentSnapshot) {
