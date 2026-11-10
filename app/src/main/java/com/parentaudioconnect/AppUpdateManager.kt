@@ -27,7 +27,7 @@ object AppUpdateManager {
     private const val RELEASE_API =
         "https://api.github.com/repos/redy69/ParentAudioConnect/releases/latest"
     private const val DATA_MANIFEST_URL =
-        "https://raw.githubusercontent.com/redy69/ParentAudioConnect/fix/android-13-boot-reconnect/updates/manifest.json"
+        "https://raw.githubusercontent.com/redy69/ParentAudioConnect/feature/modern-parent-ui/updates/manifest.json"
     private const val APK_NAME = "app-release.apk"
     private const val MAX_DATA_FILE_BYTES = 50L * 1024L * 1024L
     private val executor = Executors.newSingleThreadExecutor()
