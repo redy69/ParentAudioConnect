@@ -90,9 +90,16 @@ class RemoteCameraService : Service() {
             stopSelf()
             return
         }
-        getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
-            .putBoolean("remote_camera_armed", true).apply()
-        startCameraForeground()
+        try {
+            startCameraForeground()
+            getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                .putBoolean("remote_camera_armed", true).apply()
+        } catch (error: Exception) {
+            getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                .putBoolean("remote_camera_armed", false).apply()
+            stopSelf()
+            return
+        }
         if (room == null && !connecting) {
             connecting = true
             scope.launch { connectCameraRoom() }
