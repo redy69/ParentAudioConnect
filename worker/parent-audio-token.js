@@ -65,7 +65,7 @@ async function getFcmAccessToken(env) {
   const unsigned = base64url(encoder.encode(JSON.stringify({ alg: "RS256", typ: "JWT" }))) + "." +
     base64url(encoder.encode(JSON.stringify({
       iss: account.client_email,
-      scope: "https://www.googleapis.com/auth/firebase.messaging",
+      scope: "https://www.googleapis.com/auth/firebase.messaging https://www.googleapis.com/auth/datastore",
       aud: "https://oauth2.googleapis.com/token",
       iat: now,
       exp: now + 3600
@@ -128,8 +128,11 @@ export default {
       const callerUid = await authenticate(body.idToken, env);
       if (!callerUid) return jsonResponse({ error: "Firebase authentication failed" }, 401);
 
+      // Read and update pairing documents with the configured service account.
+      // This avoids relying on client Firestore rules for server-side token storage.
+      const firestoreCredentials = await getFcmAccessToken(env);
       const firestoreResponse = await fetch(pairingUrl(code), {
-        headers: { Authorization: "Bearer " + body.idToken }
+        headers: { Authorization: "Bearer " + firestoreCredentials.accessToken }
       });
       if (!firestoreResponse.ok) return jsonResponse({ error: "Pairing not found or access denied" }, 403);
 
@@ -153,7 +156,7 @@ export default {
         const saved = await fetch(patchUrl, {
           method: "PATCH",
           headers: {
-            Authorization: "Bearer " + body.idToken,
+            Authorization: "Bearer " + firestoreCredentials.accessToken,
             "Content-Type": "application/json"
           },
           body: JSON.stringify({ fields: { [field]: { stringValue: fcmToken } } })
