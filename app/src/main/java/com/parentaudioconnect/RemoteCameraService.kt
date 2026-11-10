@@ -239,11 +239,17 @@ class RemoteCameraService : Service() {
                 .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val disarmIntent = PendingIntent.getService(
+            this, 44, Intent(this, RemoteCameraService::class.java).apply {
+                action = ACTION_DISARM
+            }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_camera)
             .setContentTitle("SantetHP • Kamera Jarak Jauh")
             .setContentText(message)
             .setContentIntent(openApp)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Matikan siaga", disarmIntent)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
