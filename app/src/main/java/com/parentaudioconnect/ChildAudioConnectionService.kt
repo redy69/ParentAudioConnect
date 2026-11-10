@@ -94,6 +94,7 @@ class ChildAudioConnectionService : Service() {
                         .remove("pair_code")
                         .putBoolean("remote_camera_armed", false)
                         .apply()
+                    ChildDeviceStatusWorker.cancel(applicationContext)
                     stopService(Intent(this, RemoteCameraService::class.java))
                     stopService(Intent(this, AudioPlaybackService::class.java))
                     updateNotification("Hubungan dengan orang tua telah dilepaskan")
