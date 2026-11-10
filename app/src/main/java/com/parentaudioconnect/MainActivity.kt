@@ -162,6 +162,10 @@ private var receivedMp3File: File? = null
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(16), dp(14), dp(16), dp(14))
             background = roundedPanel(Color.WHITE, 16)
+            elevation = dp(2).toFloat()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(5), 0, dp(7)) }
         }
 
         childAudioActivityText = TextView(this).apply {
@@ -171,7 +175,10 @@ private var receivedMp3File: File? = null
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(18), dp(20), dp(18), dp(20))
             background = roundedPanel(Color.WHITE, 18)
-            elevation = dp(1).toFloat()
+            elevation = dp(2).toFloat()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(5), 0, dp(7)) }
         }
 
         codeText = TextView(this).apply {
@@ -261,13 +268,24 @@ private var receivedMp3File: File? = null
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
         ).apply { bottomMargin = dp(18) })
         childModePanel = TextView(this).apply {
-            text = "HP ANAK SIAP\nMenunggu perintah dari HP orang tua"
+            text = "🛡️  HP ANAK SIAP\n\nPerangkat berhasil terhubung\nMenunggu perintah dari HP orang tua"
             textSize = 16f
-            setTextColor(Color.rgb(42, 54, 76))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(35, 53, 88))
             gravity = Gravity.CENTER
-            setPadding(dp(20), dp(26), dp(20), dp(26))
-            background = roundedPanel(Color.WHITE, 20)
-            elevation = dp(2).toFloat()
+            setLineSpacing(dp(4).toFloat(), 1f)
+            setPadding(dp(22), dp(32), dp(22), dp(32))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(231, 239, 255))
+            ).apply {
+                cornerRadius = dp(22).toFloat()
+                setStroke(dp(1), Color.rgb(218, 229, 250))
+            }
+            elevation = dp(3).toFloat()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(12), 0, dp(14)) }
             visibility = View.GONE
         }
         rootLayout.addView(childModePanel)
@@ -644,7 +662,10 @@ private var receivedMp3File: File? = null
             textSize = 14f
             isAllCaps = false
             setTextColor(Color.WHITE)
-            background = roundedPanel(Color.rgb(66, 95, 235), 16)
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(55, 91, 220), Color.rgb(39, 67, 178))
+            ).apply { cornerRadius = dp(16).toFloat() }
             elevation = dp(2).toFloat()
             minHeight = dp(52)
             stateListAnimator = null
@@ -771,9 +792,10 @@ private var receivedMp3File: File? = null
                 setTextColor(Color.rgb(35, 45, 65))
             })
             details.addView(TextView(this).apply {
-                text = if (connected) "● Online dan terhubung" else "○ Menunggu koneksi"
-                textSize = 12f
-                setPadding(0, dp(3), 0, 0)
+                text = if (connected) "● ONLINE  •  Terhubung" else "○ OFFLINE  •  Menunggu koneksi"
+                textSize = 11f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setPadding(0, dp(4), 0, 0)
                 setTextColor(if (connected) Color.rgb(28, 150, 92) else Color.rgb(130, 137, 150))
             })
             row.addView(details)
