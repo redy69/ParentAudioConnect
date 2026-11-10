@@ -101,6 +101,7 @@ object ChildDeviceStatusReporter {
             }
         } catch (error: Exception) {
             Log.w(TAG, "Unable to collect child device status", error)
+            throw error
         }
     }
 }
