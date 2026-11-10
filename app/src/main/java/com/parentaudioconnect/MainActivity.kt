@@ -202,17 +202,17 @@ private var receivedMp3File: File? = null
             text = "Memeriksa koneksi..."
             textSize = 13.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.008f
-            setTextColor(Color.rgb(39, 61, 101))
+            letterSpacing = 0.01f
+            setTextColor(Color.rgb(34, 57, 96))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(16), dp(15), dp(16), dp(15))
+            setPadding(dp(17), dp(15), dp(17), dp(15))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
             ).apply {
-                cornerRadius = dp(19).toFloat()
-                setStroke(dp(1), Color.rgb(204, 220, 246))
+                cornerRadius = dp(20).toFloat()
+                setStroke(dp(1), Color.rgb(195, 215, 245))
             }
             elevation = dp(2).toFloat()
             minHeight = dp(56)
@@ -225,17 +225,17 @@ private var receivedMp3File: File? = null
             text = "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
             textSize = 13f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.008f
-            setTextColor(Color.rgb(35, 57, 91))
+            letterSpacing = 0.01f
+            setTextColor(Color.rgb(32, 55, 92))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(16), dp(16), dp(16), dp(16))
+            setPadding(dp(17), dp(16), dp(17), dp(16))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(237, 245, 255))
             ).apply {
-                cornerRadius = dp(19).toFloat()
-                setStroke(dp(1), Color.rgb(203, 220, 247))
+                cornerRadius = dp(20).toFloat()
+                setStroke(dp(1), Color.rgb(194, 215, 246))
             }
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
@@ -244,18 +244,18 @@ private var receivedMp3File: File? = null
         }
 
         codeText = TextView(this).apply {
-            textSize = 27f
+            textSize = 28f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.12f
             setTextColor(Color.rgb(39, 78, 180))
             gravity = Gravity.CENTER
-            setPadding(dp(16), dp(18), dp(16), dp(18))
+            setPadding(dp(16), dp(17), dp(16), dp(17))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(232, 240, 255))
             ).apply {
-                cornerRadius = dp(18).toFloat()
-                setStroke(dp(1), Color.rgb(207, 222, 248))
+                cornerRadius = dp(19).toFloat()
+                setStroke(dp(1), Color.rgb(198, 216, 246))
             }
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
@@ -267,16 +267,17 @@ private var receivedMp3File: File? = null
             text = "HUBUNGKAN HP ANAK\nMasukkan kode ini pada aplikasi SantetHP di perangkat anak. Kode berlaku selama 15 menit."
             textSize = 14f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(43, 62, 99))
+            letterSpacing = 0.005f
+            setTextColor(Color.rgb(38, 59, 99))
             gravity = Gravity.CENTER
             setLineSpacing(dp(4).toFloat(), 1f)
-            setPadding(dp(18), dp(18), dp(18), dp(18))
+            setPadding(dp(19), dp(18), dp(19), dp(18))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(239, 245, 255))
             ).apply {
-                cornerRadius = dp(18).toFloat()
-                setStroke(dp(1), Color.rgb(211, 225, 248))
+                cornerRadius = dp(19).toFloat()
+                setStroke(dp(1), Color.rgb(202, 219, 247))
             }
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
@@ -288,7 +289,8 @@ private var receivedMp3File: File? = null
         roleIntroText = TextView(this).apply {
             text = "SELAMAT DATANG DI SANTETHP\nPilih jenis perangkat untuk melanjutkan. Pastikan Anda memilih peran yang sesuai dengan HP ini."
             textSize = 14f
-            setTextColor(Color.rgb(55, 72, 105))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(48, 67, 103))
             gravity = Gravity.CENTER
             setLineSpacing(dp(4).toFloat(), 1f)
             setPadding(dp(18), dp(20), dp(18), dp(20))
@@ -296,8 +298,8 @@ private var receivedMp3File: File? = null
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(237, 244, 255))
             ).apply {
-                cornerRadius = dp(20).toFloat()
-                setStroke(dp(1), Color.rgb(215, 227, 247))
+                cornerRadius = dp(21).toFloat()
+                setStroke(dp(1), Color.rgb(205, 220, 246))
             }
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
@@ -418,13 +420,13 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(35, 53, 88))
             gravity = Gravity.CENTER
             setLineSpacing(dp(4).toFloat(), 1f)
-            setPadding(dp(22), dp(32), dp(22), dp(32))
+            setPadding(dp(22), dp(29), dp(22), dp(29))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(231, 239, 255))
             ).apply {
-                cornerRadius = dp(22).toFloat()
-                setStroke(dp(1), Color.rgb(218, 229, 250))
+                cornerRadius = dp(23).toFloat()
+                setStroke(dp(1), Color.rgb(207, 222, 248))
             }
             elevation = dp(3).toFloat()
             layoutParams = LinearLayout.LayoutParams(
