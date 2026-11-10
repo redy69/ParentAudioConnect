@@ -59,7 +59,6 @@ class ChildAudioConnectionService : Service() {
     private var mp3TransferManager: Mp3TransferManager? = null
     private val activeRemoteAudioTrackIds = ConcurrentHashMap.newKeySet<Int>()
     private var liveHeartbeatJob: Job? = null
-    private var deviceStatusJob: Job? = null
     private var pairingRemovalListener: ListenerRegistration? = null
     @Volatile private var connecting = false
 
@@ -123,7 +122,6 @@ class ChildAudioConnectionService : Service() {
                     val idToken = user.getIdToken(false).await().token
                         ?: throw IllegalStateException("Token Firebase kosong")
 
-                    startDeviceStatusUpdates()
                     updateNotification("Menghubungkan ke ruang audio…")
                     val response = withContext(Dispatchers.IO) {
                         requestToken(idToken, code)
@@ -275,16 +273,6 @@ class ChildAudioConnectionService : Service() {
         }
     }
 
-    private fun startDeviceStatusUpdates() {
-        if (deviceStatusJob?.isActive == true) return
-        deviceStatusJob = serviceScope.launch {
-            while (isActive) {
-                ChildDeviceStatusReporter.publish(applicationContext)
-                delay(5 * 60 * 1000L)
-            }
-        }
-    }
-
     /** Keep LiveKit listener output at maximum on the Android media stream. */
     private fun maximizeMediaVolume() {
         val audioManager = getSystemService(android.media.AudioManager::class.java)
@@ -387,8 +375,6 @@ class ChildAudioConnectionService : Service() {
         roomEventsJob = null
         activeRemoteAudioTrackIds.clear()
         stopLiveAudioHeartbeat()
-        deviceStatusJob?.cancel()
-        deviceStatusJob = null
         ChildAudioActivityReporter.setLiveAudioActive(applicationContext, false)
         mp3TransferManager = null
         serviceScope.cancel()
