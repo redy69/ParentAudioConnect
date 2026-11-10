@@ -82,6 +82,7 @@ private lateinit var playMp3Button: Button
     private val childListeners = linkedMapOf<String, ListenerRegistration>()
     private val renamePromptedCodes = mutableSetOf<String>()
     private var selectedChildCode: String? = null
+    private var activeRoomCode: String? = null
 
 private var mp3TransferManager: Mp3TransferManager? = null
 private var receivedMp3File: File? = null
@@ -422,7 +423,7 @@ private var receivedMp3File: File? = null
             statusText.text = "Menunggu HP ${childNames[code] ?: "anak"} terhubung..."
             return
         }
-        if (selectedChildCode == code && room != null) return
+        if (activeRoomCode == code && room != null) return
         selectedChildCode = code
         codeText.text = code
         statusText.text = "Menghubungkan ke ${childNames[code] ?: "anak"}..."
@@ -432,6 +433,7 @@ private var receivedMp3File: File? = null
                 room?.release()
             } catch (_: Exception) { }
             room = null
+            activeRoomCode = null
             mp3TransferManager = null
             isConnecting = false
             connectToLiveKit(code)
@@ -635,10 +637,10 @@ private var receivedMp3File: File? = null
                     }
                     if (connected) {
                         if (selectedChildCode == null) selectedChildCode = code
-                        if (selectedChildCode == code && room == null && !isConnecting) {
+                        if (selectedChildCode == code && activeRoomCode != code && !isConnecting) {
                             statusText.text = "HP ${childNames[code] ?: "ANAK"} BERHASIL TERHUBUNG!"
                             codeText.text = code
-                            connectToLiveKit(code)
+                            selectChild(code)
                         }
                         if (!childNames[code].isNullOrBlank() &&
                             childNames[code]?.startsWith("Anak ") == true &&
@@ -810,6 +812,7 @@ private var receivedMp3File: File? = null
                         )
 
                         room = newRoom
+                        if (role == "parent") activeRoomCode = code
                         mp3TransferManager = Mp3TransferManager(
     context = this@MainActivity,
     room = newRoom,
@@ -1069,6 +1072,7 @@ private fun playReceivedMp3() {
             room?.disconnect()
             room?.release()
             room = null
+            activeRoomCode = null
         }
 
         activityScope.cancel()
