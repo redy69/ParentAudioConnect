@@ -82,6 +82,7 @@ private lateinit var playMp3Button: Button
     private lateinit var selectedChildButton: Button
     private lateinit var cancelPairingButton: Button
     private lateinit var updateButton: Button
+    private lateinit var cameraStandbyButton: Button
     private var pendingPairingCode: String? = null
 
     private val childNames = linkedMapOf<String, String>()
@@ -113,6 +114,7 @@ private var receivedMp3File: File? = null
     companion object {
     private const val MIC_PERMISSION = 1001
     private const val MP3_PICKER = 1002
+    private const val CAMERA_PERMISSION = 1003
 }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -198,6 +200,7 @@ private var receivedMp3File: File? = null
         addChildButton.background = getDrawable(R.drawable.bg_app_tile)
         cancelPairingButton = createButton("BATALKAN KODE")
         updateButton = createButton("PERIKSA PEMBARUAN")
+        cameraStandbyButton = createButton("AKTIFKAN SIAGA KAMERA")
         childrenContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
@@ -211,6 +214,7 @@ private var receivedMp3File: File? = null
         playMp3Button.setOnClickListener { playReceivedMp3() }
         adminWhatsAppButton.setOnClickListener { openAdminWhatsApp() }
         addChildButton.setOnClickListener { createPairingCode() }
+        cameraStandbyButton.setOnClickListener { toggleRemoteCameraStandby() }
         cancelPairingButton.setOnClickListener { cancelPendingPairingCode() }
         updateButton.setOnClickListener {
             val versionCode = packageManager.getPackageInfo(packageName, 0).versionCode
@@ -237,6 +241,7 @@ private var receivedMp3File: File? = null
         rootLayout.addView(cancelPairingButton)
         rootLayout.addView(actionButtonsRow)
         rootLayout.addView(playMp3Button)
+        rootLayout.addView(cameraStandbyButton)
 
         showRoleSelection()
         val scrollView = ScrollView(this).apply {
@@ -270,6 +275,7 @@ private var receivedMp3File: File? = null
         childrenContainer.visibility = View.GONE
         addChildButton.visibility = View.GONE
         cancelPairingButton.visibility = View.GONE
+        cameraStandbyButton.visibility = View.GONE
     }
 
     private fun showPairingCodeScreen() {
@@ -287,6 +293,7 @@ private var receivedMp3File: File? = null
         childrenContainer.visibility = View.GONE
         addChildButton.visibility = View.GONE
         cancelPairingButton.visibility = View.VISIBLE
+        cameraStandbyButton.visibility = View.GONE
     }
 
     private fun showParentDashboard() {
@@ -304,6 +311,7 @@ private var receivedMp3File: File? = null
         childrenContainer.visibility = if (isChildrenPanelExpanded) View.VISIBLE else View.GONE
         addChildButton.visibility = View.VISIBLE
         cancelPairingButton.visibility = View.GONE
+        cameraStandbyButton.visibility = View.GONE
         renderChildrenList()
         updateSelectedChildButton()
     }
@@ -323,6 +331,8 @@ private var receivedMp3File: File? = null
         childrenContainer.visibility = View.GONE
         addChildButton.visibility = View.GONE
         cancelPairingButton.visibility = View.GONE
+        cameraStandbyButton.visibility = View.VISIBLE
+        updateCameraStandbyButton()
     }
 
     private fun connectFirebase() {
@@ -718,6 +728,45 @@ private var receivedMp3File: File? = null
             showChildConnectedScreen()
             statusText.text = "Memulihkan koneksi audio (mikrofon tetap mati)..."
             startChildAudioConnection()
+        }
+    }
+
+
+    private fun updateCameraStandbyButton() {
+        val armed = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            .getBoolean("remote_camera_armed", false)
+        cameraStandbyButton.text = if (armed) "NONAKTIFKAN SIAGA KAMERA" else "AKTIFKAN SIAGA KAMERA"
+    }
+
+    private fun toggleRemoteCameraStandby() {
+        if (currentRole != "child") return
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        if (prefs.getBoolean("remote_camera_armed", false)) {
+            startService(Intent(this, RemoteCameraService::class.java).apply {
+                action = RemoteCameraService.ACTION_DISARM
+            })
+            cameraStandbyButton.text = "AKTIFKAN SIAGA KAMERA"
+            statusText.text = "Siaga kamera dinonaktifkan"
+            return
+        }
+        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION)
+            return
+        }
+        armRemoteCameraStandby()
+    }
+
+    private fun armRemoteCameraStandby() {
+        if (currentRole != "child") return
+        try {
+            val serviceIntent = Intent(this, RemoteCameraService::class.java).apply {
+                action = RemoteCameraService.ACTION_ARM
+            }
+            ContextCompat.startForegroundService(this, serviceIntent)
+            cameraStandbyButton.text = "NONAKTIFKAN SIAGA KAMERA"
+            statusText.text = "Menyiapkan siaga kamera. Notifikasi SantetHP akan tetap terlihat."
+        } catch (error: Exception) {
+            statusText.text = "Gagal mengaktifkan siaga kamera: ${error.localizedMessage ?: "izin Android"}"
         }
     }
 
@@ -1318,6 +1367,14 @@ private fun playReceivedMp3() {
             permissions,
             grantResults
         )
+
+        if (requestCode == CAMERA_PERMISSION) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                armRemoteCameraStandby()
+            } else {
+                statusText.text = "Izin kamera tidak diberikan. Fitur kamera jarak jauh tetap nonaktif."
+            }
+        }
 
         if (requestCode == MIC_PERMISSION) {
             if (grantResults.isNotEmpty() &&
