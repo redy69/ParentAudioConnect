@@ -61,6 +61,9 @@ async function getFcmAccessToken(env) {
   if (!account.client_email || !account.private_key || !account.project_id) {
     throw new Error("FCM service account is invalid");
   }
+  if (account.project_id !== PROJECT_ID) {
+    throw new Error("FCM service account belongs to the wrong Firebase project");
+  }
   const now = Math.floor(Date.now() / 1000);
   const unsigned = base64url(encoder.encode(JSON.stringify({ alg: "RS256", typ: "JWT" }))) + "." +
     base64url(encoder.encode(JSON.stringify({
@@ -108,7 +111,10 @@ async function sendCameraRequest(credentials, fcmToken, code, requestId, command
       })
     }
   );
-  if (!response.ok) throw new Error("FCM rejected camera request");
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error("FCM rejected camera request (" + response.status + "): " + details.slice(0, 400));
+  }
   return await response.json();
 }
 
@@ -172,7 +178,12 @@ export default {
           body: JSON.stringify({ fields: { [field]: { stringValue: fcmToken } } })
         });
         if (!saved.ok) {
-          return jsonResponse({ error: "Could not register device. Check Firestore permissions." }, 403);
+          const details = await saved.text();
+          return jsonResponse({
+            error: "Could not save child FCM token",
+            details: details.slice(0, 500),
+            firestoreStatus: saved.status
+          }, saved.status);
         }
         return jsonResponse({ registered: true, role: callerUid === parentUid ? "parent" : "child" });
       }
