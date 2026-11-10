@@ -86,7 +86,9 @@ class ChildAudioConnectionService : Service() {
             .collection("pairings")
             .document(code)
             .addSnapshotListener { snapshot, error ->
-                if (error == null && snapshot != null && !snapshot.exists()) {
+                if (error == null && snapshot != null &&
+                    !snapshot.metadata.isFromCache && !snapshot.exists()
+                ) {
                     prefs.edit()
                         .remove("pair_role")
                         .remove("pair_code")
