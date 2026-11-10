@@ -4,6 +4,26 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+
+// Salin wallpaper dari docs ke drawable saat build, agar gambar ikut tertanam di APK.
+val copySantetWallpaper by tasks.registering {
+    val wallpaperSource = rootProject.file("docs/wallpaper.jpg")
+    val wallpaperTarget = layout.projectDirectory.file("src/main/res/drawable-nodpi/santethp_wallpaper.jpg")
+    inputs.file(wallpaperSource)
+    outputs.file(wallpaperTarget)
+    doLast {
+        if (!wallpaperSource.exists()) {
+            throw GradleException("File docs/wallpaper.jpg tidak ditemukan")
+        }
+        wallpaperTarget.asFile.parentFile.mkdirs()
+        wallpaperSource.copyTo(wallpaperTarget.asFile, overwrite = true)
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(copySantetWallpaper)
+}
+
 val appVersionCode = providers.gradleProperty("versionCode").orElse("1").get().toInt()
 
 android {
