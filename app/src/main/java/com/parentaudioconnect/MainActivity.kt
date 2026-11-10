@@ -72,6 +72,7 @@ class MainActivity : Activity(), LifecycleOwner {
     private lateinit var statusText: TextView
     private lateinit var childAudioActivityText: TextView
     private lateinit var codeText: TextView
+    private lateinit var pairingInstructionText: TextView
     private lateinit var startButton: LinearLayout
     private lateinit var stopButton: LinearLayout
     private lateinit var sendMp3Button: LinearLayout
@@ -261,6 +262,28 @@ private var receivedMp3File: File? = null
             ).apply { setMargins(0, dp(5), 0, dp(7)) }
         }
 
+        pairingInstructionText = TextView(this).apply {
+            text = "HUBUNGKAN HP ANAK\nMasukkan kode ini pada aplikasi SantetHP di perangkat anak. Kode berlaku selama 15 menit."
+            textSize = 14f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(43, 62, 99))
+            gravity = Gravity.CENTER
+            setLineSpacing(dp(4).toFloat(), 1f)
+            setPadding(dp(18), dp(18), dp(18), dp(18))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(239, 245, 255))
+            ).apply {
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), Color.rgb(211, 225, 248))
+            }
+            elevation = dp(2).toFloat()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(10), 0, dp(4)) }
+            visibility = View.GONE
+        }
+
         parentButton = createButton("ORTU")
         childButton = createButton("ANAK")
         startButton = createActionButton("🎙", "BICARA LIVE", Color.rgb(55, 80, 220))
@@ -406,6 +429,7 @@ private var receivedMp3File: File? = null
         rootLayout.addView(statusHeading)
         parentOnlyViews.add(statusHeading)
         rootLayout.addView(statusText)
+        rootLayout.addView(pairingInstructionText)
         rootLayout.addView(codeText)
         val activityHeading = TextView(this).apply {
             text = "AKTIVITAS PERANGKAT"
@@ -465,6 +489,7 @@ private var receivedMp3File: File? = null
         parentButton.visibility = View.VISIBLE
         childButton.visibility = View.VISIBLE
         selectedChildButton.visibility = View.GONE
+        pairingInstructionText.visibility = View.GONE
         codeText.visibility = View.GONE
         childAudioActivityText.visibility = View.GONE
         startButton.visibility = View.GONE
@@ -487,6 +512,7 @@ private var receivedMp3File: File? = null
         parentButton.visibility = View.GONE
         childButton.visibility = View.GONE
         selectedChildButton.visibility = View.GONE
+        pairingInstructionText.visibility = View.VISIBLE
         codeText.visibility = View.VISIBLE
         childAudioActivityText.visibility = View.GONE
         startButton.visibility = View.GONE
@@ -510,6 +536,7 @@ private var receivedMp3File: File? = null
         parentButton.visibility = View.GONE
         childButton.visibility = View.GONE
         selectedChildButton.visibility = View.VISIBLE
+        pairingInstructionText.visibility = View.GONE
         codeText.visibility = View.GONE
         childAudioActivityText.visibility = View.VISIBLE
         startButton.visibility = if (isMicrophoneActive) View.GONE else View.VISIBLE
