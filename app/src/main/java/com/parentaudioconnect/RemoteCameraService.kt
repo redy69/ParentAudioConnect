@@ -14,6 +14,8 @@ import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
 import io.livekit.android.LiveKit
 import io.livekit.android.room.Room
+import io.livekit.android.events.collect
+import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.track.CameraPosition
 import io.livekit.android.room.track.LocalVideoTrack
 import io.livekit.android.room.track.Track
@@ -57,6 +59,10 @@ class RemoteCameraService : Service() {
     private var room: Room? = null
     private var cameraTrack: LocalVideoTrack? = null
     private var cameraStopJob: Job? = null
+    private var roomEventsJob: Job? = null
+    private var reconnectJob: Job? = null
+    private var pendingCameraRequestId: String? = null
+    private var pendingCameraFacing: String = "back"
     @Volatile private var connecting = false
 
     override fun onCreate() {
@@ -68,10 +74,19 @@ class RemoteCameraService : Service() {
         when (intent?.action) {
             ACTION_ARM -> armFromVisibleApp()
             ACTION_START_CAMERA -> {
-                if (isArmed() && room != null) {
-                    startCamera(intent.getStringExtra(EXTRA_REQUEST_ID), intent.getStringExtra("facing") ?: "back")
+                if (isArmed()) {
+                    val requestId = intent.getStringExtra(EXTRA_REQUEST_ID)
+                    val facing = intent.getStringExtra("facing") ?: "back"
+                    if (room != null) {
+                        startCamera(requestId, facing)
+                    } else {
+                        pendingCameraRequestId = requestId
+                        pendingCameraFacing = facing
+                        updateNotification("Koneksi kamera terputus • menyambungkan kembali…")
+                        ensureCameraRoomConnected()
+                    }
                 } else {
-                    updateNotification("Siaga kamera tidak aktif atau koneksi terputus. Buka aplikasi anak.")
+                    updateNotification("Siaga kamera tidak aktif. Buka aplikasi anak dan aktifkan siaga kamera.")
                 }
             }
             ACTION_STOP_CAMERA -> stopCamera("Kamera dihentikan")
@@ -100,9 +115,20 @@ class RemoteCameraService : Service() {
             stopSelf()
             return
         }
-        if (room == null && !connecting) {
-            connecting = true
-            scope.launch { connectCameraRoom() }
+        ensureCameraRoomConnected()
+    }
+
+    private fun ensureCameraRoomConnected() {
+        if (!isArmed() || room != null || connecting) return
+        connecting = true
+        scope.launch { connectCameraRoom() }
+    }
+
+    private fun scheduleCameraReconnect() {
+        if (!isArmed() || reconnectJob?.isActive == true) return
+        reconnectJob = scope.launch {
+            delay(2500)
+            if (isArmed() && room == null) ensureCameraRoomConnected()
         }
     }
 
@@ -136,12 +162,32 @@ class RemoteCameraService : Service() {
             val newRoom = LiveKit.create(applicationContext)
             newRoom.connect(url = response.getString("serverUrl"), token = response.getString("token"))
             newRoom.localParticipant.setMicrophoneEnabled(false)
+            roomEventsJob?.cancel()
             room = newRoom
+            roomEventsJob = scope.launch {
+                newRoom.events.collect { event ->
+                    if (event is RoomEvent.Disconnected && isArmed()) {
+                        if (room === newRoom) {
+                            room = null
+                            cameraTrack = null
+                            updateNotification("Koneksi kamera terputus • mencoba menyambungkan kembali…")
+                            scheduleCameraReconnect()
+                        }
+                    }
+                }
+            }
             updateNotification("Siaga kamera aktif • menunggu permintaan orang tua")
+            val queuedRequestId = pendingCameraRequestId
+            if (queuedRequestId != null) {
+                pendingCameraRequestId = null
+                startCamera(queuedRequestId, pendingCameraFacing)
+            }
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
+            room = null
             updateNotification("Kamera belum siap: ${error.localizedMessage ?: "koneksi gagal"}")
+            scheduleCameraReconnect()
         } finally {
             connecting = false
         }
@@ -200,6 +246,11 @@ class RemoteCameraService : Service() {
     }
 
     private fun disarm() {
+        reconnectJob?.cancel()
+        reconnectJob = null
+        roomEventsJob?.cancel()
+        roomEventsJob = null
+        pendingCameraRequestId = null
         cameraStopJob?.cancel()
         cameraStopJob = null
         getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
@@ -280,6 +331,8 @@ class RemoteCameraService : Service() {
 
     override fun onDestroy() {
         cameraStopJob?.cancel()
+        reconnectJob?.cancel()
+        roomEventsJob?.cancel()
         scope.cancel()
         val activeRoom = room
         room = null
