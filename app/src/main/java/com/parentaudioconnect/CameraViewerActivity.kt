@@ -14,6 +14,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.android.gms.tasks.Task
 import io.livekit.android.LiveKit
 import io.livekit.android.events.RoomEvent
+import io.livekit.android.events.collect
 import io.livekit.android.renderer.SurfaceViewRenderer
 import io.livekit.android.room.Room
 import io.livekit.android.room.track.VideoTrack
