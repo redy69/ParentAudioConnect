@@ -83,7 +83,7 @@ private lateinit var playMp3Button: Button
     private lateinit var cancelPairingButton: Button
     private lateinit var updateButton: Button
     private lateinit var cameraStandbyButton: Button
-    private lateinit var cameraLiveButton: Button
+    private lateinit var cameraLiveButton: LinearLayout
     private var pendingPairingCode: String? = null
 
     private val childNames = linkedMapOf<String, String>()
@@ -129,44 +129,47 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.TOP
             setPadding(dp(18), dp(18), dp(18), dp(28))
-            setBackgroundResource(R.drawable.santethp_wallpaper)
+            setBackgroundColor(Color.rgb(244, 247, 252))
         }
 
         val title = TextView(this).apply {
-            text = "SantetHP\\nKontrol Perangkat Keluarga"
-            textSize = 23f
+            text = "SantetHP\\nKONTROL PERANGKAT KELUARGA"
+            textSize = 21f
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(22), dp(24), dp(22), dp(24))
-            background = getDrawable(R.drawable.bg_glass_panel)
-            elevation = dp(3).toFloat()
+            setPadding(dp(22), dp(25), dp(22), dp(25))
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(24, 39, 75))
+                cornerRadius = dp(22).toFloat()
+            }
+            elevation = dp(4).toFloat()
         }
 
         statusText = TextView(this).apply {
             text = "Memeriksa koneksi..."
             textSize = 14f
-            setTextColor(Color.rgb(75, 83, 102))
+            setTextColor(Color.rgb(76, 88, 110))
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(16), dp(14), dp(16), dp(14))
-            background = getDrawable(R.drawable.bg_glass_panel)
+            background = roundedPanel(Color.WHITE, 16)
         }
 
         childAudioActivityText = TextView(this).apply {
             text = "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
             textSize = 15f
-            setTextColor(Color.rgb(55, 63, 80))
+            setTextColor(Color.rgb(42, 54, 76))
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(18), dp(20), dp(18), dp(20))
-            background = getDrawable(R.drawable.bg_glass_panel)
+            background = roundedPanel(Color.WHITE, 18)
             elevation = dp(1).toFloat()
         }
 
         codeText = TextView(this).apply {
             textSize = 26f
-            setTextColor(Color.rgb(55, 80, 220))
+            setTextColor(Color.rgb(45, 91, 210))
             gravity = Gravity.CENTER
             setPadding(dp(16), dp(16), dp(16), dp(16))
-            background = getDrawable(R.drawable.bg_glass_panel)
+            background = roundedPanel(Color.WHITE, 18)
         }
 
         parentButton = createButton("ORTU")
@@ -177,17 +180,36 @@ private var receivedMp3File: File? = null
         playMp3Button = createButton("PUTAR MP3 DITERIMA")
         adminWhatsAppButton = createActionButton("☎", "CHAT ADMIN", Color.rgb(37, 211, 102))
         actionButtonsRow = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+        }
+        val microphoneSlot = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+        }
+        val firstActionRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            weightSum = 3f
         }
-        val actionParams = LinearLayout.LayoutParams(0, dp(108), 1f).apply {
-            setMargins(dp(4), dp(7), dp(4), dp(7))
+        val secondActionRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
         }
-        actionButtonsRow.addView(startButton, LinearLayout.LayoutParams(actionParams))
-        actionButtonsRow.addView(stopButton, LinearLayout.LayoutParams(actionParams))
-        actionButtonsRow.addView(sendMp3Button, LinearLayout.LayoutParams(actionParams))
-        actionButtonsRow.addView(adminWhatsAppButton, LinearLayout.LayoutParams(actionParams))
+        val actionParams = LinearLayout.LayoutParams(0, dp(112), 1f).apply {
+            setMargins(dp(5), dp(6), dp(5), dp(6))
+        }
+        microphoneSlot.addView(startButton, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(112)
+        ))
+        microphoneSlot.addView(stopButton, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(112)
+        ))
+        firstActionRow.addView(microphoneSlot, LinearLayout.LayoutParams(actionParams))
+        firstActionRow.addView(sendMp3Button, LinearLayout.LayoutParams(actionParams))
+        secondActionRow.addView(cameraLiveButton, LinearLayout.LayoutParams(actionParams))
+        secondActionRow.addView(adminWhatsAppButton, LinearLayout.LayoutParams(actionParams))
+        actionButtonsRow.addView(firstActionRow)
+        actionButtonsRow.addView(secondActionRow)
         addChildButton = createButton("＋")
         addChildButton.textSize = 25f
         addChildButton.contentDescription = "Tambah anak"
@@ -202,7 +224,7 @@ private var receivedMp3File: File? = null
         cancelPairingButton = createButton("BATALKAN KODE")
         updateButton = createButton("PERIKSA PEMBARUAN")
         cameraStandbyButton = createButton("AKTIFKAN SIAGA KAMERA")
-        cameraLiveButton = createButton("KAMERA LIVE")
+        cameraLiveButton = createActionButton("📷", "KAMERA LIVE", Color.rgb(45, 91, 210))
         childrenContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
@@ -226,7 +248,15 @@ private var receivedMp3File: File? = null
 
         rootLayout.addView(title, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply { bottomMargin = dp(16) })
+        ).apply { bottomMargin = dp(18) })
+        val deviceSectionTitle = TextView(this).apply {
+            text = "PERANGKAT ANAK"
+            textSize = 12f
+            setTextColor(Color.rgb(104, 117, 140))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(dp(4), dp(3), dp(4), dp(7))
+        }
+        rootLayout.addView(deviceSectionTitle)
         val childHeaderRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -238,13 +268,36 @@ private var receivedMp3File: File? = null
         rootLayout.addView(updateButton)
         rootLayout.addView(parentButton)
         rootLayout.addView(childButton)
+        val statusHeading = TextView(this).apply {
+            text = "STATUS KONEKSI"
+            textSize = 12f
+            setTextColor(Color.rgb(104, 117, 140))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(dp(4), dp(12), dp(4), dp(7))
+        }
+        rootLayout.addView(statusHeading)
         rootLayout.addView(statusText)
         rootLayout.addView(codeText)
+        val activityHeading = TextView(this).apply {
+            text = "AKTIVITAS PERANGKAT"
+            textSize = 12f
+            setTextColor(Color.rgb(104, 117, 140))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(dp(12), dp(14), dp(4), dp(7))
+        }
+        rootLayout.addView(activityHeading)
         rootLayout.addView(childAudioActivityText)
         rootLayout.addView(cancelPairingButton)
+        val controlHeading = TextView(this).apply {
+            text = "KONTROL UTAMA"
+            textSize = 12f
+            setTextColor(Color.rgb(104, 117, 140))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(dp(4), dp(16), dp(4), dp(5))
+        }
+        rootLayout.addView(controlHeading)
         rootLayout.addView(actionButtonsRow)
         rootLayout.addView(playMp3Button)
-        rootLayout.addView(cameraLiveButton)
         rootLayout.addView(cameraStandbyButton)
 
         showRoleSelection()
@@ -1169,8 +1222,8 @@ private var receivedMp3File: File? = null
                 "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
         }
         childAudioActivityText.setTextColor(
-            if (liveAudioActive || mp3AudioActive) Color.rgb(105, 230, 170)
-            else Color.rgb(180, 190, 210)
+            if (liveAudioActive || mp3AudioActive) Color.rgb(28, 150, 92)
+            else Color.rgb(104, 117, 140)
         )
     }
 
