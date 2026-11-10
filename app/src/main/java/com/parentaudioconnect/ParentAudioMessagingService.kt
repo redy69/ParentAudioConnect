@@ -1,22 +1,59 @@
 package com.santethp
 
 import android.util.Log
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 class ParentAudioMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
 
-        // Keep the current device token locally until the authenticated
-        // parent-child registration endpoint is implemented.
-        getSharedPreferences("parent_audio", MODE_PRIVATE)
-            .edit()
-            .putString("fcm_token", token)
-            .apply()
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        prefs.edit().putString("fcm_token", token).apply()
 
-        Log.i(TAG, "FCM registration token refreshed")
+        // Re-register immediately when Firebase refreshes the token. The
+        // activity also performs registration after pairing and on startup.
+        val code = prefs.getString("pair_code", null)
+        if (prefs.getString("pair_role", null) == "child" && !code.isNullOrBlank()) {
+            FirebaseAuth.getInstance().currentUser?.getIdToken(false)
+                ?.addOnSuccessListener { result ->
+                    val idToken = result.token
+                    if (!idToken.isNullOrBlank()) {
+                        Thread {
+                            var connection: HttpURLConnection? = null
+                            try {
+                                connection = URL("https://parent-audio-token.yudhis-r15.workers.dev/register-device")
+                                    .openConnection() as HttpURLConnection
+                                connection.requestMethod = "POST"
+                                connection.connectTimeout = 15000
+                                connection.readTimeout = 15000
+                                connection.doOutput = true
+                                connection.setRequestProperty("Content-Type", "application/json")
+                                val body = JSONObject()
+                                    .put("idToken", idToken)
+                                    .put("code", code)
+                                    .put("fcmToken", token)
+                                connection.outputStream.use {
+                                    it.write(body.toString().toByteArray(Charsets.UTF_8))
+                                }
+                                val responseCode = connection.responseCode
+                                Log.i(TAG, "FCM device registration response: $responseCode")
+                            } catch (error: Exception) {
+                                Log.w(TAG, "FCM device registration after token refresh failed", error)
+                            } finally {
+                                connection?.disconnect()
+                            }
+                        }.start()
+                    }
+                }
+        }
+
+        Log.i(TAG, "FCM registration token refreshed and saved")
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
