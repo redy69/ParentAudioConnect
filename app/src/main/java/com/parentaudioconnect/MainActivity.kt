@@ -927,7 +927,7 @@ private var receivedMp3File: File? = null
             val empty = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(dp(14), dp(18), dp(14), dp(18))
+                setPadding(dp(14), dp(16), dp(14), dp(16))
                 background = GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
                     intArrayOf(Color.WHITE, Color.rgb(247, 250, 255))
@@ -966,7 +966,7 @@ private var receivedMp3File: File? = null
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(10), dp(10), dp(8), dp(10))
+                setPadding(dp(10), dp(9), dp(8), dp(9))
                 background = GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
                     if (selectedChildCode == code)
@@ -985,7 +985,7 @@ private var receivedMp3File: File? = null
                 isFocusable = true
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply { setMargins(0, dp(4), 0, dp(4)) }
+                ).apply { setMargins(0, dp(3), 0, dp(3)) }
             }
             val phoneIcon = ChildAvatarView().apply {
                 layoutParams = LinearLayout.LayoutParams(dp(50), dp(50)).apply {
@@ -1000,7 +1000,7 @@ private var receivedMp3File: File? = null
             }
             details.addView(TextView(this).apply {
                 text = name
-                textSize = 14f
+                textSize = 13.5f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 letterSpacing = 0.005f
                 setTextColor(Color.rgb(27, 43, 73))
@@ -1042,9 +1042,9 @@ private var receivedMp3File: File? = null
             })
             val removeButton = Button(this).apply {
                 text = "Lepaskan"
-                textSize = 11f
+                textSize = 10.5f
                 isAllCaps = false
-                minHeight = dp(36)
+                minHeight = dp(34)
                 setPadding(dp(7), 0, dp(7), 0)
                 setTextColor(Color.rgb(169, 62, 72))
                 background = GradientDrawable().apply {
@@ -1053,8 +1053,8 @@ private var receivedMp3File: File? = null
                     setStroke(dp(1), Color.rgb(245, 220, 222))
                 }
                 layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)
-                ).apply { leftMargin = dp(6) }
+                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)
+                ).apply { leftMargin = dp(5) }
                 setOnClickListener { promptRemoveChild(code) }
             }
             row.addView(removeButton)
@@ -1065,12 +1065,12 @@ private var receivedMp3File: File? = null
 
         val addRow = TextView(this).apply {
             text = "＋    Tambahkan perangkat anak"
-            textSize = 12.5f
+            textSize = 12f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.005f
             setTextColor(Color.rgb(42, 82, 174))
             gravity = Gravity.CENTER
-            setPadding(dp(14), dp(13), dp(14), dp(13))
+            setPadding(dp(14), dp(12), dp(14), dp(12))
             background = GradientDrawable(
                 GradientDrawable.Orientation.LEFT_RIGHT,
                 intArrayOf(Color.rgb(239, 245, 255), Color.rgb(229, 238, 255))
