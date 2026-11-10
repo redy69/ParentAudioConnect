@@ -90,8 +90,7 @@ async function getFcmAccessToken(env) {
   return { accessToken: result.access_token, projectId: account.project_id };
 }
 
-async function sendCameraRequest(env, fcmToken, code, requestId, command, facing) {
-  const credentials = await getFcmAccessToken(env);
+async function sendCameraRequest(credentials, fcmToken, code, requestId, command, facing) {
   const response = await fetch(
     "https://fcm.googleapis.com/v1/projects/" + encodeURIComponent(credentials.projectId) + "/messages:send",
     {
@@ -128,13 +127,24 @@ export default {
       const callerUid = await authenticate(body.idToken, env);
       if (!callerUid) return jsonResponse({ error: "Firebase authentication failed" }, 401);
 
-      // Read and update pairing documents with the configured service account.
-      // This avoids relying on client Firestore rules for server-side token storage.
-      const firestoreCredentials = await getFcmAccessToken(env);
+      // Keep the existing audio token endpoints independent from the FCM service
+      // account. Only notification registration and camera requests need server
+      // credentials to read/write the pairing's FCM token fields.
+      const needsServiceAccount = url.pathname === "/register-device" ||
+        url.pathname === "/request-camera";
+      const serviceCredentials = needsServiceAccount ? await getFcmAccessToken(env) : null;
+      const firestoreAccessToken = serviceCredentials?.accessToken || body.idToken;
       const firestoreResponse = await fetch(pairingUrl(code), {
-        headers: { Authorization: "Bearer " + firestoreCredentials.accessToken }
+        headers: { Authorization: "Bearer " + firestoreAccessToken }
       });
-      if (!firestoreResponse.ok) return jsonResponse({ error: "Pairing not found or access denied" }, 403);
+      if (!firestoreResponse.ok) {
+        const details = await firestoreResponse.text();
+        return jsonResponse({
+          error: "Could not read pairing document",
+          details: details.slice(0, 500),
+          firestoreStatus: firestoreResponse.status
+        }, firestoreResponse.status);
+      }
 
       const document = await firestoreResponse.json();
       const fields = document.fields || {};
@@ -156,7 +166,7 @@ export default {
         const saved = await fetch(patchUrl, {
           method: "PATCH",
           headers: {
-            Authorization: "Bearer " + firestoreCredentials.accessToken,
+            Authorization: "Bearer " + firestoreAccessToken,
             "Content-Type": "application/json"
           },
           body: JSON.stringify({ fields: { [field]: { stringValue: fcmToken } } })
@@ -179,7 +189,7 @@ export default {
         const command = commands[action];
         if (!command) return jsonResponse({ error: "Invalid camera action" }, 400);
         const facing = body.facing === "front" ? "front" : "back";
-        await sendCameraRequest(env, childFcmToken, code, body.requestId, command, facing);
+        await sendCameraRequest(serviceCredentials, childFcmToken, code, body.requestId, command, facing);
         return jsonResponse({ sent: true, requestId: body.requestId, action });
       }
 
@@ -203,7 +213,10 @@ export default {
       const token = await createLiveKitToken(env, callerUid, roomBase, isParent);
       return jsonResponse({ token, serverUrl: env.LIVEKIT_URL, role: isParent ? "parent" : "child", expiresIn: 600 });
     } catch (error) {
-      return jsonResponse({ error: "Internal server error" }, 500);
+      console.error("ParentAudio Worker request failed:", error);
+      return jsonResponse({
+        error: error instanceof Error ? error.message : "Internal server error"
+      }, 500);
     }
   }
 };
