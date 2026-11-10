@@ -136,7 +136,7 @@ private var receivedMp3File: File? = null
         rootLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.TOP
-            setPadding(dp(18), dp(18), dp(18), dp(28))
+            setPadding(dp(16), dp(18), dp(16), dp(28))
             setBackgroundColor(Color.rgb(244, 247, 252))
         }
 
@@ -206,7 +206,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(48, 65, 96))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(17), dp(15), dp(17), dp(15))
+            setPadding(dp(16), dp(14), dp(16), dp(14))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
@@ -215,7 +215,7 @@ private var receivedMp3File: File? = null
                 setStroke(dp(1), Color.rgb(211, 224, 246))
             }
             elevation = dp(2).toFloat()
-            minHeight = dp(54)
+            minHeight = dp(52)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { setMargins(0, dp(5), 0, dp(7)) }
@@ -223,13 +223,13 @@ private var receivedMp3File: File? = null
 
         childAudioActivityText = TextView(this).apply {
             text = "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
-            textSize = 14f
+            textSize = 13.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.005f
             setTextColor(Color.rgb(35, 53, 88))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(18), dp(19), dp(18), dp(19))
+            setPadding(dp(16), dp(17), dp(16), dp(17))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(240, 246, 255))
@@ -408,7 +408,7 @@ private var receivedMp3File: File? = null
 
         rootLayout.addView(title, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply { bottomMargin = dp(18) })
+        ).apply { bottomMargin = dp(16) })
         childModePanel = TextView(this).apply {
             text = "🛡️  HP ANAK SIAP\n\nPerangkat berhasil terhubung\nMenunggu perintah dari HP orang tua"
             textSize = 16f
@@ -438,7 +438,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(57, 88, 151))
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.12f
-            setPadding(dp(4), dp(5), dp(4), dp(9))
+            setPadding(dp(4), dp(7), dp(4), dp(8))
         }
         rootLayout.addView(deviceSectionTitle)
         parentOnlyViews.add(deviceSectionTitle)
@@ -461,7 +461,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(57, 88, 151))
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.12f
-            setPadding(dp(4), dp(14), dp(4), dp(9))
+            setPadding(dp(4), dp(13), dp(4), dp(8))
         }
         rootLayout.addView(statusHeading)
         parentOnlyViews.add(statusHeading)
@@ -474,7 +474,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(57, 88, 151))
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.12f
-            setPadding(dp(4), dp(15), dp(4), dp(9))
+            setPadding(dp(4), dp(14), dp(4), dp(8))
         }
         rootLayout.addView(activityHeading)
         parentOnlyViews.add(activityHeading)
@@ -487,7 +487,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(57, 88, 151))
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.12f
-            setPadding(dp(4), dp(17), dp(4), dp(8))
+            setPadding(dp(4), dp(15), dp(4), dp(8))
         }
         rootLayout.addView(controlHeading)
         parentOnlyViews.add(controlHeading)
