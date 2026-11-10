@@ -11,6 +11,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import com.google.firebase.auth.FirebaseAuth
+import com.google.android.gms.tasks.Task
 import io.livekit.android.LiveKit
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.renderer.SurfaceViewRenderer
@@ -26,6 +27,9 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.UUID
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class CameraViewerActivity : Activity() {
     companion object {
@@ -203,3 +207,14 @@ class CameraViewerActivity : Activity() {
         super.onDestroy()
     }
 }
+
+private suspend fun <T> Task<T>.awaitResult(): T =
+    suspendCancellableCoroutine { continuation ->
+        addOnCompleteListener { task ->
+            if (!continuation.isActive) return@addOnCompleteListener
+            if (task.isSuccessful) continuation.resume(task.result)
+            else continuation.resumeWithException(
+                task.exception ?: IllegalStateException("Autentikasi Firebase gagal")
+            )
+        }
+    }
