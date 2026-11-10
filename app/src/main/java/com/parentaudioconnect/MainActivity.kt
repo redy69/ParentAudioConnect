@@ -138,21 +138,62 @@ private var receivedMp3File: File? = null
             setBackgroundColor(Color.rgb(244, 247, 252))
         }
 
-        val title = TextView(this).apply {
-            text = "SantetHP\nKONTROL PERANGKAT KELUARGA"
-            textSize = 21f
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.WHITE)
+        val title = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(22), dp(25), dp(22), dp(25))
-            letterSpacing = 0.015f
+            setPadding(dp(22), dp(19), dp(22), dp(20))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.rgb(19, 37, 79), Color.rgb(48, 83, 160))
+                intArrayOf(Color.rgb(15, 29, 64), Color.rgb(35, 69, 139), Color.rgb(67, 104, 183))
             ).apply {
-                cornerRadius = dp(22).toFloat()
+                cornerRadius = dp(24).toFloat()
+                setStroke(dp(1), Color.argb(55, 255, 255, 255))
             }
             elevation = dp(5).toFloat()
+
+            addView(TextView(this@MainActivity).apply {
+                text = "PARENTAL CARE  •  FAMILY CONNECT"
+                textSize = 9.5f
+                letterSpacing = 0.13f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.rgb(190, 211, 255))
+            })
+
+            val brandRow = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dp(5), 0, dp(2))
+            }
+            brandRow.addView(TextView(this@MainActivity).apply {
+                text = "SantetHP"
+                textSize = 29f
+                letterSpacing = 0.005f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.WHITE)
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            brandRow.addView(TextView(this@MainActivity).apply {
+                text = "ORTU"
+                textSize = 10f
+                letterSpacing = 0.08f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+                setPadding(dp(12), dp(7), dp(12), dp(7))
+                background = GradientDrawable().apply {
+                    setColor(Color.argb(38, 255, 255, 255))
+                    cornerRadius = dp(20).toFloat()
+                    setStroke(dp(1), Color.argb(85, 255, 255, 255))
+                }
+            })
+            addView(brandRow)
+
+            addView(TextView(this@MainActivity).apply {
+                text = "Ruang kendali orang tua"
+                textSize = 13f
+                setTextColor(Color.rgb(224, 234, 255))
+                letterSpacing = 0.015f
+            })
         }
 
         statusText = TextView(this).apply {
