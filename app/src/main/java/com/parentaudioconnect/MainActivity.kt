@@ -838,17 +838,29 @@ private var receivedMp3File: File? = null
         if (!::childrenContainer.isInitialized) return
         childrenContainer.removeAllViews()
         childrenContainer.orientation = LinearLayout.VERTICAL
-        childrenContainer.setPadding(dp(10), dp(10), dp(10), dp(10))
-        childrenContainer.background = roundedPanel(Color.WHITE, 20)
-        childrenContainer.elevation = dp(2).toFloat()
+        childrenContainer.setPadding(dp(9), dp(10), dp(9), dp(10))
+        childrenContainer.background = GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
+        ).apply {
+            cornerRadius = dp(21).toFloat()
+            setStroke(dp(1), Color.rgb(215, 226, 245))
+        }
+        childrenContainer.elevation = dp(3).toFloat()
 
         if (childNames.isEmpty()) {
             val empty = TextView(this).apply {
-                text = "Belum ada perangkat anak yang ditambahkan"
-                textSize = 14f
-                setTextColor(Color.rgb(105, 115, 135))
-                setPadding(dp(12), dp(18), dp(12), dp(18))
-                gravity = Gravity.CENTER_VERTICAL
+                text = "Belum ada perangkat anak yang ditambahkan\nTambahkan HP anak untuk mulai menghubungkan keluarga."
+                textSize = 13f
+                setLineSpacing(dp(3).toFloat(), 1f)
+                setTextColor(Color.rgb(91, 108, 139))
+                setPadding(dp(14), dp(20), dp(14), dp(20))
+                gravity = Gravity.CENTER
+                background = GradientDrawable().apply {
+                    setColor(Color.rgb(247, 250, 255))
+                    cornerRadius = dp(15).toFloat()
+                    setStroke(dp(1), Color.rgb(225, 233, 247))
+                }
             }
             childrenContainer.addView(empty)
         }
@@ -858,10 +870,21 @@ private var receivedMp3File: File? = null
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(10), dp(10), dp(10), dp(10))
-                background = roundedPanel(
-                    if (selectedChildCode == code) Color.rgb(239, 243, 255) else Color.WHITE, 14
-                )
+                setPadding(dp(10), dp(11), dp(9), dp(11))
+                background = GradientDrawable(
+                    GradientDrawable.Orientation.TL_BR,
+                    if (selectedChildCode == code)
+                        intArrayOf(Color.rgb(235, 243, 255), Color.rgb(248, 251, 255))
+                    else
+                        intArrayOf(Color.WHITE, Color.rgb(247, 250, 255))
+                ).apply {
+                    cornerRadius = dp(17).toFloat()
+                    setStroke(
+                        dp(if (selectedChildCode == code) 1.5f.toInt() else 1),
+                        if (selectedChildCode == code) Color.rgb(133, 169, 235)
+                        else Color.rgb(224, 232, 246)
+                    )
+                }
                 isClickable = true
                 isFocusable = true
                 layoutParams = LinearLayout.LayoutParams(
@@ -869,8 +892,8 @@ private var receivedMp3File: File? = null
                 ).apply { setMargins(0, dp(5), 0, dp(5)) }
             }
             val phoneIcon = ChildAvatarView().apply {
-                layoutParams = LinearLayout.LayoutParams(dp(54), dp(54)).apply {
-                    rightMargin = dp(12)
+                layoutParams = LinearLayout.LayoutParams(dp(49), dp(49)).apply {
+                    rightMargin = dp(10)
                 }
                 contentDescription = "Ilustrasi profil perangkat anak"
             }
@@ -881,29 +904,45 @@ private var receivedMp3File: File? = null
             }
             details.addView(TextView(this).apply {
                 text = name
-                textSize = 15f
+                textSize = 14f
                 setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(Color.rgb(35, 45, 65))
+                letterSpacing = 0.005f
+                setTextColor(Color.rgb(27, 43, 73))
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
             })
             details.addView(TextView(this).apply {
                 text = "Perangkat terdaftar"
-                textSize = 10f
-                setTextColor(Color.rgb(139, 148, 164))
+                textSize = 9.5f
+                setTextColor(Color.rgb(112, 127, 151))
                 setPadding(0, dp(2), 0, 0)
             })
             details.addView(TextView(this).apply {
                 text = if (connected) "● ONLINE  •  Terhubung" else "○ OFFLINE  •  Menunggu koneksi"
-                textSize = 11f
+                textSize = 9.5f
                 setTypeface(null, android.graphics.Typeface.BOLD)
-                setPadding(0, dp(4), 0, 0)
-                setTextColor(if (connected) Color.rgb(28, 150, 92) else Color.rgb(130, 137, 150))
+                letterSpacing = 0.005f
+                setPadding(dp(7), dp(4), dp(7), dp(4))
+                setTextColor(if (connected) Color.rgb(24, 128, 82) else Color.rgb(105, 116, 137))
+                background = GradientDrawable().apply {
+                    setColor(if (connected) Color.rgb(226, 247, 237) else Color.rgb(239, 243, 249))
+                    cornerRadius = dp(8).toFloat()
+                }
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
             })
             row.addView(details)
             if (selectedChildCode == code) row.addView(TextView(this).apply {
                 text = "✓"
-                textSize = 23f
-                setTextColor(Color.rgb(55, 100, 225))
-                setPadding(dp(8), 0, dp(8), 0)
+                textSize = 18f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+                setTextColor(Color.WHITE)
+                setPadding(dp(6), dp(3), dp(6), dp(3))
+                background = GradientDrawable().apply {
+                    setColor(Color.rgb(55, 100, 210))
+                    cornerRadius = dp(20).toFloat()
+                }
             })
             val removeButton = Button(this).apply {
                 text = "Lepaskan"
@@ -911,8 +950,12 @@ private var receivedMp3File: File? = null
                 isAllCaps = false
                 minHeight = dp(38)
                 setPadding(dp(8), 0, dp(8), 0)
-                setTextColor(Color.rgb(190, 55, 65))
-                background = roundedPanel(Color.WHITE, 10)
+                setTextColor(Color.rgb(169, 62, 72))
+                background = GradientDrawable().apply {
+                    setColor(Color.rgb(255, 247, 247))
+                    cornerRadius = dp(10).toFloat()
+                    setStroke(dp(1), Color.rgb(245, 220, 222))
+                }
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, dp(38)
                 ).apply { leftMargin = dp(6) }
@@ -926,9 +969,10 @@ private var receivedMp3File: File? = null
 
         val addRow = TextView(this).apply {
             text = "＋    Tambahkan perangkat anak"
-            textSize = 13f
+            textSize = 12.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(48, 91, 198))
+            letterSpacing = 0.005f
+            setTextColor(Color.rgb(42, 82, 174))
             gravity = Gravity.CENTER
             setPadding(dp(14), dp(13), dp(14), dp(13))
             background = GradientDrawable(
