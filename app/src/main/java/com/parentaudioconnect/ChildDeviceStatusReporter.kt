@@ -11,6 +11,9 @@ import android.util.Log
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.android.gms.tasks.Tasks
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Publishes lightweight battery and active-network diagnostics for a paired child device.
@@ -19,7 +22,7 @@ import com.google.firebase.firestore.SetOptions
 object ChildDeviceStatusReporter {
     private const val TAG = "ChildDeviceStatus"
 
-    fun publish(context: Context) {
+    suspend fun publish(context: Context) {
         val prefs = context.getSharedPreferences("parent_audio", Context.MODE_PRIVATE)
         val code = prefs.getString("pair_code", null)
         if (code.isNullOrBlank() || prefs.getString("pair_role", null) != "child") return
@@ -88,13 +91,14 @@ object ChildDeviceStatusReporter {
                 "deviceStatusAt" to FieldValue.serverTimestamp()
             )
 
-            FirebaseFirestore.getInstance()
-                .collection("pairings")
-                .document(code)
-                .set(status, SetOptions.merge())
-                .addOnFailureListener { error ->
-                    Log.w(TAG, "Could not publish device status for pairing $code", error)
-                }
+            withContext(Dispatchers.IO) {
+                Tasks.await(
+                    FirebaseFirestore.getInstance()
+                        .collection("pairings")
+                        .document(code)
+                        .set(status, SetOptions.merge())
+                )
+            }
         } catch (error: Exception) {
             Log.w(TAG, "Unable to collect child device status", error)
         }
