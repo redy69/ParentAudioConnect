@@ -96,6 +96,7 @@ private var receivedMp3File: File? = null
     }
     private var room: Room? = null
     private var isConnecting = false
+    private var isMicrophoneActive = false
     private var currentRole = ""
 
     private val characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -240,8 +241,8 @@ private var receivedMp3File: File? = null
         childButton.visibility = View.GONE
         codeText.visibility = View.VISIBLE
         childAudioActivityText.visibility = View.VISIBLE
-        startButton.visibility = View.VISIBLE
-        stopButton.visibility = View.GONE
+        startButton.visibility = if (isMicrophoneActive) View.GONE else View.VISIBLE
+        stopButton.visibility = if (isMicrophoneActive) View.VISIBLE else View.GONE
         sendMp3Button.visibility = View.VISIBLE
         playMp3Button.visibility = View.GONE
         adminWhatsAppButton.visibility = View.VISIBLE
@@ -438,9 +439,11 @@ private var receivedMp3File: File? = null
         statusText.text = "Menghubungkan ke ${childNames[code] ?: "anak"}..."
         activityScope.launch {
             try {
+                room?.localParticipant?.setMicrophoneEnabled(false)
                 room?.disconnect()
                 room?.release()
             } catch (_: Exception) { }
+            isMicrophoneActive = false
             room = null
             activeRoomCode = null
             mp3TransferManager = null
@@ -893,6 +896,7 @@ private var receivedMp3File: File? = null
                         if (role == "parent") {
                             newRoom.localParticipant
                                 .setMicrophoneEnabled(false)
+                            isMicrophoneActive = false
 
                             statusText.text =
                                 "HP ANAK TERHUBUNG"
@@ -1007,6 +1011,7 @@ private var receivedMp3File: File? = null
                     ?.setMicrophoneEnabled(true) ?: false
 
                 if (success) {
+                    isMicrophoneActive = true
                     statusText.text = "MIKROFON AKTIF - SUARA SEDANG DIKIRIM"
                     startButton.visibility = View.GONE
                     stopButton.visibility = View.VISIBLE
@@ -1025,6 +1030,7 @@ private var receivedMp3File: File? = null
             try {
                 room?.localParticipant?.setMicrophoneEnabled(false)
 
+                isMicrophoneActive = false
                 statusText.text = "Mikrofon berhenti"
                 startButton.visibility = View.VISIBLE
                 stopButton.visibility = View.GONE
