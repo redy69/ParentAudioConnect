@@ -390,8 +390,8 @@ private var receivedMp3File: File? = null
                 val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
                 val savedRole = prefs.getString("pair_role", null)
                 if (savedRole == "parent") {
+                    // Parent FCM token is not used for child camera delivery.
                     loadSavedChildren()
-                    childNames.keys.forEach { registerDeviceToken(it, "parent", token) }
                 } else {
                     val savedCode = prefs.getString("pair_code", null)
                     if (!savedCode.isNullOrBlank() && savedRole == "child") {
@@ -486,9 +486,20 @@ private var receivedMp3File: File? = null
         if (role == "child") editor.putString("pair_code", code)
         editor.apply()
 
-        val token = getSharedPreferences("parent_audio", MODE_PRIVATE)
-            .getString("fcm_token", null)
-        if (!token.isNullOrBlank()) registerDeviceToken(code, role, token)
+        // Only the child device's FCM token is needed by the parent to
+        // deliver camera commands. Fetch it here instead of relying on a
+        // possibly stale or not-yet-cached SharedPreferences value.
+        if (role == "child") {
+            FirebaseMessaging.getInstance().token
+                .addOnSuccessListener { token ->
+                    getSharedPreferences("parent_audio", MODE_PRIVATE)
+                        .edit().putString("fcm_token", token).apply()
+                    registerDeviceToken(code, role, token)
+                }
+                .addOnFailureListener { error ->
+                    statusText.text = "Gagal mengambil token notifikasi HP anak: ${error.localizedMessage ?: "coba lagi"}"
+                }
+        }
     }
 
     private fun loadSavedChildren() {
@@ -1114,8 +1125,8 @@ private var receivedMp3File: File? = null
                 document.update("childUid", uid)
                     .addOnSuccessListener {
 
-                        savePairing(code, "child")
                         currentRole = "child"
+                        savePairing(code, "child")
 
                         codeText.text = code
                         showChildConnectedScreen()
