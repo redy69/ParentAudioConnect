@@ -135,7 +135,7 @@ private var receivedMp3File: File? = null
         }
 
         val title = TextView(this).apply {
-            text = "SantetHP\\nKONTROL PERANGKAT KELUARGA"
+            text = "SantetHP\nKONTROL PERANGKAT KELUARGA"
             textSize = 21f
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER_VERTICAL
