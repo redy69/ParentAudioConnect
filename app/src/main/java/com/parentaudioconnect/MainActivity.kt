@@ -219,7 +219,8 @@ private var receivedMp3File: File? = null
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
         selectedChildButton.setOnClickListener { toggleChildrenPanel() }
         selectedChildButton.setTextColor(Color.rgb(48, 56, 74))
-        selectedChildButton.background = getDrawable(R.drawable.bg_glass_panel)
+        selectedChildButton.background = roundedPanel(Color.WHITE, 16)
+        selectedChildButton.elevation = dp(2).toFloat()
         addChildButton.setTextColor(Color.rgb(55, 80, 220))
         addChildButton.background = getDrawable(R.drawable.bg_app_tile)
         cancelPairingButton = createButton("BATALKAN KODE")
@@ -605,7 +606,7 @@ private var receivedMp3File: File? = null
         if (!::childrenContainer.isInitialized) return
         childrenContainer.removeAllViews()
         childrenContainer.orientation = LinearLayout.VERTICAL
-        childrenContainer.setPadding(dp(12), dp(8), dp(12), dp(8))
+        childrenContainer.setPadding(dp(10), dp(10), dp(10), dp(10))
         childrenContainer.background = roundedPanel(Color.WHITE, 20)
         childrenContainer.elevation = dp(2).toFloat()
 
@@ -633,21 +634,34 @@ private var receivedMp3File: File? = null
                 isFocusable = true
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply { setMargins(0, dp(3), 0, dp(3)) }
+                ).apply { setMargins(0, dp(5), 0, dp(5)) }
             }
+            val phoneIcon = TextView(this).apply {
+                text = "▣"
+                textSize = 25f
+                gravity = Gravity.CENTER
+                setTextColor(Color.rgb(45, 91, 210))
+                background = roundedPanel(Color.rgb(232, 239, 255), 14)
+                layoutParams = LinearLayout.LayoutParams(dp(48), dp(48)).apply {
+                    rightMargin = dp(12)
+                }
+            }
+            row.addView(phoneIcon)
             val details = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             }
             details.addView(TextView(this).apply {
                 text = name
-                textSize = 16f
-                setTextColor(Color.rgb(35, 40, 52))
+                textSize = 15f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.rgb(35, 45, 65))
             })
             details.addView(TextView(this).apply {
-                text = if (connected) "● Terhubung" else "○ Menunggu / Offline"
+                text = if (connected) "● Online dan terhubung" else "○ Menunggu koneksi"
                 textSize = 12f
-                setTextColor(if (connected) Color.rgb(35, 160, 95) else Color.rgb(130, 137, 150))
+                setPadding(0, dp(3), 0, 0)
+                setTextColor(if (connected) Color.rgb(28, 150, 92) else Color.rgb(130, 137, 150))
             })
             row.addView(details)
             if (selectedChildCode == code) row.addView(TextView(this).apply {
@@ -676,9 +690,10 @@ private var receivedMp3File: File? = null
         }
 
         val addRow = TextView(this).apply {
-            text = "＋    Tambah Perangkat"
-            textSize = 15f
-            setTextColor(Color.rgb(40, 50, 70))
+            text = "＋    Tambah HP Anak"
+            textSize = 14f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(45, 91, 210))
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(12), dp(16), dp(12), dp(16))
             isClickable = true
