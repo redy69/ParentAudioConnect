@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - fix/android-13-boot-reconnect
+      - feature/remote-camera
 
 permissions:
   contents: write
