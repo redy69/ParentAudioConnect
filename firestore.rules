@@ -267,6 +267,39 @@ service cloud.firestore {
       allow update: if isChild() && validChildStatusUpdate();
 
       allow delete: if isParent();
+
+      // Child uploads only after explicit local opt-in and Android Notification Access.
+      // The paired parent alone may read notification content.
+      match /notifications/{notificationId} {
+        allow create: if signedIn()
+          && get(/databases/$(database)/documents/pairings/$(code)).data.childUid == request.auth.uid
+          && request.resource.data.keys().hasOnly([
+            'packageName', 'appName', 'title', 'text', 'postedAt'
+          ])
+          && request.resource.data.keys().hasAll([
+            'packageName', 'appName', 'title', 'text', 'postedAt'
+          ])
+          && request.resource.data.packageName is string
+          && request.resource.data.packageName.size() <= 200
+          && request.resource.data.appName is string
+          && request.resource.data.appName.size() <= 120
+          && request.resource.data.title is string
+          && request.resource.data.title.size() <= 300
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 1200
+          && request.resource.data.postedAt is timestamp;
+
+        allow read: if signedIn()
+          && get(/databases/$(database)/documents/pairings/$(code)).data.parentUid == request.auth.uid;
+
+        allow delete: if signedIn()
+          && (
+            get(/databases/$(database)/documents/pairings/$(code)).data.parentUid == request.auth.uid
+            || get(/databases/$(database)/documents/pairings/$(code)).data.childUid == request.auth.uid
+          );
+
+        allow update: if false;
+      }
     }
   }
 }

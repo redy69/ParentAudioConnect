@@ -1,6 +1,8 @@
 
 package com.santethp
 import android.content.Intent
+import android.content.ComponentName
+import android.provider.Settings
 import android.net.Uri
 import java.io.File
 import android.Manifest
@@ -102,6 +104,8 @@ private lateinit var playMp3Button: Button
     private lateinit var safeZonesContainer: LinearLayout
     private lateinit var childAppBlockPanel: TextView
     private lateinit var childAppActivityPanel: TextView
+    private lateinit var childNotificationPanel: TextView
+    private var notificationHistoryListener: ListenerRegistration? = null
     private lateinit var parentAppBlockPanel: TextView
     private var pendingLocationStart = false
     private val parentOnlyViews = mutableListOf<View>()
@@ -623,6 +627,28 @@ private var receivedMp3File: File? = null
             setOnClickListener { showChildAppActivityConsent() }
         }
         rootLayout.addView(childAppActivityPanel)
+        childNotificationPanel = TextView(this).apply {
+            text = "🔔  PEMANTAUAN NOTIFIKASI\nNonaktif • Ketuk untuk membaca penjelasan dan mengaktifkan akses notifikasi"
+            textSize = 13f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(35, 53, 88))
+            gravity = Gravity.CENTER
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(dp(18), dp(18), dp(18), dp(18))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(245, 241, 255))
+            ).apply {
+                cornerRadius = dp(19).toFloat()
+                setStroke(dp(1), Color.rgb(211, 198, 239))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(3), 0, dp(12)) }
+            visibility = View.GONE
+            setOnClickListener { showChildNotificationConsent() }
+        }
+        rootLayout.addView(childNotificationPanel)
         val deviceSectionTitle = TextView(this).apply {
             text = "PERANGKAT ANAK"
             textSize = 11.5f
@@ -693,6 +719,28 @@ private var receivedMp3File: File? = null
         }
         rootLayout.addView(parentAppBlockPanel)
         parentOnlyViews.add(parentAppBlockPanel)
+        val parentNotificationsButton = TextView(this).apply {
+            text = "🔔  NOTIFIKASI HP ANAK\nLihat riwayat notifikasi dari semua aplikasi"
+            textSize = 13.5f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(47, 55, 110))
+            gravity = Gravity.CENTER_VERTICAL
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(dp(18), dp(17), dp(18), dp(17))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(245, 241, 255))
+            ).apply {
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), Color.rgb(211, 198, 239))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(5), 0, dp(8)) }
+            setOnClickListener { showChildNotificationsDialog() }
+        }
+        rootLayout.addView(parentNotificationsButton)
+        parentOnlyViews.add(parentNotificationsButton)
         val mapsButton = TextView(this).apply {
             text = "🗺️  MAPS & GEO-FENCE\nBuka peta lokasi perangkat anak"
             textSize = 14f
@@ -821,6 +869,7 @@ private var receivedMp3File: File? = null
             updateCameraStandbyButton()
             updateChildAppBlockPanel()
             updateChildAppActivityPanel()
+            updateChildNotificationPanel()
             // Device battery/network reporting is independent of Usage Access.
             // Always re-enqueue the lightweight status worker when the child app resumes.
             ChildDeviceStatusWorker.schedule(this)
@@ -912,6 +961,7 @@ private var receivedMp3File: File? = null
         childLocationPanel.visibility = View.GONE
         childAppBlockPanel.visibility = View.GONE
         childAppActivityPanel.visibility = View.GONE
+        childNotificationPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
         actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.VISIBLE
@@ -940,6 +990,7 @@ private var receivedMp3File: File? = null
         childModePanel.visibility = View.GONE
         childLocationPanel.visibility = View.GONE
         childAppActivityPanel.visibility = View.GONE
+        childNotificationPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
         actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.GONE
@@ -1321,9 +1372,11 @@ private var receivedMp3File: File? = null
         childLocationPanel.visibility = View.VISIBLE
         childAppBlockPanel.visibility = View.VISIBLE
         childAppActivityPanel.visibility = View.VISIBLE
+        childNotificationPanel.visibility = View.VISIBLE
         updateChildLocationPanel()
         updateChildAppBlockPanel()
         updateChildAppActivityPanel()
+        updateChildNotificationPanel()
         updateButton.visibility = View.VISIBLE
         updateInfoText.visibility = View.VISIBLE
         updateButton.text = "PERIKSA PEMBARUAN APLIKASI"
@@ -2772,6 +2825,189 @@ private var receivedMp3File: File? = null
         )
     }
 
+    private fun notificationListenerAccessEnabled(): Boolean {
+        val enabled = Settings.Secure.getString(
+            contentResolver, "enabled_notification_listeners"
+        ).orEmpty()
+        val component = ComponentName(this, ChildNotificationListenerService::class.java).flattenToString()
+        return enabled.split(':').any { it.equals(component, ignoreCase = true) }
+    }
+
+    private fun updateChildNotificationPanel() {
+        if (!this::childNotificationPanel.isInitialized || currentRole != "child") return
+        val optedIn = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            .getBoolean("child_notification_monitoring_enabled", false)
+        val access = notificationListenerAccessEnabled()
+        childNotificationPanel.text = when {
+            !optedIn -> "🔔  PEMANTAUAN NOTIFIKASI\nNonaktif • Ketuk untuk membaca penjelasan dan mengaktifkan akses"
+            access -> "🔔  PEMANTAUAN NOTIFIKASI AKTIF\nAkses Android sudah aktif • Notifikasi yang tampil akan dibagikan ke HP orang tua"
+            else -> "🔔  PEMANTAUAN NOTIFIKASI\nPersetujuan tersimpan • Aktifkan akses SantetHP pada Pengaturan Android"
+        }
+        childNotificationPanel.setTextColor(
+            if (optedIn && access) Color.rgb(28, 132, 86) else Color.rgb(35, 53, 88)
+        )
+    }
+
+    private fun showChildNotificationConsent() {
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        if (prefs.getBoolean("child_notification_monitoring_enabled", false)) {
+            try {
+                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            } catch (_: Exception) {
+                Toast.makeText(this, "Pengaturan akses notifikasi tidak tersedia.", Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Pemantauan semua notifikasi")
+            .setMessage(
+                "Jika diaktifkan, SantetHP dapat membaca nama aplikasi, judul, dan isi notifikasi yang ditampilkan Android pada HP ini, lalu menyimpannya agar dapat dilihat dari HP orang tua. Termasuk notifikasi pesan dan kode verifikasi jika aplikasi menampilkannya. Jangan aktifkan jika tidak setuju membagikan informasi tersebut. Izin khusus tetap harus diaktifkan secara manual pada Pengaturan Android."
+            )
+            .setNegativeButton("Batal", null)
+            .setPositiveButton("Saya setuju • Lanjutkan") { _, _ ->
+                prefs.edit().putBoolean("child_notification_monitoring_enabled", true).apply()
+                try {
+                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                } catch (_: Exception) {
+                    Toast.makeText(this, "Pengaturan akses notifikasi tidak tersedia.", Toast.LENGTH_LONG).show()
+                }
+                updateChildNotificationPanel()
+            }
+            .show()
+    }
+
+    private fun showChildNotificationsDialog() {
+        if (currentRole != "parent") return
+        val code = selectedChildCode
+        if (code.isNullOrBlank()) {
+            Toast.makeText(this, "Pilih HP anak terlebih dahulu.", Toast.LENGTH_LONG).show()
+            return
+        }
+        notificationHistoryListener?.remove()
+        val list = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(14), dp(8), dp(14), dp(8))
+        }
+        val scroll = ScrollView(this).apply {
+            addView(list)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(460)
+            )
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Notifikasi • ${childNames[code] ?: "HP Anak"}")
+            .setView(scroll)
+            .setNegativeButton("Tutup", null)
+            .setNeutralButton("Hapus riwayat", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                AlertDialog.Builder(this)
+                    .setTitle("Hapus semua riwayat?")
+                    .setMessage("Notifikasi yang tersimpan untuk perangkat ini akan dihapus permanen.")
+                    .setNegativeButton("Batal", null)
+                    .setPositiveButton("Hapus") { _, _ -> clearChildNotificationHistory(code) }
+                    .show()
+            }
+        }
+        notificationHistoryListener = db.collection("pairings").document(code)
+            .collection("notifications")
+            .orderBy("postedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(100)
+            .addSnapshotListener { snapshot, error ->
+                list.removeAllViews()
+                if (error != null) {
+                    list.addView(TextView(this).apply {
+                        text = "Gagal memuat notifikasi: ${error.localizedMessage ?: "periksa aturan Firestore"}"
+                        textSize = 12f
+                        setTextColor(Color.rgb(170, 55, 55))
+                    })
+                    return@addSnapshotListener
+                }
+                val documents = snapshot?.documents.orEmpty()
+                if (documents.isEmpty()) {
+                    list.addView(TextView(this).apply {
+                        text = "Belum ada notifikasi. Pastikan HP anak online dan akses notifikasi SantetHP sudah aktif."
+                        textSize = 13f
+                        setTextColor(Color.rgb(104, 117, 140))
+                        setPadding(dp(8), dp(20), dp(8), dp(20))
+                    })
+                    return@addSnapshotListener
+                }
+                val formatter = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm:ss", java.util.Locale("id", "ID"))
+                documents.forEach { document ->
+                    val appName = document.getString("appName") ?: document.getString("packageName") ?: "Aplikasi"
+                    val title = document.getString("title").orEmpty()
+                    val body = document.getString("text").orEmpty()
+                    val timestamp = document.getTimestamp("postedAt")
+                    val whenText = timestamp?.toDate()?.let { formatter.format(it) } ?: "Waktu tidak tersedia"
+                    val card = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(dp(12), dp(10), dp(12), dp(10))
+                        background = GradientDrawable().apply {
+                            setColor(Color.WHITE)
+                            cornerRadius = dp(13).toFloat()
+                            setStroke(dp(1), Color.rgb(224, 229, 241))
+                        }
+                        layoutParams = LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+                        ).apply { setMargins(0, dp(4), 0, dp(4)) }
+                    }
+                    card.addView(TextView(this).apply {
+                        text = appName
+                        textSize = 12f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(Color.rgb(51, 76, 132))
+                    })
+                    if (title.isNotBlank()) card.addView(TextView(this).apply {
+                        text = title
+                        textSize = 13f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(Color.rgb(35, 47, 72))
+                        setPadding(0, dp(4), 0, 0)
+                    })
+                    if (body.isNotBlank()) card.addView(TextView(this).apply {
+                        text = body
+                        textSize = 12f
+                        setTextColor(Color.rgb(62, 73, 94))
+                        setPadding(0, dp(3), 0, 0)
+                    })
+                    card.addView(TextView(this).apply {
+                        text = whenText
+                        textSize = 10.5f
+                        setTextColor(Color.rgb(120, 130, 148))
+                        setPadding(0, dp(7), 0, 0)
+                    })
+                    list.addView(card)
+                }
+            }
+        dialog.setOnDismissListener {
+            notificationHistoryListener?.remove()
+            notificationHistoryListener = null
+        }
+        dialog.show()
+    }
+
+    private fun clearChildNotificationHistory(code: String) {
+        val collection = db.collection("pairings").document(code).collection("notifications")
+        collection.limit(400).get().addOnSuccessListener { snapshot ->
+            if (snapshot.isEmpty) {
+                Toast.makeText(this, "Riwayat notifikasi sudah kosong.", Toast.LENGTH_SHORT).show()
+                return@addOnSuccessListener
+            }
+            val batch = db.batch()
+            snapshot.documents.forEach { batch.delete(it.reference) }
+            batch.commit().addOnSuccessListener {
+                if (snapshot.size() >= 400) clearChildNotificationHistory(code)
+                else Toast.makeText(this, "Riwayat notifikasi berhasil dihapus.", Toast.LENGTH_LONG).show()
+            }.addOnFailureListener {
+                Toast.makeText(this, "Gagal menghapus riwayat notifikasi.", Toast.LENGTH_LONG).show()
+            }
+        }.addOnFailureListener {
+            Toast.makeText(this, "Gagal membaca riwayat notifikasi.", Toast.LENGTH_LONG).show()
+        }
+    }
+
     private fun renderChildDeviceStatus(snapshot: DocumentSnapshot) {
         val battery = snapshot.getLong("deviceBatteryPercent")?.toInt() ?: -1
         val charging = snapshot.getBoolean("deviceCharging") == true
@@ -3632,6 +3868,8 @@ private fun playReceivedMp3() {
         childListeners.values.forEach { it.remove() }
         childListeners.clear()
         childAudioActivityText.removeCallbacks(staleStatusRunnable)
+        notificationHistoryListener?.remove()
+        notificationHistoryListener = null
 
         activityScope.launch {
             room?.disconnect()
