@@ -1626,8 +1626,8 @@ private var receivedMp3File: File? = null
                 "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
         }
         childAudioActivityText.setTextColor(
-            if (liveAudioActive || mp3AudioActive) Color.rgb(28, 150, 92)
-            else Color.rgb(104, 117, 140)
+            if (liveAudioActive || mp3AudioActive) Color.rgb(23, 107, 67)
+            else Color.rgb(82, 98, 122)
         )
     }
 
