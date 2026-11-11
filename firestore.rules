@@ -153,8 +153,9 @@ service cloud.firestore {
           || (request.resource.data.appBlockInstalledApps is list
             && request.resource.data.appBlockInstalledApps.size() <= 100))
         && (!changed.hasAny(['blockedApps'])
-          || (request.resource.data.blockedApps is list
-            && request.resource.data.blockedApps.size() <= 100))
+          || (request.resource.data.appBlockConsent == false
+            && request.resource.data.blockedApps is list
+            && request.resource.data.blockedApps.size() == 0))
         && (!changed.hasAny(['appBlockUpdatedAt'])
           || request.resource.data.appBlockUpdatedAt is timestamp)
         && (!changed.hasAny(['liveAudioActive'])
