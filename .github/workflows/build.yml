@@ -9,6 +9,7 @@ on:
       - feature/remote-camera
       - fix/camera-standby-return-and-fcm
       - feature/device-health-monitoring
+      - feature/livekit-multi-server-failover
 
 permissions:
   contents: write
