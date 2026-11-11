@@ -125,6 +125,7 @@ service cloud.firestore {
             && request.resource.data.childFcmToken.size() >= 20
             && request.resource.data.childFcmToken.size() <= 4096))
         && (!changed.hasAny(['appUsageSummary'])
+          || (!request.resource.data.keys().hasAny(['appUsageSummary']))
           || (request.resource.data.appUsageSummary is list
             && request.resource.data.appUsageSummary.size() <= 12))
         && (!changed.hasAny(['appUsageEnabled'])
