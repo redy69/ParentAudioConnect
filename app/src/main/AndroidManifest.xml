@@ -43,6 +43,18 @@
         </activity>
 
         <service
+            android:name=".ChildAppBlockAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/child_app_block_accessibility" />
+        </service>
+
+        <service
             android:name=".ChildLocationSharingService"
             android:exported="false"
             android:foregroundServiceType="location" />
