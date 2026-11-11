@@ -52,9 +52,6 @@ class ChildDeviceStatusWorker(
         runReporter("usage schedule") {
             ChildUsageScheduleReporter.syncAndNotify(applicationContext)
         }
-        runReporter("app permission audit") {
-            AppPermissionAuditReporter.publish(applicationContext)
-        }
         runReporter("app blocking list") {
             AppBlockReporter.publish(applicationContext)
         }
