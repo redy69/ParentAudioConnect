@@ -1666,11 +1666,15 @@ private var receivedMp3File: File? = null
     }
 
     private fun isAppBlockAccessibilityEnabled(): Boolean {
-        val expected = "$packageName/.ChildAppBlockAccessibilityService"
+        val expected = android.content.ComponentName(
+            this, ChildAppBlockAccessibilityService::class.java
+        )
         val enabled = android.provider.Settings.Secure.getString(
             contentResolver, android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
         ) ?: return false
-        return enabled.split(':').any { it.equals(expected, ignoreCase = true) }
+        return enabled.split(':').any { entry ->
+            android.content.ComponentName.unflattenFromString(entry) == expected
+        }
     }
 
     private fun updateChildAppBlockPanel() {
@@ -1708,7 +1712,10 @@ private var receivedMp3File: File? = null
                 updateChildAppBlockPanel()
             }
             .setPositiveButton("Pengaturan Aksesibilitas") { _, _ ->
-                if (!enabled) prefs.edit().putBoolean("child_app_block_consent", true).apply()
+                if (!enabled) {
+                    prefs.edit().putBoolean("child_app_block_consent", true).apply()
+                    ChildDeviceStatusWorker.schedule(this)
+                }
                 try {
                     startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
                 } catch (_: Exception) {
