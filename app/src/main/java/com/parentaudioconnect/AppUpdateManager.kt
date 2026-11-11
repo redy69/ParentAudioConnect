@@ -42,9 +42,17 @@ object AppUpdateManager {
             try {
                 var dataUpdated = false
                 var dataVersionMessage = "Data aplikasi sudah terbaru"
+                var installStatus = "OJO DI INSTALL"
+                var installStatusMessage = "Status kelayakan belum diverifikasi."
 
                 try {
                     val manifest = fetchJson(DATA_MANIFEST_URL, github = false)
+                    val requestedStatus = manifest.optString("installStatus", "")
+                    installStatus = if (requestedStatus == "NORMAL") "NORMAL" else "OJO DI INSTALL"
+                    installStatusMessage = manifest.optString(
+                        "installStatusMessage",
+                        if (installStatus == "NORMAL") "APK dinyatakan layak dipasang." else "Jangan instal APK sebelum ada pemberitahuan NORMAL."
+                    ).take(240)
                     val remoteDataVersion = manifest.optInt("dataVersion", 0)
                     val prefs = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                     val localDataVersion = prefs.getInt(KEY_DATA_VERSION, 0)
@@ -58,6 +66,8 @@ object AppUpdateManager {
                 } catch (error: Exception) {
                     android.util.Log.w("AppUpdateManager", "Data update check failed", error)
                     dataVersionMessage = "Pembaruan data tidak dapat diperiksa"
+                    installStatus = "OJO DI INSTALL"
+                    installStatusMessage = "Status kelayakan tidak dapat diverifikasi. Jangan instal dulu."
                 }
 
                 val release = fetchJson(RELEASE_API, github = true)
@@ -76,11 +86,12 @@ object AppUpdateManager {
                     val downloadUrl = apkUrl ?: throw IllegalStateException("File APK pembaruan tidak ditemukan")
                     activity.runOnUiThread {
                         if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
-                        onStatus("Pembaruan aplikasi tersedia: build $remoteVersion")
+                        onStatus("$installStatus • $installStatusMessage\nPembaruan aplikasi tersedia: build $remoteVersion")
                         AlertDialog.Builder(activity)
                             .setTitle("Pembaruan SantetHP tersedia")
                             .setMessage(
-                                "Versi baru build $remoteVersion tersedia. " +
+                                "$installStatus — $installStatusMessage\n\n" +
+                                    "Versi baru build $remoteVersion tersedia. " +
                                     (if (dataUpdated) "Data aplikasi juga sudah diperbarui. " else "") +
                                     "Unduh APK dan lanjutkan instalasi Android?"
                             )
@@ -94,11 +105,11 @@ object AppUpdateManager {
                     activity.runOnUiThread {
                         if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
                         val message = if (dataUpdated) {
-                            "$dataVersionMessage. APK SantetHP sudah versi terbaru."
+                            "$installStatus — $installStatusMessage\n$dataVersionMessage. APK SantetHP sudah versi terbaru."
                         } else if (dataVersionMessage == "Data aplikasi sudah terbaru") {
-                            "SantetHP sudah menggunakan versi terbaru."
+                            "$installStatus — $installStatusMessage\nSantetHP sudah menggunakan versi terbaru."
                         } else {
-                            "$dataVersionMessage. Versi APK tetap terbaru."
+                            "$installStatus — $installStatusMessage\n$dataVersionMessage. Versi APK tetap terbaru."
                         }
                         onStatus(message)
                         Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
@@ -108,7 +119,7 @@ object AppUpdateManager {
                 android.util.Log.w("AppUpdateManager", "App update check failed", error)
                 activity.runOnUiThread {
                     if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
-                    val message = "Gagal memeriksa pembaruan: ${error.localizedMessage ?: "koneksi bermasalah"}"
+                    val message = "OJO DI INSTALL — Status kelayakan belum dapat diverifikasi. Gagal memeriksa pembaruan: ${error.localizedMessage ?: "koneksi bermasalah"}"
                     onStatus(message)
                     Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
                 }
