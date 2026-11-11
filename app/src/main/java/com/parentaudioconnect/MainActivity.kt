@@ -2073,8 +2073,7 @@ private var receivedMp3File: File? = null
                 }.toTypedArray()
 
                 AlertDialog.Builder(this)
-                    .setTitle("Pilih satu aplikasi")
-                    .setMessage("Pilih aplikasi yang ingin diblokir atau diubah durasinya. Setiap aplikasi memiliki durasi masing-masing.")
+                    .setTitle("Pilih aplikasi • atur durasi masing-masing")
                     .setItems(labels) { _, which ->
                         val (pkg, name) = apps[which]
                         val currentUntil = activeByPackage[pkg]?.third
