@@ -104,7 +104,7 @@ object ChildDeviceStatusReporter {
         } catch (error: Exception) {
             Log.e(
                 TAG,
-                "Unable to publish child device status (\${error.javaClass.simpleName}): \${error.message}",
+                "Unable to publish child device status (${error.javaClass.simpleName}): ${error.message}",
                 error
             )
             throw error

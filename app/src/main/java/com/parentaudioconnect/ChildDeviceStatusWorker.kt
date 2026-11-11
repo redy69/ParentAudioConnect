@@ -35,7 +35,7 @@ class ChildDeviceStatusWorker(
                 hasFailure = true
                 Log.e(
                     TAG,
-                    "Reporter failed: $name (\${error.javaClass.simpleName}): \${error.message}",
+                    "Reporter failed: $name (${error.javaClass.simpleName}): ${error.message}",
                     error
                 )
             }
