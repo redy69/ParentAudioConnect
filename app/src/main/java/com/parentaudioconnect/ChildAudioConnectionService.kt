@@ -57,6 +57,7 @@ class ChildAudioConnectionService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var room: Room? = null
     private var roomEventsJob: Job? = null
+    private var reconnectJob: Job? = null
     private var mp3TransferManager: Mp3TransferManager? = null
     private val activeRemoteAudioTrackIds = ConcurrentHashMap.newKeySet<Int>()
     private var liveHeartbeatJob: Job? = null
@@ -223,6 +224,7 @@ class ChildAudioConnectionService : Service() {
                                             applicationContext, false
                                         )
                                         updateNotification("Koneksi audio terputus • mencoba kembali")
+                                        scheduleAudioReconnect(candidateRoom)
                                     }
                                     else -> Unit
                                 }
@@ -284,6 +286,27 @@ class ChildAudioConnectionService : Service() {
             }
         } finally {
             connecting = false
+        }
+    }
+
+    private fun scheduleAudioReconnect(disconnectedRoom: Room) {
+        if (reconnectJob?.isActive == true) return
+        reconnectJob = serviceScope.launch {
+            delay(1_500)
+            if (!isActive || room !== disconnectedRoom) return@launch
+
+            room = null
+            roomEventsJob?.cancel()
+            roomEventsJob = null
+            mp3TransferManager = null
+            try {
+                disconnectedRoom.release()
+            } catch (_: Exception) { }
+
+            if (!connecting && isActive) {
+                connecting = true
+                connectWithRetry()
+            }
         }
     }
 
@@ -385,6 +408,8 @@ class ChildAudioConnectionService : Service() {
     override fun onDestroy() {
         pairingRemovalListener?.remove()
         pairingRemovalListener = null
+        reconnectJob?.cancel()
+        reconnectJob = null
         roomEventsJob?.cancel()
         roomEventsJob = null
         activeRemoteAudioTrackIds.clear()
