@@ -16,6 +16,7 @@ class ChildAppBlockAccessibilityService : AccessibilityService() {
     @Volatile private var blockedPackages: Set<String> = emptySet()
     private var lastBlockedPackage: String? = null
     private var lastBlockedAt = 0L
+    private var lastReportedActivityPackage: String? = null
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -36,6 +37,7 @@ class ChildAppBlockAccessibilityService : AccessibilityService() {
             pairingListener = null
             boundPairingCode = null
             blockedPackages = emptySet()
+            lastReportedActivityPackage = null
             return
         }
         if (boundPairingCode == code && pairingListener != null) return
@@ -44,6 +46,7 @@ class ChildAppBlockAccessibilityService : AccessibilityService() {
         pairingListener = null
         boundPairingCode = code
         blockedPackages = emptySet()
+        lastReportedActivityPackage = null
         pairingListener = FirebaseFirestore.getInstance()
             .collection("pairings").document(code)
             .addSnapshotListener { snapshot, error ->
@@ -66,10 +69,42 @@ class ChildAppBlockAccessibilityService : AccessibilityService() {
         if (event == null || event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         bindToCurrentPairing()
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
-        if (prefs.getString("pair_role", null) != "child" ||
-            !prefs.getBoolean("child_app_block_consent", false)) return
+        if (prefs.getString("pair_role", null) != "child") return
+
         val packageName = event.packageName?.toString() ?: return
         if (packageName == this.packageName || packageName == "com.android.systemui") return
+
+        // Separate, explicit child consent: report only the foreground app identity,
+        // never window text, screenshots, keystrokes, or accessibility node contents.
+        val activityConsent = prefs.getBoolean("child_app_activity_consent", false)
+        val code = boundPairingCode
+        if (activityConsent && !code.isNullOrBlank() &&
+            packageName != lastReportedActivityPackage
+        ) {
+            lastReportedActivityPackage = packageName
+            val appName = try {
+                packageManager.getApplicationLabel(
+                    packageManager.getApplicationInfo(packageName, 0)
+                ).toString()
+            } catch (_: Exception) {
+                packageName
+            }
+            FirebaseFirestore.getInstance().collection("pairings").document(code)
+                .update(
+                    mapOf(
+                        "appActivityConsent" to true,
+                        "appActivityPackage" to packageName,
+                        "appActivityName" to appName,
+                        "appActivityAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                    )
+                )
+                .addOnFailureListener {
+                    android.util.Log.w("ChildAppActivity", "Unable to publish foreground app", it)
+                }
+        }
+
+        // App blocking remains independently controlled by its own child consent.
+        if (!prefs.getBoolean("child_app_block_consent", false)) return
         if (packageName !in blockedPackages) return
         val now = System.currentTimeMillis()
         if (packageName == lastBlockedPackage && now - lastBlockedAt < 1200L) return
@@ -86,6 +121,7 @@ class ChildAppBlockAccessibilityService : AccessibilityService() {
         pairingListener = null
         boundPairingCode = null
         blockedPackages = emptySet()
+        lastReportedActivityPackage = null
         super.onDestroy()
     }
 }
