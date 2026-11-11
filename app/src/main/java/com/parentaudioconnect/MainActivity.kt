@@ -120,10 +120,14 @@ private var receivedMp3File: File? = null
 
     private var pairingListener: ListenerRegistration? = null
     private var latestPairingSnapshot: DocumentSnapshot? = null
+    private val childSnapshots = linkedMapOf<String, DocumentSnapshot>()
     private val staleStatusRunnable = Runnable {
-        latestPairingSnapshot?.let {
-            renderChildAudioActivity(it)
-            renderChildDeviceStatus(it)
+        selectedChildCode?.let { code ->
+            childSnapshots[code]?.let { snapshot ->
+                latestPairingSnapshot = snapshot
+                renderChildAudioActivity(snapshot)
+                renderChildDeviceStatus(snapshot)
+            }
         }
     }
     private var room: Room? = null
@@ -1637,6 +1641,20 @@ private var receivedMp3File: File? = null
             return
         }
 
+        childSnapshots[code]?.let { snapshot ->
+            latestPairingSnapshot = snapshot
+            renderChildAudioActivity(snapshot)
+            renderChildDeviceStatus(snapshot)
+            childAudioActivityText.removeCallbacks(staleStatusRunnable)
+            childAudioActivityText.postDelayed(staleStatusRunnable, 36_000L)
+        } ?: run {
+            latestPairingSnapshot = null
+            childAudioActivityText.removeCallbacks(staleStatusRunnable)
+            childAudioActivityText.text = "AKTIVITAS HP ANAK\nMenunggu data perangkat yang dipilih..."
+            childDeviceStatusText.text = "KONDISI HP ${childNames[code] ?: "ANAK"}\nMenunggu laporan dari perangkat ini..."
+            childLocationMapView.showUnavailable(false)
+        }
+
         if (activeRoomCode == code && room != null) {
             statusText.text = if (isMicrophoneActive) {
                 "AUDIO LIVE AKTIF"
@@ -1722,9 +1740,9 @@ private var receivedMp3File: File? = null
                 codeText.text = ""
                 statusText.text = "Belum ada HP anak terhubung. Tekan TAMBAH ANAK untuk membuat kode."
             } else {
-                selectedChildCode = childNames.keys.first()
-                codeText.text = selectedChildCode
-                statusText.text = "Pilih anak yang ingin dihubungkan"
+                // Keep the last selected child restored by loadSavedChildren().
+                codeText.text = selectedChildCode.orEmpty()
+                statusText.text = "Menampilkan data ${selectedChildCode?.let { childNames[it] } ?: "anak"}"
             }
         } else {
             val code = prefs.getString("pair_code", null) ?: return
@@ -2550,6 +2568,7 @@ private var receivedMp3File: File? = null
                 }
 
                 if (snapshot != null && snapshot.exists()) {
+                    childSnapshots[code] = snapshot
                     val childUid = snapshot.getString("childUid")
                     val connected = !childUid.isNullOrEmpty()
                     childConnected[code] = connected
