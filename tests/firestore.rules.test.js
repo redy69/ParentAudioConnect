@@ -7,6 +7,7 @@ import {
 } from "@firebase/rules-unit-testing";
 import {
   Timestamp,
+  deleteField,
   doc,
   getDoc,
   setDoc,
@@ -125,6 +126,44 @@ test("parent cannot write child telemetry fields", async () => {
   const db = testEnv.authenticatedContext("parent-user").firestore();
   await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
     deviceBatteryPercent: 88
+  }));
+});
+
+test("child can publish app usage history and opt-in status", async () => {
+  const db = testEnv.authenticatedContext("child-user").firestore();
+  await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    appUsageEnabled: true,
+    appUsagePermissionGranted: true,
+    appUsageSummary: [{
+      packageName: "com.example.app",
+      appName: "Example",
+      foregroundMinutes: 42
+    }],
+    appUsageAt: Timestamp.now()
+  }));
+});
+
+test("child can clear app usage history when sharing is disabled", async () => {
+  const db = testEnv.authenticatedContext("child-user").firestore();
+  await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    appUsageEnabled: false,
+    appUsagePermissionGranted: false,
+    appUsageSummary: deleteField(),
+    appUsageAt: Timestamp.now()
+  }));
+});
+
+test("parent cannot write child app usage history", async () => {
+  const db = testEnv.authenticatedContext("parent-user").firestore();
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    appUsageEnabled: true,
+    appUsagePermissionGranted: true,
+    appUsageSummary: [{
+      packageName: "com.example.app",
+      appName: "Example",
+      foregroundMinutes: 42
+    }],
+    appUsageAt: Timestamp.now()
   }));
 });
 
