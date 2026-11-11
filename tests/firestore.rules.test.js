@@ -126,7 +126,7 @@ test("unrelated signed-in user cannot update an already claimed pairing", async 
 });
 
 
-test("parent can create a 16-character pairing code with a maximum five-minute expiry", async () => {
+test("parent can create an eight-character pairing code with a maximum five-minute expiry", async () => {
   const db = testEnv.authenticatedContext("new-parent").firestore();
   await assertSucceeds(setDoc(doc(db, "pairings", "ABCDEFGHJKLMNPQR"), {
     parentUid: "new-parent",
@@ -136,9 +136,9 @@ test("parent can create a 16-character pairing code with a maximum five-minute e
   }));
 });
 
-test("parent cannot create a legacy eight-character pairing code", async () => {
+test("parent cannot create a sixteen-character pairing code", async () => {
   const db = testEnv.authenticatedContext("new-parent").firestore();
-  await assertFails(setDoc(doc(db, "pairings", "ABCDEFGH"), {
+  await assertFails(setDoc(doc(db, "pairings", "ABCDEFGHJKLMNPQR"), {
     parentUid: "new-parent",
     childUid: null,
     createdAt: Timestamp.now(),
@@ -148,7 +148,7 @@ test("parent cannot create a legacy eight-character pairing code", async () => {
 
 test("parent cannot create a pairing code that expires after five minutes", async () => {
   const db = testEnv.authenticatedContext("new-parent").firestore();
-  await assertFails(setDoc(doc(db, "pairings", "ABCDEFGHJKLMNPQR"), {
+  await assertFails(setDoc(doc(db, "pairings", "ABCDEFGH"), {
     parentUid: "new-parent",
     childUid: null,
     createdAt: Timestamp.now(),

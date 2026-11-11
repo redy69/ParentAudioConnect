@@ -173,7 +173,7 @@ service cloud.firestore {
 
     match /pairings/{code} {
       allow create: if signedIn()
-        && code.size() == 16
+        && code.size() == 8
         && request.resource.data.keys().hasOnly([
           'parentUid', 'childUid', 'createdAt', 'expiresAt'
         ])

@@ -302,7 +302,7 @@ private var receivedMp3File: File? = null
         }
 
         pairingInstructionText = TextView(this).apply {
-            text = "HUBUNGKAN HP ANAK\nMasukkan kode ini pada aplikasi SantetHP di perangkat anak. Kode berlaku selama 15 menit."
+            text = "HUBUNGKAN HP ANAK\nMasukkan kode ini pada aplikasi SantetHP di perangkat anak. Kode berlaku selama 5 menit."
             textSize = 14f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.005f
@@ -2111,7 +2111,7 @@ private var receivedMp3File: File? = null
     private fun generateCode(): String {
         val random = SecureRandom()
 
-        return (1..16).map {
+        return (1..8).map {
             characters[random.nextInt(characters.length)]
         }.joinToString("")
     }
@@ -2398,7 +2398,7 @@ private var receivedMp3File: File? = null
 
     private fun showCodeDialog() {
         val input = EditText(this).apply {
-            hint = "Masukkan 16 karakter kode"
+            hint = "Masukkan 8 karakter kode"
             isSingleLine = true
         }
 
@@ -2413,8 +2413,8 @@ private var receivedMp3File: File? = null
                     .trim()
                     .uppercase()
 
-                if (code.length != 16) {
-                    statusText.text = "Kode harus 16 karakter"
+                if (code.length != 8) {
+                    statusText.text = "Kode harus 8 karakter"
                 } else {
                     joinPairing(code)
                 }
