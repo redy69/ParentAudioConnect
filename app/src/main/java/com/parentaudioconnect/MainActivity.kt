@@ -1547,29 +1547,38 @@ private var receivedMp3File: File? = null
         childrenContainer.visibility = View.GONE
         updateSelectedChildButton()
         renderChildrenList()
+        codeText.text = code
+
         if (childConnected[code] != true) {
-            codeText.text = code
             statusText.text = "Menunggu HP ${childNames[code] ?: "anak"} terhubung..."
             return
         }
-        if (activeRoomCode == code && room != null) return
-        selectedChildCode = code
-        updateSelectedChildButton()
-        renderChildrenList()
-        codeText.text = code
-        statusText.text = "Menghubungkan ke ${childNames[code] ?: "anak"}..."
-        activityScope.launch {
-            try {
-                room?.localParticipant?.setMicrophoneEnabled(false)
-                room?.disconnect()
-                room?.release()
-            } catch (_: Exception) { }
-            isMicrophoneActive = false
-            room = null
-            activeRoomCode = null
-            mp3TransferManager = null
-            isConnecting = false
-            connectToLiveKit(code)
+
+        if (activeRoomCode == code && room != null) {
+            statusText.text = if (isMicrophoneActive) {
+                "AUDIO LIVE AKTIF"
+            } else {
+                "HP anak terhubung • audio siap digunakan"
+            }
+            return
+        }
+
+        statusText.text = "HP ${childNames[code] ?: "anak"} terhubung • audio belum diaktifkan"
+        if (room != null || isConnecting) {
+            activityScope.launch {
+                try {
+                    room?.localParticipant?.setMicrophoneEnabled(false)
+                    room?.disconnect()
+                    room?.release()
+                } catch (_: Exception) { }
+                room = null
+                activeRoomCode = null
+                mp3TransferManager = null
+                isMicrophoneActive = false
+                isConnecting = false
+                startButton.visibility = View.VISIBLE
+                stopButton.visibility = View.GONE
+            }
         }
     }
 
@@ -1640,8 +1649,7 @@ private var receivedMp3File: File? = null
             codeText.text = code
             showChildConnectedScreen()
             watchChildPairingRemoval(code)
-            statusText.text = "Memulihkan koneksi audio (mikrofon tetap mati)..."
-            startChildAudioConnection()
+            statusText.text = "Terhubung ke orang tua • menunggu perintah audio"
         }
     }
 
@@ -2485,9 +2493,11 @@ private var receivedMp3File: File? = null
                     if (connected) {
                         if (selectedChildCode == null) selectedChildCode = code
                         if (selectedChildCode == code && activeRoomCode != code && !isConnecting) {
-                            statusText.text = "HP ${childNames[code] ?: "ANAK"} BERHASIL TERHUBUNG!"
-                            codeText.text = code
-                            selectChild(code)
+                            if (selectedChildCode == null) selectChild(code)
+                            else {
+                                codeText.text = code
+                                statusText.text = "HP ${childNames[code] ?: "ANAK"} TERHUBUNG • AUDIO NONAKTIF"
+                            }
                         }
                         if (!childNames[code].isNullOrBlank() &&
                             childNames[code]?.startsWith("Anak ") == true &&
@@ -2603,7 +2613,7 @@ private var receivedMp3File: File? = null
             }
     }
 
-    private fun connectToLiveKit(code: String) {
+    private fun connectToLiveKit(code: String, onConnected: (() -> Unit)? = null) {
         if (room != null || isConnecting) return
 
         isConnecting = true
@@ -2681,9 +2691,9 @@ private var receivedMp3File: File? = null
                                 .setMicrophoneEnabled(false)
                             isMicrophoneActive = false
 
-                            statusText.text =
-                                "HP ANAK TERHUBUNG"
+                            statusText.text = "Ruang audio siap"
                             showParentDashboard()
+                            onConnected?.invoke()
 
                         } else {
                             newRoom.localParticipant
@@ -2717,6 +2727,66 @@ private var receivedMp3File: File? = null
                     error.localizedMessage ?: "Koneksi gagal",
                     Toast.LENGTH_LONG
                 ).show()
+            }
+    }
+
+    private fun requestRemoteAudio(
+        code: String,
+        action: String,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        val user = auth.currentUser
+        if (user == null) {
+            onComplete(false, "Firebase belum terhubung")
+            return
+        }
+        user.getIdToken(false)
+            .addOnSuccessListener { result ->
+                val idToken = result.token
+                if (idToken.isNullOrBlank()) {
+                    onComplete(false, "Token Firebase tidak tersedia")
+                    return@addOnSuccessListener
+                }
+                activityScope.launch {
+                    try {
+                        withContext(Dispatchers.IO) {
+                            val connection = URL(workerUrl.replace("/token", "/request-audio"))
+                                .openConnection() as HttpURLConnection
+                            try {
+                                connection.requestMethod = "POST"
+                                connection.connectTimeout = 15000
+                                connection.readTimeout = 15000
+                                connection.doOutput = true
+                                connection.setRequestProperty("Content-Type", "application/json")
+                                val body = JSONObject().apply {
+                                    put("idToken", idToken)
+                                    put("code", code)
+                                    put("action", action)
+                                }
+                                connection.outputStream.use {
+                                    it.write(body.toString().toByteArray(Charsets.UTF_8))
+                                }
+                                val status = connection.responseCode
+                                val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                                val responseText = stream?.bufferedReader()?.use { it.readText() } ?: "{}"
+                                val response = JSONObject(responseText)
+                                if (status !in 200..299 || !response.optBoolean("sent", false)) {
+                                    throw IllegalStateException(
+                                        response.optString("error", "Server menolak perintah audio")
+                                    )
+                                }
+                            } finally {
+                                connection.disconnect()
+                            }
+                        }
+                        onComplete(true, null)
+                    } catch (error: Exception) {
+                        onComplete(false, error.localizedMessage ?: "Gagal mengirim perintah")
+                    }
+                }
+            }
+            .addOnFailureListener { error ->
+                onComplete(false, error.localizedMessage ?: "Gagal mendapatkan token Firebase")
             }
     }
 
@@ -2777,49 +2847,79 @@ private var receivedMp3File: File? = null
 
     private fun startMicrophone() {
         if (currentRole != "parent") return
+        val code = selectedChildCode
+        if (code.isNullOrBlank() || childConnected[code] != true) {
+            statusText.text = "Pilih HP anak yang sudah terhubung terlebih dahulu"
+            return
+        }
 
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED
         ) {
-            requestPermissions(
-                arrayOf(Manifest.permission.RECORD_AUDIO),
-                MIC_PERMISSION
-            )
+            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), MIC_PERMISSION)
             return
         }
 
+        statusText.text = "Meminta HP anak mengaktifkan audio..."
+        requestRemoteAudio(code, "start") { sent, error ->
+            if (!sent) {
+                statusText.text = "Perintah audio gagal: ${error ?: "periksa koneksi HP anak"}"
+                return@requestRemoteAudio
+            }
+            if (room != null && activeRoomCode == code) {
+                enableMicrophoneOnConnectedRoom()
+            } else {
+                connectToLiveKit(code) { enableMicrophoneOnConnectedRoom() }
+            }
+        }
+    }
+
+    private fun enableMicrophoneOnConnectedRoom() {
         activityScope.launch {
             try {
-                val success = room?.localParticipant
-                    ?.setMicrophoneEnabled(true) ?: false
-
+                val success = room?.localParticipant?.setMicrophoneEnabled(true) ?: false
                 if (success) {
                     isMicrophoneActive = true
-                    statusText.text = "MIKROFON AKTIF - SUARA SEDANG DIKIRIM"
+                    statusText.text = "AUDIO LIVE AKTIF • SUARA SEDANG DIKIRIM"
                     startButton.visibility = View.GONE
                     stopButton.visibility = View.VISIBLE
                 } else {
-                    statusText.text = "Gagal mengaktifkan mikrofon"
+                    statusText.text = "Ruang audio belum siap. Coba mulai Audio Live lagi."
                 }
-
-            } catch (error: Exception) {
+            } catch (_: Exception) {
                 statusText.text = "Gagal mengaktifkan mikrofon"
             }
         }
     }
 
     private fun stopMicrophone() {
+        val code = selectedChildCode
         activityScope.launch {
             try {
                 room?.localParticipant?.setMicrophoneEnabled(false)
-
+                room?.disconnect()
+                room?.release()
+                room = null
+                activeRoomCode = null
+                mp3TransferManager = null
+                isConnecting = false
                 isMicrophoneActive = false
-                statusText.text = "Mikrofon berhenti"
                 startButton.visibility = View.VISIBLE
                 stopButton.visibility = View.GONE
-
-            } catch (error: Exception) {
-                statusText.text = "Gagal menghentikan mikrofon"
+                statusText.text = "Menghentikan Audio Live..."
+                if (!code.isNullOrBlank()) {
+                    requestRemoteAudio(code, "stop") { sent, error ->
+                        statusText.text = if (sent) {
+                            "Audio Live berhenti"
+                        } else {
+                            "Audio orang tua berhenti • perintah penutup belum terkirim: ${error ?: "koneksi"}"
+                        }
+                    }
+                } else {
+                    statusText.text = "Audio Live berhenti"
+                }
+            } catch (_: Exception) {
+                statusText.text = "Gagal menghentikan audio"
             }
         }
     }
@@ -2851,14 +2951,29 @@ override fun onActivityResult(
     ) {
         val uri = data?.data ?: return
 
-        val manager = mp3TransferManager
-
-        if (manager == null) {
-            statusText.text = "Ruang audio belum terhubung"
+        val code = selectedChildCode
+        if (code.isNullOrBlank() || childConnected[code] != true) {
+            statusText.text = "Pilih HP anak yang sudah terhubung terlebih dahulu"
             return
         }
 
-        manager.send(uri)
+        statusText.text = "Menyiapkan koneksi untuk mengirim MP3..."
+        requestRemoteAudio(code, "start") { sent, error ->
+            if (!sent) {
+                statusText.text = "Gagal meminta koneksi audio: ${error ?: "koneksi"}"
+                return@requestRemoteAudio
+            }
+            val sendFile = {
+                val manager = mp3TransferManager
+                if (manager == null) {
+                    statusText.text = "Ruang audio belum siap. Silakan pilih MP3 lagi."
+                } else {
+                    manager.send(uri)
+                }
+            }
+            if (room != null && activeRoomCode == code) sendFile()
+            else connectToLiveKit(code, sendFile)
+        }
     }
 }
 
