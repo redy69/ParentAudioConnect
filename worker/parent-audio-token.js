@@ -48,11 +48,16 @@ function getLiveKitProjects(env) {
 async function createLiveKitCandidates(projects, uid, room, canPublish) {
   const candidates = [];
   for (const project of projects) {
-    const token = await createLiveKitToken(
-      project.apiKey, project.apiSecret, uid, room, canPublish
-    );
-    candidates.push({ id: project.id, token, serverUrl: project.url });
+    try {
+      const token = await createLiveKitToken(
+        project.apiKey, project.apiSecret, uid, room, canPublish
+      );
+      candidates.push({ id: project.id, token, serverUrl: project.url });
+    } catch (_) {
+      // A misconfigured backup must not prevent other configured projects from working.
+    }
   }
+  if (candidates.length === 0) throw new Error("No usable LiveKit project credentials");
   return candidates;
 }
 
