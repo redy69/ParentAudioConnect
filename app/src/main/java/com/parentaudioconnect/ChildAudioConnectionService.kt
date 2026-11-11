@@ -152,86 +152,85 @@ class ChildAudioConnectionService : Service() {
                                     )
                                 )
                             )
-                        }
-                    )
-                    roomEventsJob?.cancel()
-                    roomEventsJob = serviceScope.launch {
-                        newRoom.events.collect { event ->
-                            when (event) {
-                                is RoomEvent.TrackSubscribed -> {
-                                    if (event.track is RemoteAudioTrack) {
-                                        activeRemoteAudioTrackIds.add(event.track.hashCode())
-                                        maximizeMediaVolume()
-                                        ChildAudioActivityReporter.setLiveAudioActive(
-                                            applicationContext, true
-                                        )
-                                        updateNotification("Audio live sedang diputar • mikrofon anak mati")
-                                        startLiveAudioHeartbeat()
-                                    }
-                                }
-                                is RoomEvent.TrackMuted -> {
-                                    if (event.publication.kind == Track.Kind.AUDIO) {
-                                        // Keep other subscribed audio tracks active if any remain.
-                                        val mutedTrack = event.publication.track
-                                        if (mutedTrack is RemoteAudioTrack) {
-                                            activeRemoteAudioTrackIds.remove(mutedTrack.hashCode())
-                                        } else {
-                                            activeRemoteAudioTrackIds.clear()
-                                        }
-                                        val stillActive = activeRemoteAudioTrackIds.isNotEmpty()
-                                        if (!stillActive) stopLiveAudioHeartbeat()
-                                        ChildAudioActivityReporter.setLiveAudioActive(
-                                            applicationContext, stillActive
-                                        )
-                                        updateNotification(
-                                            if (stillActive) "Audio live masih diputar"
-                                            else "Audio live berhenti • menunggu orang tua"
-                                        )
-                                    }
-                                }
-                                is RoomEvent.TrackUnmuted -> {
-                                    val unmutedTrack = event.publication.track
-                                    if (event.publication.kind == Track.Kind.AUDIO &&
-                                        unmutedTrack is RemoteAudioTrack
-                                    ) {
-                                        activeRemoteAudioTrackIds.add(unmutedTrack.hashCode())
-                                        maximizeMediaVolume()
-                                        ChildAudioActivityReporter.setLiveAudioActive(
-                                            applicationContext, true
-                                        )
-                                        updateNotification("Audio live sedang diputar • mikrofon anak mati")
-                                        startLiveAudioHeartbeat()
-                                    }
-                                }
-                                is RoomEvent.TrackUnsubscribed -> {
-                                    if (event.track is RemoteAudioTrack) {
-                                        activeRemoteAudioTrackIds.remove(event.track.hashCode())
-                                        if (activeRemoteAudioTrackIds.isEmpty()) {
-                                            stopLiveAudioHeartbeat()
+                        },
+                        prepareRoom = { candidateRoom ->
+                        roomEventsJob?.cancel()
+                        roomEventsJob = serviceScope.launch {
+                            candidateRoom.events.collect { event ->
+                                when (event) {
+                                    is RoomEvent.TrackSubscribed -> {
+                                        if (event.track is RemoteAudioTrack) {
+                                            activeRemoteAudioTrackIds.add(event.track.hashCode())
+                                            maximizeMediaVolume()
                                             ChildAudioActivityReporter.setLiveAudioActive(
-                                                applicationContext, false
+                                                applicationContext, true
                                             )
-                                            updateNotification("Audio live berhenti • koneksi tetap aktif")
+                                            updateNotification("Audio live sedang diputar • mikrofon anak mati")
+                                            startLiveAudioHeartbeat()
                                         }
-                                        // Keep the requested maximum volume after each audio session.
                                     }
+                                    is RoomEvent.TrackMuted -> {
+                                        if (event.publication.kind == Track.Kind.AUDIO) {
+                                            // Keep other subscribed audio tracks active if any remain.
+                                            val mutedTrack = event.publication.track
+                                            if (mutedTrack is RemoteAudioTrack) {
+                                                activeRemoteAudioTrackIds.remove(mutedTrack.hashCode())
+                                            } else {
+                                                activeRemoteAudioTrackIds.clear()
+                                            }
+                                            val stillActive = activeRemoteAudioTrackIds.isNotEmpty()
+                                            if (!stillActive) stopLiveAudioHeartbeat()
+                                            ChildAudioActivityReporter.setLiveAudioActive(
+                                                applicationContext, stillActive
+                                            )
+                                            updateNotification(
+                                                if (stillActive) "Audio live masih diputar"
+                                                else "Audio live berhenti • menunggu orang tua"
+                                            )
+                                        }
+                                    }
+                                    is RoomEvent.TrackUnmuted -> {
+                                        val unmutedTrack = event.publication.track
+                                        if (event.publication.kind == Track.Kind.AUDIO &&
+                                            unmutedTrack is RemoteAudioTrack
+                                        ) {
+                                            activeRemoteAudioTrackIds.add(unmutedTrack.hashCode())
+                                            maximizeMediaVolume()
+                                            ChildAudioActivityReporter.setLiveAudioActive(
+                                                applicationContext, true
+                                            )
+                                            updateNotification("Audio live sedang diputar • mikrofon anak mati")
+                                            startLiveAudioHeartbeat()
+                                        }
+                                    }
+                                    is RoomEvent.TrackUnsubscribed -> {
+                                        if (event.track is RemoteAudioTrack) {
+                                            activeRemoteAudioTrackIds.remove(event.track.hashCode())
+                                            if (activeRemoteAudioTrackIds.isEmpty()) {
+                                                stopLiveAudioHeartbeat()
+                                                ChildAudioActivityReporter.setLiveAudioActive(
+                                                    applicationContext, false
+                                                )
+                                                updateNotification("Audio live berhenti • koneksi tetap aktif")
+                                            }
+                                            // Keep the requested maximum volume after each audio session.
+                                        }
+                                    }
+                                    is RoomEvent.Disconnected -> {
+                                        activeRemoteAudioTrackIds.clear()
+                                        stopLiveAudioHeartbeat()
+                                        ChildAudioActivityReporter.setLiveAudioActive(
+                                            applicationContext, false
+                                        )
+                                        updateNotification("Koneksi audio terputus • mencoba kembali")
+                                    }
+                                    else -> Unit
                                 }
-                                is RoomEvent.Disconnected -> {
-                                    activeRemoteAudioTrackIds.clear()
-                                    stopLiveAudioHeartbeat()
-                                    ChildAudioActivityReporter.setLiveAudioActive(
-                                        applicationContext, false
-                                    )
-                                    updateNotification("Koneksi audio terputus • mencoba kembali")
-                                }
-                                else -> Unit
                             }
                         }
-                    }
-
-                    newRoom.connect(
-                        url = response.getString("serverUrl"),
-                        token = response.getString("token")
+    
+    
+                        }
                     )
                     newRoom.localParticipant.setMicrophoneEnabled(false)
                     // LiveKit MediaAudioType uses Android's normal media route and STREAM_MUSIC.
