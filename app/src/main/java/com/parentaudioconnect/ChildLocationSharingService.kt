@@ -23,7 +23,6 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
 
 /**
  * Explicitly enabled, user-visible location sharing for the paired child device.
@@ -109,7 +108,7 @@ class ChildLocationSharingService : Service() {
             "childLocationSharingEnabled" to true
         )
         firestore.collection("pairings").document(code)
-            .set(payload, SetOptions.merge())
+            .update(payload)
             .addOnFailureListener { error ->
                 Log.w(TAG, "Unable to publish child location", error)
             }
@@ -124,13 +123,11 @@ class ChildLocationSharingService : Service() {
         prefs.edit().putBoolean("child_location_sharing_enabled", false).apply()
         if (prefs.getString("pair_role", null) == "child" && !code.isNullOrBlank()) {
             firestore.collection("pairings").document(code)
-                .set(
+                .update(
                     mapOf(
                         "childLocationSharingEnabled" to false,
                         "childLocationStoppedAt" to FieldValue.serverTimestamp()
-                    ),
-                    SetOptions.merge()
-                )
+                    ))
                 .addOnFailureListener { error ->
                     Log.w(TAG, "Unable to publish location sharing stop", error)
                 }

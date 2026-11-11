@@ -9,7 +9,6 @@ import android.util.Log
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -35,13 +34,12 @@ object AppPermissionAuditReporter {
 
         if (!prefs.getBoolean("child_permission_audit_enabled", false)) {
             withContext(Dispatchers.IO) {
-                Tasks.await(document.set(
+                Tasks.await(document.update(
                     mapOf(
                         "appPermissionAuditEnabled" to false,
                         "appPermissionAuditSummary" to emptyList<Map<String, Any>>(),
                         "appPermissionAuditAt" to FieldValue.serverTimestamp()
-                    ), SetOptions.merge()
-                ))
+                    )))
             }
             return
         }
@@ -88,13 +86,12 @@ object AppPermissionAuditReporter {
             }.sortedBy { it["appName"] as? String ?: "" }.take(30)
 
             withContext(Dispatchers.IO) {
-                Tasks.await(document.set(
+                Tasks.await(document.update(
                     mapOf(
                         "appPermissionAuditEnabled" to true,
                         "appPermissionAuditSummary" to summary,
                         "appPermissionAuditAt" to FieldValue.serverTimestamp()
-                    ), SetOptions.merge()
-                ))
+                    )))
             }
         } catch (error: Exception) {
             Log.w(TAG, "Unable to publish permission audit", error)

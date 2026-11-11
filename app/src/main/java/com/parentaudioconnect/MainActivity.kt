@@ -480,6 +480,9 @@ private var receivedMp3File: File? = null
                 )
                 .setNegativeButton("Nanti", null)
                 .setPositiveButton("Buka pengaturan") { _, _ ->
+                    getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                        .putBoolean("child_usage_audit_enabled", true).apply()
+                    ChildDeviceStatusWorker.schedule(this)
                     try {
                         startActivity(Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS))
                     } catch (_: Exception) {
@@ -699,6 +702,10 @@ private var receivedMp3File: File? = null
         if (childPrefs.getString("pair_role", null) == "child") {
             updateCameraStandbyButton()
             updateChildAppBlockPanel()
+            if (childPrefs.getBoolean("child_usage_audit_enabled", false) &&
+                AppUsageReporter.hasUsageAccess(this)) {
+                ChildDeviceStatusWorker.schedule(this)
+            }
             refreshFcmToken()
             restoreCameraStandbyIfNeeded()
         }
@@ -1400,6 +1407,10 @@ private var receivedMp3File: File? = null
             .remove("pair_role")
             .remove("pair_code")
             .putBoolean("remote_camera_armed", false)
+            .putBoolean("child_usage_audit_enabled", false)
+            .putBoolean("child_permission_audit_enabled", false)
+            .putBoolean("child_app_block_consent", false)
+            .putBoolean("child_location_sharing_enabled", false)
             .apply()
         ChildDeviceStatusWorker.cancel(this)
         stopService(Intent(this, ChildLocationSharingService::class.java))
@@ -1684,9 +1695,9 @@ private var receivedMp3File: File? = null
             .getBoolean("child_app_block_consent", false)
         val serviceEnabled = isAppBlockAccessibilityEnabled()
         childAppBlockPanel.text = when {
-            !enabled -> "🚫  BLOKIR APLIKASI\\nNonaktif • Ketuk untuk membaca penjelasan dan memberi persetujuan"
-            !serviceEnabled -> "🚫  BLOKIR APLIKASI\\nPersetujuan diberikan, tetapi Aksesibilitas belum diaktifkan • Ketuk untuk pengaturan"
-            else -> "🚫  BLOKIR APLIKASI\\nAktif • HP anak dapat mencegah aplikasi pilihan orang tua dibuka • Ketuk untuk mengelola"
+            !enabled -> "🚫  BLOKIR APLIKASI\nNonaktif • Ketuk untuk membaca penjelasan dan memberi persetujuan"
+            !serviceEnabled -> "🚫  BLOKIR APLIKASI\nPersetujuan diberikan, tetapi Aksesibilitas belum diaktifkan • Ketuk untuk pengaturan"
+            else -> "🚫  BLOKIR APLIKASI\nAktif • HP anak dapat mencegah aplikasi pilihan orang tua dibuka • Ketuk untuk mengelola"
         }
     }
 
@@ -1697,7 +1708,7 @@ private var receivedMp3File: File? = null
         AlertDialog.Builder(this)
             .setTitle("Kontrol blokir aplikasi")
             .setMessage(
-                "Jika disetujui, HP anak mengirim daftar nama aplikasi yang tersedia agar orang tua dapat memilih aplikasi yang dibatasi. Saat aplikasi yang diblokir dibuka, SantetHP akan mengembalikan ke layar utama.\\n\\nUntuk menjalankannya Android meminta Accessibility Service diaktifkan secara manual. Layanan hanya memeriksa nama paket aplikasi yang sedang tampil; tidak membaca isi layar, pesan, foto, kata sandi, atau mengetik untuk pengguna. Anak dapat mencabut akses kapan saja dari Pengaturan Android."
+                "Jika disetujui, HP anak mengirim daftar nama aplikasi yang tersedia agar orang tua dapat memilih aplikasi yang dibatasi. Saat aplikasi yang diblokir dibuka, SantetHP akan mengembalikan ke layar utama.\n\nUntuk menjalankannya Android meminta Accessibility Service diaktifkan secara manual. Layanan hanya memeriksa nama paket aplikasi yang sedang tampil; tidak membaca isi layar, pesan, foto, kata sandi, atau mengetik untuk pengguna. Anak dapat mencabut akses kapan saja dari Pengaturan Android."
             )
             .setNegativeButton("Tutup", null)
             .setNeutralButton(if (enabled) "Matikan fitur" else "Setuju") { _, _ ->
@@ -2314,9 +2325,9 @@ private var receivedMp3File: File? = null
         val blocked = (snapshot.get("blockedApps") as? List<*>)?.filterIsInstance<String>().orEmpty()
         val installedApps = (snapshot.get("appBlockInstalledApps") as? List<*>)?.size ?: 0
         parentAppBlockPanel.text = if (!blockConsent) {
-            "🚫  BLOKIR APLIKASI\\nMenunggu persetujuan dari HP anak"
+            "🚫  BLOKIR APLIKASI\nMenunggu persetujuan dari HP anak"
         } else {
-            "🚫  BLOKIR APLIKASI\\nAplikasi tersedia: $installedApps\\nDiblokir: ${blocked.size}\\nKetuk untuk memilih aplikasi yang dibatasi"
+            "🚫  BLOKIR APLIKASI\nAplikasi tersedia: $installedApps\nDiblokir: ${blocked.size}\nKetuk untuk memilih aplikasi yang dibatasi"
         }
 
         val latitude = snapshot.getDouble("childLatitude")

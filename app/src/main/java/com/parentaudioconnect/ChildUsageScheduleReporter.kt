@@ -9,7 +9,6 @@ import androidx.core.app.NotificationCompat
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Calendar
@@ -39,6 +38,7 @@ object ChildUsageScheduleReporter {
                         .get()
                 )
             }
+            if (!snapshot.exists()) return
             val enabled = snapshot.getBoolean("usageScheduleEnabled") == true
             val start = snapshot.getLong("usageScheduleStartMinutes")?.toInt() ?: 21 * 60
             val end = snapshot.getLong("usageScheduleEndMinutes")?.toInt() ?: 6 * 60
@@ -70,13 +70,11 @@ object ChildUsageScheduleReporter {
                     FirebaseFirestore.getInstance()
                         .collection("pairings")
                         .document(code)
-                        .set(
+                        .update(
                             mapOf(
                                 "childScheduleQuietNow" to quietNow,
                                 "childScheduleCheckedAt" to FieldValue.serverTimestamp()
-                            ),
-                            SetOptions.merge()
-                        )
+                            ))
                 )
             }
         } catch (error: Exception) {

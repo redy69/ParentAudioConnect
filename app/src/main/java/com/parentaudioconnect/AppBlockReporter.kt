@@ -6,7 +6,6 @@ import android.util.Log
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -22,12 +21,12 @@ object AppBlockReporter {
         val doc = FirebaseFirestore.getInstance().collection("pairings").document(code)
         if (!enabled) {
             withContext(Dispatchers.IO) {
-                Tasks.await(doc.set(mapOf(
+                Tasks.await(doc.update(mapOf(
                     "appBlockConsent" to false,
                     "appBlockInstalledApps" to emptyList<Map<String, String>>(),
                     "blockedApps" to emptyList<String>(),
                     "appBlockUpdatedAt" to FieldValue.serverTimestamp()
-                ), SetOptions.merge()))
+                )))
             }
             return
         }
@@ -47,11 +46,11 @@ object AppBlockReporter {
                 .sortedBy { it["appName"]?.lowercase() ?: "" }
                 .take(100)
             withContext(Dispatchers.IO) {
-                Tasks.await(doc.set(mapOf(
+                Tasks.await(doc.update(mapOf(
                     "appBlockConsent" to true,
                     "appBlockInstalledApps" to apps,
                     "appBlockUpdatedAt" to FieldValue.serverTimestamp()
-                ), SetOptions.merge()))
+                )))
             }
         } catch (error: Exception) {
             Log.w(TAG, "Unable to publish launcher app list", error)

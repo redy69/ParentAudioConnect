@@ -7,7 +7,6 @@ import android.os.Process
 import android.util.Log
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
 import com.google.android.gms.tasks.Tasks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -33,14 +32,13 @@ object AppUsageReporter {
         if (code.isNullOrBlank() || prefs.getString("pair_role", null) != "child") return
 
         try {
-            if (!hasUsageAccess(context)) {
+            if (!prefs.getBoolean("child_usage_audit_enabled", false) ||
+                !hasUsageAccess(context)) {
                 withContext(Dispatchers.IO) {
                     Tasks.await(
                         FirebaseFirestore.getInstance().collection("pairings").document(code)
-                            .set(
-                                mapOf("appUsagePermissionGranted" to false, "appUsageAt" to FieldValue.serverTimestamp()),
-                                SetOptions.merge()
-                            )
+                            .update(
+                                mapOf("appUsagePermissionGranted" to false, "appUsageAt" to FieldValue.serverTimestamp()))
                     )
                 }
                 return
@@ -81,14 +79,12 @@ object AppUsageReporter {
                     FirebaseFirestore.getInstance()
                         .collection("pairings")
                         .document(code)
-                        .set(
+                        .update(
                             mapOf(
                                 "appUsageSummary" to summary,
                                 "appUsagePermissionGranted" to true,
                                 "appUsageAt" to FieldValue.serverTimestamp()
-                            ),
-                            SetOptions.merge()
-                        )
+                            ))
                 )
             }
         } catch (error: Exception) {

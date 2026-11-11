@@ -10,7 +10,6 @@ import android.telephony.TelephonyManager
 import android.util.Log
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
 import com.google.android.gms.tasks.Tasks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -96,7 +95,7 @@ object ChildDeviceStatusReporter {
                     FirebaseFirestore.getInstance()
                         .collection("pairings")
                         .document(code)
-                        .set(status, SetOptions.merge())
+                        .update(status)
                 )
             }
         } catch (error: Exception) {
