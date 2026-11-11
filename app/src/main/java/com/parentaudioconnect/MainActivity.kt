@@ -2433,7 +2433,9 @@ private var receivedMp3File: File? = null
         } ?: ""
         val internetLabel = if (internetValidated) "Internet aktif" else "Internet belum terverifikasi"
 
-        val selectedName = selectedChildCode?.let { childNames[it] }\n            ?.takeIf { it.isNotBlank() } ?: "ANAK"\n        childDeviceStatusText.text = buildString {
+        val selectedName = selectedChildCode?.let { childNames[it] }
+            ?.takeIf { it.isNotBlank() } ?: "ANAK"
+        childDeviceStatusText.text = buildString {
             append("KONDISI HP $selectedName\n")
             append("Baterai: $batteryLabel$chargeLabel$temperatureLabel\n")
             append("Jaringan: $network\n")
