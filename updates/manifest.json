@@ -7,13 +7,14 @@
       "sha256": "522d3910e4c032feadaa57cf1a405671ae82fe69eeba8f11b6cb73bf6eb26233"
     }
   ],
-  "notes": "Uji Hybrid Update SantetHP: satu file teks non-eksekusi untuk memverifikasi unduhan dan SHA-256.",
-  "installStatus": "DURONG ONO UPDATE",
-  "installStatusMessage": "lagi di kembangno",
+  "notes": "Pembaruan SantetHP Build 222: siap untuk pengujian terkontrol pada perangkat.",
+  "installStatus": "NORMAL",
+  "installStatusMessage": "Build 222 siap untuk pengujian perangkat. Pengiriman FCM antarkedua HP masih perlu diverifikasi.",
   "changes": [
-    "Indikator kelayakan instalasi ditampilkan saat memeriksa update.",
-    "Unduhan APK hanya tersedia jika status sudah NORMAL.",
-    "Catatan perubahan versi dapat ditampilkan sebagai daftar.",
-    "Jika status update gagal diperiksa, instalasi tetap diblokir."
+    "Pengamanan Audio Live ditingkatkan: koneksi yang gagal atau kedaluwarsa meminta HP anak menghentikan audio.",
+    "Perintah mulai dan berhenti audio jarak jauh menggunakan FCM dengan pemeriksaan pasangan orang tua dan anak.",
+    "Pemantauan baterai, jaringan, penggunaan aplikasi, jadwal, izin, dan pemblokiran berjalan terpisah dari LiveKit.",
+    "Status kesiapan update dan daftar perubahan ditampilkan sebelum APK diunduh.",
+    "Build 222 lolos build Android; pengujian FCM langsung pada kedua HP masih menunggu."
   ]
 }
