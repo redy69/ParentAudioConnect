@@ -775,7 +775,7 @@ private var receivedMp3File: File? = null
     }
 
     private fun updateChildUsageAccessPanel() {
-        if (!::childModePanel.isInitialized) return
+        if (!this::childModePanel.isInitialized) return
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         val optedIn = prefs.getBoolean("child_usage_audit_enabled", false)
         val granted = AppUsageReporter.hasUsageAccess(this)
