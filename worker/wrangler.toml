@@ -2,3 +2,11 @@ name = "parent-audio-token"
 main = "parent-audio-token.js"
 compatibility_date = "2026-11-08"
 keep_vars = true
+
+[[ratelimits]]
+name = "USER_RATE_LIMITER"
+namespace_id = "2026111201"
+
+  [ratelimits.simple]
+  limit = 60
+  period = 60
