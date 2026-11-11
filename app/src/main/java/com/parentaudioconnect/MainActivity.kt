@@ -3505,39 +3505,42 @@ private var receivedMp3File: File? = null
         serverId: String,
         onComplete: (Boolean, String?) -> Unit
     ) {
-        val user = auth.currentUser
-        if (user == null) { onComplete(false, "Firebase belum terhubung"); return }
-        user.getIdToken(false).addOnSuccessListener { result ->
-            val idToken = result.token
-            if (idToken.isNullOrBlank()) { onComplete(false, "Token Firebase tidak tersedia"); return@addOnSuccessListener }
-            activityScope.launch {
-                try {
-                    withContext(Dispatchers.IO) {
-                        val connection = URL(workerUrl.replace("/token", "/select-server"))
-                            .openConnection() as HttpURLConnection
-                        try {
-                            connection.requestMethod = "POST"
-                            connection.connectTimeout = 15000
-                            connection.readTimeout = 15000
-                            connection.doOutput = true
-                            connection.setRequestProperty("Content-Type", "application/json")
-                            val body = JSONObject().put("idToken", idToken).put("code", code)
-                                .put("kind", kind).put("serverId", serverId)
-                            connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-                            val status = connection.responseCode
-                            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-                            val response = JSONObject(stream?.bufferedReader()?.use { it.readText() } ?: "{}")
-                            if (status !in 200..299 || !response.optBoolean("saved", false)) {
-                                throw IllegalStateException(response.optString("error", "Pilihan server gagal disimpan"))
-                            }
-                        } finally { connection.disconnect() }
-                    }
-                    onComplete(true, null)
-                } catch (error: Exception) {
-                    onComplete(false, error.localizedMessage ?: "Gagal menyimpan server pasangan")
-                }
+        if (currentRole != "parent") {
+            onComplete(false, "Hanya perangkat orang tua yang dapat memilih server")
+            return
+        }
+        if (auth.currentUser == null) {
+            onComplete(false, "Firebase belum terhubung")
+            return
+        }
+        val field = when (kind) {
+            "audio" -> "audioLiveKitServerId"
+            "camera" -> "cameraLiveKitServerId"
+            else -> {
+                onComplete(false, "Jenis koneksi LiveKit tidak valid")
+                return
             }
-        }.addOnFailureListener { onComplete(false, it.localizedMessage ?: "Autentikasi gagal") }
+        }
+        val allowedServers = setOf("main", "backup-2", "backup-3", "backup-4", "backup-5")
+        if (serverId !in allowedServers) {
+            onComplete(false, "Pilihan server LiveKit tidak valid")
+            return
+        }
+
+        // Save through the authenticated Firestore SDK. The pairing security rules
+        // verify that this signed-in account is the parent and that only this
+        // approved server-selection field is changed.
+        db.collection("pairings").document(code)
+            .update(field, serverId)
+            .addOnSuccessListener {
+                onComplete(true, null)
+            }
+            .addOnFailureListener { error ->
+                onComplete(
+                    false,
+                    error.localizedMessage ?: "Firestore menolak penyimpanan pilihan server"
+                )
+            }
     }
 
     private fun requestLiveKitToken(
