@@ -140,6 +140,7 @@ class ParentAudioMessagingService : FirebaseMessagingService() {
                     } else {
                         ChildAudioConnectionService.ACTION_DISCONNECT
                     }
+                    putExtra(ChildAudioConnectionService.EXTRA_SERVER_ID, message.data["serverId"])
                 }
                 if (command == "AUDIO_START") {
                     ContextCompat.startForegroundService(this, audioIntent)
@@ -167,6 +168,7 @@ class ParentAudioMessagingService : FirebaseMessagingService() {
                         else -> RemoteCameraService.ACTION_START_CAMERA
                     }
                     putExtra(RemoteCameraService.EXTRA_REQUEST_ID, message.data["requestId"])
+                    putExtra(RemoteCameraService.EXTRA_SERVER_ID, message.data["serverId"])
                     putExtra("facing", message.data["facing"] ?: "back")
                 }
                 startService(cameraIntent)
