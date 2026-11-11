@@ -1714,11 +1714,20 @@ private var receivedMp3File: File? = null
             .setNeutralButton(if (enabled) "Matikan fitur" else "Setuju") { _, _ ->
                 prefs.edit().putBoolean("child_app_block_consent", !enabled).apply()
                 if (enabled) {
-                    com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                        .collection("pairings")
-                        .document(prefs.getString("pair_code", "") ?: "")
-                        .set(mapOf("appBlockConsent" to false, "blockedApps" to emptyList<String>()),
-                            com.google.firebase.firestore.SetOptions.merge())
+                    val code = prefs.getString("pair_code", null)
+                    if (prefs.getString("pair_role", null) == "child" && !code.isNullOrBlank()) {
+                        com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                            .collection("pairings")
+                            .document(code)
+                            .update(
+                                mapOf(
+                                    "appBlockConsent" to false,
+                                    "appBlockInstalledApps" to emptyList<Map<String, String>>(),
+                                    "blockedApps" to emptyList<String>(),
+                                    "appBlockUpdatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                                )
+                            )
+                    }
                 }
                 ChildDeviceStatusWorker.schedule(this)
                 updateChildAppBlockPanel()

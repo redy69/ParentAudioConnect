@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
 
 /**
  * Publishes child-side playback state to the paired document so the parent app
@@ -69,13 +68,12 @@ object ChildAudioActivityReporter {
         FirebaseFirestore.getInstance()
             .collection("pairings")
             .document(code)
-            .set(
+            .update(
                 mapOf(
                     field to active,
                     timestampField to FieldValue.serverTimestamp(),
                     "audioActivityAt" to FieldValue.serverTimestamp()
-                ),
-                SetOptions.merge()
+                )
             )
             .addOnSuccessListener {
                 Log.d(TAG, "Published $field=$active")
