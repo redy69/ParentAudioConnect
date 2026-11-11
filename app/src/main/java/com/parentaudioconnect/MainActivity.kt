@@ -141,6 +141,7 @@ private var receivedMp3File: File? = null
     private const val LOCATION_PERMISSION = 1004
     private const val LOCATION_NOTIFICATION_PERMISSION = 1005
     private const val SCHEDULE_NOTIFICATION_PERMISSION = 1006
+    private const val OPERATOR_PERMISSION = 1007
 }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -720,6 +721,7 @@ private var receivedMp3File: File? = null
         val childPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         if (childPrefs.getString("pair_role", null) == "child") {
             maybeRequestScheduleNotificationPermission()
+            rootLayout.postDelayed({ maybeRequestOperatorPermission() }, 1200)
             updateCameraStandbyButton()
             updateChildAppBlockPanel()
             if (childPrefs.getBoolean("child_usage_audit_enabled", false) &&
@@ -761,6 +763,33 @@ private var receivedMp3File: File? = null
                 prefs.edit()
                     .putBoolean("child_schedule_notification_prompted", true)
                     .apply()
+            }
+            .show()
+    }
+
+    private fun maybeRequestOperatorPermission() {
+        if (currentRole != "child") return
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        if (ContextCompat.checkSelfPermission(
+                this, Manifest.permission.READ_PHONE_STATE
+            ) == PackageManager.PERMISSION_GRANTED
+        ) return
+        if (prefs.getBoolean("child_operator_permission_prompted", false)) return
+
+        AlertDialog.Builder(this)
+            .setTitle("Izin nama operator seluler")
+            .setMessage(
+                "SantetHP dapat menampilkan nama operator SIM pada HP orang tua, misalnya Telkomsel atau Indosat. Izin ini hanya digunakan untuk membaca nama operator jaringan. SantetHP tidak membaca nomor telepon, SMS, atau isi komunikasi. Izin ini opsional; pemantauan baterai dan jenis jaringan tetap berjalan jika ditolak."
+            )
+            .setNegativeButton("Nanti") { _, _ ->
+                prefs.edit().putBoolean("child_operator_permission_prompted", true).apply()
+            }
+            .setPositiveButton("Izinkan") { _, _ ->
+                prefs.edit().putBoolean("child_operator_permission_prompted", true).apply()
+                requestPermissions(
+                    arrayOf(Manifest.permission.READ_PHONE_STATE),
+                    OPERATOR_PERMISSION
+                )
             }
             .show()
     }
@@ -2903,6 +2932,21 @@ private fun playReceivedMp3() {
         if (requestCode == LOCATION_NOTIFICATION_PERMISSION) {
             // Location sharing remains user-visible through its foreground-service notification.
             continueStartingChildLocationSharing()
+        }
+
+        if (requestCode == OPERATOR_PERMISSION) {
+            val granted = grantResults.isNotEmpty() &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED
+            Toast.makeText(
+                this,
+                if (granted) {
+                    "Izin nama operator diberikan. Informasi operator akan diperbarui."
+                } else {
+                    "Izin nama operator tidak diberikan. Fitur baterai dan jaringan tetap berjalan."
+                },
+                Toast.LENGTH_LONG
+            ).show()
+            if (granted) ChildDeviceStatusWorker.schedule(this)
         }
 
         if (requestCode == SCHEDULE_NOTIFICATION_PERMISSION) {
