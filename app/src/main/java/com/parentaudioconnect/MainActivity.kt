@@ -102,6 +102,7 @@ private lateinit var playMp3Button: Button
     private lateinit var childPermissionAuditPanel: TextView
     private lateinit var parentPermissionAuditPanel: TextView
     private lateinit var childAppBlockPanel: TextView
+    private lateinit var childAppActivityPanel: TextView
     private lateinit var parentAppBlockPanel: TextView
     private var pendingLocationStart = false
     private val parentOnlyViews = mutableListOf<View>()
@@ -620,6 +621,28 @@ private var receivedMp3File: File? = null
             setOnClickListener { showChildAppBlockConsent() }
         }
         rootLayout.addView(childAppBlockPanel)
+        childAppActivityPanel = TextView(this).apply {
+            text = "📱  PEMANTAUAN APLIKASI AKTIF\nNonaktif • Ketuk untuk membaca penjelasan dan memberi persetujuan"
+            textSize = 13f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(35, 53, 88))
+            gravity = Gravity.CENTER
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(dp(18), dp(18), dp(18), dp(18))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(237, 248, 244))
+            ).apply {
+                cornerRadius = dp(19).toFloat()
+                setStroke(dp(1), Color.rgb(190, 225, 208))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(3), 0, dp(12)) }
+            visibility = View.GONE
+            setOnClickListener { showChildAppActivityConsent() }
+        }
+        rootLayout.addView(childAppActivityPanel)
         val deviceSectionTitle = TextView(this).apply {
             text = "PERANGKAT ANAK"
             textSize = 11.5f
@@ -770,6 +793,7 @@ private var receivedMp3File: File? = null
             rootLayout.postDelayed({ maybeRequestOperatorPermission() }, 1200)
             updateCameraStandbyButton()
             updateChildAppBlockPanel()
+            updateChildAppActivityPanel()
             // Device battery/network reporting is independent of Usage Access.
             // Always re-enqueue the lightweight status worker when the child app resumes.
             ChildDeviceStatusWorker.schedule(this)
@@ -861,6 +885,7 @@ private var receivedMp3File: File? = null
         childLocationPanel.visibility = View.GONE
         childPermissionAuditPanel.visibility = View.GONE
         childAppBlockPanel.visibility = View.GONE
+        childAppActivityPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
         actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.VISIBLE
@@ -889,6 +914,7 @@ private var receivedMp3File: File? = null
         childModePanel.visibility = View.GONE
         childLocationPanel.visibility = View.GONE
         childPermissionAuditPanel.visibility = View.GONE
+        childAppActivityPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
         actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.GONE
@@ -917,6 +943,7 @@ private var receivedMp3File: File? = null
         childModePanel.visibility = View.GONE
         childLocationPanel.visibility = View.GONE
         childPermissionAuditPanel.visibility = View.GONE
+        childAppActivityPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.VISIBLE }
         updateButton.visibility = View.VISIBLE
         actionButtonsRow.visibility = View.VISIBLE
@@ -949,8 +976,10 @@ private var receivedMp3File: File? = null
         childLocationPanel.visibility = View.VISIBLE
         childPermissionAuditPanel.visibility = View.VISIBLE
         childAppBlockPanel.visibility = View.VISIBLE
+        childAppActivityPanel.visibility = View.VISIBLE
         updateChildLocationPanel()
         updateChildAppBlockPanel()
+        updateChildAppActivityPanel()
         updateChildPermissionAuditPanel()
         updateButton.visibility = View.VISIBLE
         updateInfoText.visibility = View.VISIBLE
@@ -1581,6 +1610,7 @@ private var receivedMp3File: File? = null
             .putBoolean("child_usage_audit_enabled", false)
             .putBoolean("child_permission_audit_enabled", false)
             .putBoolean("child_app_block_consent", false)
+            .putBoolean("child_app_activity_consent", false)
             .putBoolean("child_location_sharing_enabled", false)
             .apply()
         ChildDeviceStatusWorker.cancel(this)
@@ -1954,6 +1984,67 @@ private var receivedMp3File: File? = null
                 updateChildAppBlockPanel()
             }
             .show()
+    }
+
+    private fun updateChildAppActivityPanel() {
+        if (!::childAppActivityPanel.isInitialized) return
+        val enabled = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            .getBoolean("child_app_activity_consent", false)
+        val serviceEnabled = isAppBlockAccessibilityEnabled()
+        childAppActivityPanel.text = when {
+            !enabled ->
+                "📱  PEMANTAUAN APLIKASI AKTIF\nNonaktif • Ketuk untuk membaca penjelasan dan memberi persetujuan"
+            !serviceEnabled ->
+                "📱  PEMANTAUAN APLIKASI AKTIF\nPersetujuan diberikan, tetapi Aksesibilitas belum aktif • Ketuk untuk pengaturan"
+            else ->
+                "📱  PEMANTAUAN APLIKASI AKTIF\nAktif • Nama aplikasi yang tampil dikirim saat berganti aplikasi • Ketuk untuk menghentikan"
+        }
+    }
+
+    private fun showChildAppActivityConsent() {
+        if (currentRole != "child") return
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        val enabled = prefs.getBoolean("child_app_activity_consent", false)
+        val serviceEnabled = isAppBlockAccessibilityEnabled()
+        val message = if (enabled) {
+            "Pemantauan aplikasi aktif sedang diizinkan. SantetHP hanya membagikan nama aplikasi yang tampil ketika berpindah aplikasi dan waktu deteksinya. SantetHP tidak membaca isi layar, pesan, foto, kata sandi, atau ketikan. Anda dapat menghentikannya kapan saja."
+        } else {
+            "Jika disetujui, SantetHP mengirim nama aplikasi yang sedang tampil ke HP orang tua setiap kali aplikasi berganti. Data dikirim melalui layanan Aksesibilitas Android yang diaktifkan secara manual. SantetHP hanya membaca nama paket aplikasi, bukan isi layar, pesan, foto, kata sandi, atau ketikan. Fitur ini terpisah dari blokir aplikasi dan dapat dihentikan kapan saja dari HP anak."
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Pemantauan aplikasi aktif")
+            .setMessage(message)
+            .setNegativeButton("Tutup", null)
+        if (enabled) {
+            dialog.setPositiveButton("Hentikan pemantauan") { _, _ ->
+                prefs.edit().putBoolean("child_app_activity_consent", false).apply()
+                val code = prefs.getString("pair_code", null)
+                if (prefs.getString("pair_role", null) == "child" && !code.isNullOrBlank()) {
+                    db.collection("pairings").document(code).update("appActivityConsent", false)
+                }
+                updateChildAppActivityPanel()
+                Toast.makeText(this, "Pemantauan aplikasi aktif dihentikan.", Toast.LENGTH_LONG).show()
+            }
+        } else {
+            dialog.setPositiveButton(if (serviceEnabled) "Saya setuju, aktifkan" else "Setuju & buka pengaturan") { _, _ ->
+                prefs.edit().putBoolean("child_app_activity_consent", true).apply()
+                val code = prefs.getString("pair_code", null)
+                if (prefs.getString("pair_role", null) == "child" && !code.isNullOrBlank()) {
+                    db.collection("pairings").document(code).update("appActivityConsent", true)
+                }
+                updateChildAppActivityPanel()
+                if (!serviceEnabled) {
+                    try {
+                        startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    } catch (_: Exception) {
+                        Toast.makeText(this, "Pengaturan Aksesibilitas tidak tersedia", Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    Toast.makeText(this, "Pemantauan aplikasi aktif diizinkan.", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+        dialog.show()
     }
 
     private fun showParentAppBlockDialog() {
@@ -2498,6 +2589,23 @@ private var receivedMp3File: File? = null
                     }
                 }
                 append(if (usageFresh) "\nData penggunaan diperbarui" else "\nData penggunaan mungkin sudah lama")
+            }
+            append("\n\nPEMANTAUAN APLIKASI AKTIF")
+            if (snapshot.getBoolean("appActivityConsent") != true) {
+                append("\nBelum diaktifkan dari HP anak")
+            } else {
+                val activeName = snapshot.getString("appActivityName")
+                val activityAt = snapshot.getTimestamp("appActivityAt")
+                val activityTime = activityAt?.let {
+                    android.text.format.DateFormat.getTimeFormat(this).format(it.toDate())
+                }
+                if (activeName.isNullOrBlank()) {
+                    append("\nMenunggu pergantian aplikasi pertama")
+                } else {
+                    append("\nTerakhir terdeteksi: $activeName")
+                    if (activityTime != null) append(" • $activityTime")
+                    append("\nDiperbarui saat aplikasi berganti")
+                }
             }
         }
         childDeviceStatusText.setTextColor(
