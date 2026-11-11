@@ -140,6 +140,7 @@ private var receivedMp3File: File? = null
     private const val CAMERA_PERMISSION = 1003
     private const val LOCATION_PERMISSION = 1004
     private const val LOCATION_NOTIFICATION_PERMISSION = 1005
+    private const val SCHEDULE_NOTIFICATION_PERMISSION = 1006
 }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -700,6 +701,7 @@ private var receivedMp3File: File? = null
         // Retry registration whenever the child app returns to foreground.
         val childPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         if (childPrefs.getString("pair_role", null) == "child") {
+            maybeRequestScheduleNotificationPermission()
             updateCameraStandbyButton()
             updateChildAppBlockPanel()
             if (childPrefs.getBoolean("child_usage_audit_enabled", false) &&
@@ -709,6 +711,40 @@ private var receivedMp3File: File? = null
             refreshFcmToken()
             restoreCameraStandbyIfNeeded()
         }
+    }
+
+    private fun maybeRequestScheduleNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT < 33) return
+
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        if (!prefs.getBoolean("child_schedule_config_enabled", false)) return
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        ) return
+        if (prefs.getBoolean("child_schedule_notification_prompted", false)) return
+
+        AlertDialog.Builder(this)
+            .setTitle("Aktifkan notifikasi jadwal")
+            .setMessage(
+                "Jadwal penggunaan HP dari orang tua sudah tersimpan. Izinkan notifikasi agar SantetHP dapat memberi pengingat saat waktu belajar atau istirahat dimulai dan berakhir. Pengingat ini hanya berjalan sesuai jadwal yang tersimpan di HP anak."
+            )
+            .setPositiveButton("Aktifkan") { _, _ ->
+                prefs.edit()
+                    .putBoolean("child_schedule_notification_prompted", true)
+                    .apply()
+                requestPermissions(
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    SCHEDULE_NOTIFICATION_PERMISSION
+                )
+            }
+            .setNegativeButton("Nanti") { _, _ ->
+                prefs.edit()
+                    .putBoolean("child_schedule_notification_prompted", true)
+                    .apply()
+            }
+            .show()
     }
 
     private fun showRoleSelection() {
@@ -2836,6 +2872,20 @@ private fun playReceivedMp3() {
         if (requestCode == LOCATION_NOTIFICATION_PERMISSION) {
             // Location sharing remains user-visible through its foreground-service notification.
             continueStartingChildLocationSharing()
+        }
+
+        if (requestCode == SCHEDULE_NOTIFICATION_PERMISSION) {
+            val granted = grantResults.isNotEmpty() &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED
+            Toast.makeText(
+                this,
+                if (granted) {
+                    "Notifikasi pengingat jadwal diaktifkan"
+                } else {
+                    "Notifikasi jadwal belum diizinkan. Pengingat mungkin tidak muncul."
+                },
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
