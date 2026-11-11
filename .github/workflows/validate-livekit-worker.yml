@@ -1,0 +1,32 @@
+name: Validate LiveKit Worker
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/livekit-multi-server-failover
+    paths:
+      - 'worker/**'
+      - '.github/workflows/validate-livekit-worker.yml'
+  pull_request:
+    paths:
+      - 'worker/**'
+      - '.github/workflows/validate-livekit-worker.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check Worker JavaScript syntax
+        run: node --check worker/parent-audio-token.js
