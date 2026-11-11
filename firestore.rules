@@ -30,6 +30,7 @@ service cloud.firestore {
           'usageScheduleDays',
           'usageScheduleTimeZone',
           'usageScheduleUpdatedAt',
+          'parentFcmToken',
           'blockedApps',
           'appBlockUpdatedAt'
         ])
@@ -53,6 +54,10 @@ service cloud.firestore {
             && request.resource.data.usageScheduleTimeZone.size() <= 64))
         && (!changed.hasAny(['usageScheduleUpdatedAt'])
           || request.resource.data.usageScheduleUpdatedAt is timestamp)
+        && (!changed.hasAny(['parentFcmToken'])
+          || (request.resource.data.parentFcmToken is string
+            && request.resource.data.parentFcmToken.size() >= 20
+            && request.resource.data.parentFcmToken.size() <= 4096))
         && (!changed.hasAny(['blockedApps'])
           || (resource.data.appBlockConsent == true
             && request.resource.data.blockedApps is list
@@ -71,6 +76,7 @@ service cloud.firestore {
           'deviceInternetValidated',
           'deviceOperatorName',
           'deviceStatusAt',
+          'childFcmToken',
           'appUsageSummary',
           'appUsagePermissionGranted',
           'appUsageAt',
@@ -113,6 +119,10 @@ service cloud.firestore {
             && request.resource.data.deviceOperatorName.size() <= 80))
         && (!changed.hasAny(['deviceStatusAt'])
           || request.resource.data.deviceStatusAt is timestamp)
+        && (!changed.hasAny(['childFcmToken'])
+          || (request.resource.data.childFcmToken is string
+            && request.resource.data.childFcmToken.size() >= 20
+            && request.resource.data.childFcmToken.size() <= 4096))
         && (!changed.hasAny(['appUsageSummary'])
           || (request.resource.data.appUsageSummary is list
             && request.resource.data.appUsageSummary.size() <= 12))

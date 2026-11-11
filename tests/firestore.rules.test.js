@@ -83,6 +83,44 @@ test("parent cannot save an invalid schedule day", async () => {
   }));
 });
 
+test("parent can register its own FCM token", async () => {
+  const db = testEnv.authenticatedContext("parent-user").firestore();
+  await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    parentFcmToken: "parent-fcm-token-".padEnd(40, "p")
+  }));
+});
+
+test("child can register its own FCM token", async () => {
+  const db = testEnv.authenticatedContext("child-user").firestore();
+  await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    childFcmToken: "child-fcm-token-".padEnd(40, "c")
+  }));
+});
+
+test("parent cannot overwrite the child's FCM token", async () => {
+  const db = testEnv.authenticatedContext("parent-user").firestore();
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    childFcmToken: "attacker-token-".padEnd(40, "x")
+  }));
+});
+
+test("child cannot overwrite the parent's FCM token", async () => {
+  const db = testEnv.authenticatedContext("child-user").firestore();
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    parentFcmToken: "attacker-token-".padEnd(40, "x")
+  }));
+});
+
+test("paired device cannot register an empty or oversized FCM token", async () => {
+  const db = testEnv.authenticatedContext("child-user").firestore();
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    childFcmToken: ""
+  }));
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    childFcmToken: "x".repeat(4097)
+  }));
+});
+
 test("parent cannot write child telemetry fields", async () => {
   const db = testEnv.authenticatedContext("parent-user").firestore();
   await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
