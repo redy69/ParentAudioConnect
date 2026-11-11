@@ -7,5 +7,7 @@
       "sha256": "522d3910e4c032feadaa57cf1a405671ae82fe69eeba8f11b6cb73bf6eb26233"
     }
   ],
-  "notes": "Uji Hybrid Update SantetHP: satu file teks non-eksekusi untuk memverifikasi unduhan dan SHA-256."
+  "notes": "Uji Hybrid Update SantetHP: satu file teks non-eksekusi untuk memverifikasi unduhan dan SHA-256.",
+  "installStatus": "OJO DI INSTALL",
+  "installStatusMessage": "Status awal: jangan instal APK sebelum dinyatakan NORMAL."
 }
