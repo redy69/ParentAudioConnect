@@ -212,6 +212,17 @@ export default {
         return jsonResponse({ error: "Not a member of this pairing" }, 403);
       }
 
+      // Apply a per-authenticated-user, per-endpoint rate limit. This avoids
+      // penalizing unrelated users who share a mobile carrier IP address.
+      if (env.USER_RATE_LIMITER) {
+        const rateLimit = await env.USER_RATE_LIMITER.limit({
+          key: callerUid + ":" + url.pathname
+        });
+        if (!rateLimit.success) {
+          return jsonResponse({ error: "Too many requests. Please try again shortly." }, 429);
+        }
+      }
+
       if (url.pathname === "/register-device") {
         const fcmToken = body.fcmToken;
         if (typeof fcmToken !== "string" || fcmToken.length < 20 || fcmToken.length > 4096) {
