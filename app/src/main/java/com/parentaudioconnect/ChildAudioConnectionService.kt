@@ -229,9 +229,9 @@ class ChildAudioConnectionService : Service() {
                                                 applicationContext, false
                                             )
                                             updateNotification("Koneksi audio terputus • mencoba kembali")
-                                            // Let the candidate loop finish first; the check below
-                                            // handles a disconnect during the initial handshake.
-                                            if (!connecting) scheduleAudioReconnect(candidateRoom)
+                                            // Queue recovery even during the connect/finally window.
+                                            // The recovery job waits until this loop has finished.
+                                            scheduleAudioReconnect(candidateRoom)
                                         }
                                     }
                                     else -> Unit
@@ -308,19 +308,23 @@ class ChildAudioConnectionService : Service() {
         if (reconnectJob?.isActive == true) return
         reconnectJob = serviceScope.launch {
             delay(1_500)
-            // The event handler clears room immediately. Abort only if a newer
-            // connection has already replaced the disconnected candidate.
-            if (!isActive || (room != null && room !== disconnectedRoom)) return@launch
+            // A disconnect can arrive just before connectWithRetry() exits.
+            // Wait for that loop to finish instead of losing the retry request.
+            while (connecting && isActive) delay(500)
+            // Abort if a newer candidate has already become the active room.
+            if (!isActive || room != null) return@launch
 
-            room = null
             roomEventsJob?.cancel()
             roomEventsJob = null
             mp3TransferManager = null
             try {
+                disconnectedRoom.disconnect()
+            } catch (_: Exception) { }
+            try {
                 disconnectedRoom.release()
             } catch (_: Exception) { }
 
-            if (!connecting && isActive) {
+            if (!connecting && isActive && room == null) {
                 connecting = true
                 connectWithRetry()
             }
