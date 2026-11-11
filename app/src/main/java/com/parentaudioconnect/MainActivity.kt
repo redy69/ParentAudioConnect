@@ -100,8 +100,6 @@ private lateinit var playMp3Button: Button
     private lateinit var childLocationPanel: TextView
     private lateinit var childLocationMapView: ChildLocationMapView
     private lateinit var safeZonesContainer: LinearLayout
-    private lateinit var childPermissionAuditPanel: TextView
-    private lateinit var parentPermissionAuditPanel: TextView
     private lateinit var childAppBlockPanel: TextView
     private lateinit var childAppActivityPanel: TextView
     private lateinit var parentAppBlockPanel: TextView
@@ -583,26 +581,6 @@ private var receivedMp3File: File? = null
             setOnClickListener { showChildLocationConsentDialog() }
         }
         rootLayout.addView(childLocationPanel)
-        childPermissionAuditPanel = TextView(this).apply {
-            text = "🔐  PEMANTAUAN IZIN APLIKASI\nNonaktif • Ketuk untuk membaca penjelasan dan mengaktifkan berbagi ringkasan izin"
-            textSize = 13f
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(35, 53, 88))
-            gravity = Gravity.CENTER
-            setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(18), dp(18), dp(18), dp(18))
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(246, 242, 255))).apply {
-                cornerRadius = dp(19).toFloat()
-                setStroke(dp(1), Color.rgb(211, 198, 240))
-            }
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(12)) }
-            visibility = View.GONE
-            setOnClickListener { showChildPermissionAuditConsent() }
-        }
-        rootLayout.addView(childPermissionAuditPanel)
         childAppBlockPanel = TextView(this).apply {
             text = "🚫  BLOKIR APLIKASI\nNonaktif • Ketuk untuk membaca penjelasan dan mengaktifkan kontrol aplikasi"
             textSize = 13f
@@ -697,23 +675,6 @@ private var receivedMp3File: File? = null
         parentOnlyViews.add(childAudioActivityText)
         rootLayout.addView(childDeviceStatusText)
         parentOnlyViews.add(childDeviceStatusText)
-        parentPermissionAuditPanel = TextView(this).apply {
-            text = "🔐  IZIN APLIKASI\nMenunggu persetujuan pemantauan dari HP anak"
-            textSize = 12.5f
-            setTextColor(Color.rgb(35, 53, 88))
-            setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(17), dp(16), dp(17), dp(16))
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(247, 244, 255))).apply {
-                cornerRadius = dp(19).toFloat()
-                setStroke(dp(1), Color.rgb(211, 198, 240))
-            }
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(4), 0, dp(8)) }
-        }
-        rootLayout.addView(parentPermissionAuditPanel)
-        parentOnlyViews.add(parentPermissionAuditPanel)
         parentAppBlockPanel = TextView(this).apply {
             text = "🚫  BLOKIR APLIKASI\nMenunggu persetujuan dan daftar aplikasi dari HP anak • Ketuk untuk mengatur"
             textSize = 12.5f
@@ -949,7 +910,6 @@ private var receivedMp3File: File? = null
         roleIntroText.visibility = View.VISIBLE
         childModePanel.visibility = View.GONE
         childLocationPanel.visibility = View.GONE
-        childPermissionAuditPanel.visibility = View.GONE
         childAppBlockPanel.visibility = View.GONE
         childAppActivityPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
@@ -979,7 +939,6 @@ private var receivedMp3File: File? = null
         roleIntroText.visibility = View.GONE
         childModePanel.visibility = View.GONE
         childLocationPanel.visibility = View.GONE
-        childPermissionAuditPanel.visibility = View.GONE
         childAppActivityPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
         actionButtonsRow.visibility = View.GONE
@@ -1361,13 +1320,11 @@ private var receivedMp3File: File? = null
         parentOnlyViews.forEach { it.visibility = View.GONE }
         childModePanel.visibility = View.VISIBLE
         childLocationPanel.visibility = View.VISIBLE
-        childPermissionAuditPanel.visibility = View.VISIBLE
         childAppBlockPanel.visibility = View.VISIBLE
         childAppActivityPanel.visibility = View.VISIBLE
         updateChildLocationPanel()
         updateChildAppBlockPanel()
         updateChildAppActivityPanel()
-        updateChildPermissionAuditPanel()
         updateButton.visibility = View.VISIBLE
         updateInfoText.visibility = View.VISIBLE
         updateButton.text = "PERIKSA PEMBARUAN APLIKASI"
@@ -2269,40 +2226,6 @@ private var receivedMp3File: File? = null
         Toast.makeText(this, "Berbagi lokasi dihentikan.", Toast.LENGTH_SHORT).show()
     }
 
-    private fun updateChildPermissionAuditPanel() {
-        val enabled = getSharedPreferences("parent_audio", MODE_PRIVATE)
-            .getBoolean("child_permission_audit_enabled", false)
-        childPermissionAuditPanel.text = if (enabled) {
-            "🔐  PEMANTAUAN IZIN APLIKASI\nAktif • Ketuk untuk membaca informasi atau menghentikan berbagi ringkasan izin"
-        } else {
-            "🔐  PEMANTAUAN IZIN APLIKASI\nNonaktif • Ketuk untuk membaca penjelasan dan mengaktifkan berbagi ringkasan izin"
-        }
-    }
-
-    private fun showChildPermissionAuditConsent() {
-        if (currentRole != "child") return
-        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
-        val enabled = prefs.getBoolean("child_permission_audit_enabled", false)
-        AlertDialog.Builder(this)
-            .setTitle("Pemantauan izin aplikasi")
-            .setMessage(
-                "Jika diaktifkan, SantetHP membagikan nama aplikasi yang tampil di daftar aplikasi dan status izin kamera, mikrofon, serta lokasi (diizinkan atau belum diizinkan) ke HP orang tua. Pada Android 13 ke atas, status izin notifikasi juga diperiksa jika aplikasi memintanya.\n\nSantetHP tidak membaca pesan, foto, kata sandi, atau aktivitas di dalam aplikasi. Fitur ini opsional dan dapat dihentikan kapan saja."
-            )
-            .setNegativeButton("Tutup", null)
-            .setPositiveButton(if (enabled) "Hentikan berbagi" else "Saya setuju, aktifkan") { _, _ ->
-                val next = !enabled
-                prefs.edit().putBoolean("child_permission_audit_enabled", next).apply()
-                updateChildPermissionAuditPanel()
-                ChildDeviceStatusWorker.schedule(this)
-                Toast.makeText(
-                    this,
-                    if (next) "Pemantauan izin aplikasi diaktifkan." else "Pemantauan izin aplikasi dinonaktifkan.",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-            .show()
-    }
-
     private fun isAppBlockAccessibilityEnabled(): Boolean {
         val expected = android.content.ComponentName(
             this, ChildAppBlockAccessibilityService::class.java
@@ -2564,36 +2487,6 @@ private var receivedMp3File: File? = null
             .addOnFailureListener {
                 Toast.makeText(this, "Gagal mengambil daftar aplikasi anak.", Toast.LENGTH_LONG).show()
             }
-    }
-
-    private fun renderParentPermissionAudit(snapshot: DocumentSnapshot) {
-        val enabled = snapshot.getBoolean("appPermissionAuditEnabled") == true
-        val updated = snapshot.getTimestamp("appPermissionAuditAt")
-        val time = updated?.let {
-            android.text.format.DateFormat.getTimeFormat(this@MainActivity).format(it.toDate())
-        } ?: "belum tersedia"
-        if (!enabled) {
-            parentPermissionAuditPanel.text =
-                "🔐  IZIN APLIKASI\nPemantauan belum diaktifkan dari HP anak."
-            return
-        }
-        val entries = snapshot.get("appPermissionAuditSummary") as? List<*>
-        val builder = StringBuilder("🔐  IZIN APLIKASI")
-        if (entries.isNullOrEmpty()) {
-            builder.append("\nBelum ditemukan aplikasi dengan izin terkait.")
-        } else {
-            entries.take(12).forEach { raw ->
-                val item = raw as? Map<*, *> ?: return@forEach
-                val name = item["appName"] as? String ?: "Aplikasi"
-                val granted = (item["granted"] as? List<*>)?.filterIsInstance<String>().orEmpty()
-                val notGranted = (item["notGranted"] as? List<*>)?.filterIsInstance<String>().orEmpty()
-                builder.append("\n\n").append(name)
-                if (granted.isNotEmpty()) builder.append("\nDiizinkan: ").append(granted.joinToString(", "))
-                if (notGranted.isNotEmpty()) builder.append("\nBelum diizinkan: ").append(notGranted.joinToString(", "))
-            }
-        }
-        builder.append("\n\nDiperbarui: ").append(time)
-        parentPermissionAuditPanel.text = builder.toString()
     }
 
     private fun requestRemoteCamera() {
@@ -2976,7 +2869,6 @@ private var receivedMp3File: File? = null
             if (fresh) Color.rgb(38, 59, 99) else Color.rgb(104, 117, 140)
         )
 
-        renderParentPermissionAudit(snapshot)
 
         val blockConsent = snapshot.getBoolean("appBlockConsent") == true
         val nowForBlocks = System.currentTimeMillis()
