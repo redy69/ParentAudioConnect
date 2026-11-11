@@ -61,7 +61,11 @@ object ChildUsageScheduleReporter {
 
             if (!enabled) {
                 notificationManager(context).cancel(NOTIFICATION_ID)
-            } else if (!previousKnown || previousQuiet != quietNow) {
+            } else if (!previousKnown) {
+                // On first sync, announce only if a rest period is already active.
+                // Avoid a misleading "rest time ended" notification before it ever started.
+                if (quietNow) showScheduleNotification(context, true, start, end)
+            } else if (previousQuiet != quietNow) {
                 showScheduleNotification(context, quietNow, start, end)
             }
 
