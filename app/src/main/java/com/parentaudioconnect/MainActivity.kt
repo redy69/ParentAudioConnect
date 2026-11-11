@@ -694,8 +694,6 @@ private var receivedMp3File: File? = null
         parentOnlyViews.add(childAudioActivityText)
         rootLayout.addView(childDeviceStatusText)
         parentOnlyViews.add(childDeviceStatusText)
-        rootLayout.addView(childLocationMapView)
-        parentOnlyViews.add(childLocationMapView)
         parentPermissionAuditPanel = TextView(this).apply {
             text = "🔐  IZIN APLIKASI\nMenunggu persetujuan pemantauan dari HP anak"
             textSize = 12.5f
@@ -731,6 +729,28 @@ private var receivedMp3File: File? = null
         }
         rootLayout.addView(parentAppBlockPanel)
         parentOnlyViews.add(parentAppBlockPanel)
+        val mapsButton = TextView(this).apply {
+            text = "🗺️  MAPS & GEO-FENCE\nBuka peta lokasi perangkat anak"
+            textSize = 14f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(35, 65, 125))
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(18), dp(17), dp(18), dp(17))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(235, 243, 255))
+            ).apply {
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), Color.rgb(190, 211, 244))
+            }
+            elevation = dp(2).toFloat()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(5), 0, dp(8)) }
+            setOnClickListener { showMapsPage() }
+        }
+        rootLayout.addView(mapsButton)
+        parentOnlyViews.add(mapsButton)
         rootLayout.addView(cancelPairingButton)
         val controlHeading = TextView(this).apply {
             text = "KONTROL UTAMA"
@@ -745,6 +765,49 @@ private var receivedMp3File: File? = null
         rootLayout.addView(actionButtonsRow)
         rootLayout.addView(playMp3Button)
         rootLayout.addView(cameraStandbyButton)
+
+        val mapsPage = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(10), dp(12), dp(18))
+            setBackgroundColor(Color.rgb(244, 247, 252))
+            visibility = View.GONE
+        }
+        val mapsHeader = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(5), 0, dp(12))
+        }
+        val mapsBack = TextView(this).apply {
+            text = "‹"
+            textSize = 34f
+            setTextColor(Color.rgb(35, 65, 125))
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(dp(48), dp(48))
+            setOnClickListener { showParentDashboard() }
+            contentDescription = "Kembali ke dashboard"
+        }
+        val mapsTitle = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        mapsTitle.addView(TextView(this@MainActivity).apply {
+            text = "Maps"
+            textSize = 23f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(27, 48, 84))
+        })
+        mapsTitle.addView(TextView(this@MainActivity).apply {
+            text = "Lokasi perangkat anak"
+            textSize = 12f
+            setTextColor(Color.rgb(104, 117, 140))
+        })
+        mapsHeader.addView(mapsBack)
+        mapsHeader.addView(mapsTitle)
+        mapsPage.addView(mapsHeader)
+        mapsPage.addView(childLocationMapView, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        ))
+        rootLayout.addView(mapsPage)
+        mapsPage.tag = "santethp_maps_page"
 
         showRoleSelection()
         val scrollView = ScrollView(this).apply {
@@ -914,8 +977,17 @@ private var receivedMp3File: File? = null
         updateButton.visibility = View.GONE
     }
 
+    private fun showMapsPage() {
+        if (currentRole != "parent") return
+        for (index in 0 until rootLayout.childCount) {
+            rootLayout.getChildAt(index).visibility = View.GONE
+        }
+        rootLayout.findViewWithTag<View>("santethp_maps_page")?.visibility = View.VISIBLE
+    }
+
     private fun showParentDashboard() {
         roleIntroText.visibility = View.GONE
+        rootLayout.findViewWithTag<View>("santethp_maps_page")?.visibility = View.GONE
         childModePanel.visibility = View.GONE
         childLocationPanel.visibility = View.GONE
         childPermissionAuditPanel.visibility = View.GONE
