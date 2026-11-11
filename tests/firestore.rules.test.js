@@ -156,4 +156,63 @@ test("parent cannot create a pairing code that expires after five minutes", asyn
   }));
 });
 
-test.todo("Open unclaimed pairing codes can still be read and claimed by any signed-in user; high-entropy codes reduce guessing risk but do not provide server-side rate limiting.");
+test("child can claim an active unclaimed pairing exactly once", async () => {
+  await seedUnclaimedPairing();
+  const childDb = testEnv.authenticatedContext("child-user").firestore();
+  await assertSucceeds(updateDoc(doc(childDb, "pairings", PAIR_CODE), {
+    childUid: "child-user"
+  }));
+
+  const otherDb = testEnv.authenticatedContext("other-user").firestore();
+  await assertFails(updateDoc(doc(otherDb, "pairings", PAIR_CODE), {
+    childUid: "other-user"
+  }));
+});
+
+test("parent cannot claim their own pairing code as the child", async () => {
+  await seedUnclaimedPairing();
+  const db = testEnv.authenticatedContext("parent-user").firestore();
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    childUid: "parent-user"
+  }));
+});
+
+test("expired unclaimed pairing cannot be read", async () => {
+  await seedUnclaimedPairing({
+    expiresAt: Timestamp.fromMillis(Date.now() - 60 * 1000)
+  });
+  const db = testEnv.authenticatedContext("child-user").firestore();
+  await assertFails(getDoc(doc(db, "pairings", PAIR_CODE)));
+});
+
+test("expired unclaimed pairing cannot be claimed", async () => {
+  await seedUnclaimedPairing({
+    expiresAt: Timestamp.fromMillis(Date.now() - 60 * 1000)
+  });
+  const db = testEnv.authenticatedContext("child-user").firestore();
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    childUid: "child-user"
+  }));
+});
+
+test("claim cannot change the parent UID or other pairing fields", async () => {
+  await seedUnclaimedPairing();
+  const db = testEnv.authenticatedContext("child-user").firestore();
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    childUid: "child-user",
+    parentUid: "attacker-parent"
+  }));
+});
+
+// This documents the current limitation: the first signed-in account that
+// knows an active code can claim it. Firestore Rules cannot identify the
+// intended child unless the parent pre-authorizes that child's UID.
+test("any signed-in account can claim an active unclaimed code first (known limitation)", async () => {
+  await seedUnclaimedPairing();
+  const db = testEnv.authenticatedContext("unexpected-user").firestore();
+  await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    childUid: "unexpected-user"
+  }));
+});
+
+test.todo("Open unclaimed pairing codes can be guessed without server-side rate limiting; the five-minute expiry limits the exposure window.");
