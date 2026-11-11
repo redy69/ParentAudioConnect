@@ -86,7 +86,7 @@ object AppUpdateManager {
                     val downloadUrl = apkUrl ?: throw IllegalStateException("File APK pembaruan tidak ditemukan")
                     activity.runOnUiThread {
                         if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
-                        onStatus("$installStatus • $installStatusMessage\nPembaruan aplikasi tersedia: build $remoteVersion")
+                        onStatus("$installStatus\n$installStatusMessage\nPembaruan aplikasi tersedia: build $remoteVersion")
                         val updateDialog = AlertDialog.Builder(activity)
                             .setTitle(
                                 if (installStatus == "NORMAL") {
@@ -96,7 +96,7 @@ object AppUpdateManager {
                                 }
                             )
                             .setMessage(
-                                "$installStatus — $installStatusMessage\n\n" +
+                                "$installStatus\n$installStatusMessage\n\n" +
                                     "Versi baru build $remoteVersion tersedia. " +
                                     (if (dataUpdated) "Data aplikasi juga sudah diperbarui. " else "") +
                                     if (installStatus == "NORMAL") {
@@ -118,11 +118,11 @@ object AppUpdateManager {
                     activity.runOnUiThread {
                         if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
                         val message = if (dataUpdated) {
-                            "$installStatus — $installStatusMessage\n$dataVersionMessage. APK SantetHP sudah versi terbaru."
+                            "$installStatus\n$installStatusMessage\n$dataVersionMessage. APK SantetHP sudah versi terbaru."
                         } else if (dataVersionMessage == "Data aplikasi sudah terbaru") {
-                            "$installStatus — $installStatusMessage\nSantetHP sudah menggunakan versi terbaru."
+                            "$installStatus\n$installStatusMessage\nSantetHP sudah menggunakan versi terbaru."
                         } else {
-                            "$installStatus — $installStatusMessage\n$dataVersionMessage. Versi APK tetap terbaru."
+                            "$installStatus\n$installStatusMessage\n$dataVersionMessage. Versi APK tetap terbaru."
                         }
                         onStatus(message)
                         Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
@@ -132,7 +132,7 @@ object AppUpdateManager {
                 android.util.Log.w("AppUpdateManager", "App update check failed", error)
                 activity.runOnUiThread {
                     if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
-                    val message = "DURONG ONO UPDATE — DURONG ONO UPDATE — lagi di kembangno. Gagal memeriksa pembaruan: ${error.localizedMessage ?: "koneksi bermasalah"}"
+                    val message = "DURONG ONO UPDATE\nlagi di kembangno\nGagal memeriksa pembaruan: ${error.localizedMessage ?: "koneksi bermasalah"}"
                     onStatus(message)
                     Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
                 }
