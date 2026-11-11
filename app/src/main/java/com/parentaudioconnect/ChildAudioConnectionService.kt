@@ -308,7 +308,9 @@ class ChildAudioConnectionService : Service() {
         if (reconnectJob?.isActive == true) return
         reconnectJob = serviceScope.launch {
             delay(1_500)
-            if (!isActive || room !== disconnectedRoom) return@launch
+            // The event handler clears room immediately. Abort only if a newer
+            // connection has already replaced the disconnected candidate.
+            if (!isActive || (room != null && room !== disconnectedRoom)) return@launch
 
             room = null
             roomEventsJob?.cancel()
