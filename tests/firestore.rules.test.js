@@ -34,6 +34,18 @@ async function seedPairing(overrides = {}) {
   });
 }
 
+async function seedUnclaimedPairing(overrides = {}) {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await context.firestore().doc(`pairings/${PAIR_CODE}`).set({
+      parentUid: "parent-user",
+      childUid: null,
+      createdAt: Timestamp.now(),
+      expiresAt: Timestamp.fromMillis(Date.now() + 4 * 60 * 1000),
+      ...overrides
+    });
+  });
+}
+
 before(async () => {
   testEnv = await initializeTestEnvironment({
     projectId: PROJECT_ID,
