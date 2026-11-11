@@ -96,8 +96,6 @@ class CameraViewerActivity : Activity() {
         root.addView(controls)
         setContentView(root)
 
-        room = LiveKit.create(applicationContext)
-        room?.initVideoRenderer(renderer)
         connectToCameraRoom()
     }
 
