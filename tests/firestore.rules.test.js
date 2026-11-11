@@ -153,6 +153,26 @@ test("child can clear app usage history when sharing is disabled", async () => {
   }));
 });
 
+test("child can publish consented foreground app activity", async () => {
+  const db = testEnv.authenticatedContext("child-user").firestore();
+  await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    appActivityConsent: true,
+    appActivityPackage: "com.example.app",
+    appActivityName: "Example",
+    appActivityAt: Timestamp.now()
+  }));
+});
+
+test("parent cannot publish foreground app activity for the child", async () => {
+  const db = testEnv.authenticatedContext("parent-user").firestore();
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    appActivityConsent: true,
+    appActivityPackage: "com.example.app",
+    appActivityName: "Example",
+    appActivityAt: Timestamp.now()
+  }));
+});
+
 test("parent cannot write child app usage history", async () => {
   const db = testEnv.authenticatedContext("parent-user").firestore();
   await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
