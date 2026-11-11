@@ -122,6 +122,9 @@ class CameraViewerActivity : Activity() {
                     response = response,
                     createRoom = { LiveKit.create(applicationContext) },
                     prepareRoom = { candidateRoom ->
+                        // Publish the candidate reference before connect so an immediate
+                        // disconnect during the handshake is observable by the event collector.
+                        room = candidateRoom
                         candidateRoom.initVideoRenderer(renderer)
                         roomEventsJob?.cancel()
                         roomEventsJob = launch {
@@ -142,7 +145,10 @@ class CameraViewerActivity : Activity() {
                                             runOnUiThread {
                                                 status.text = "Koneksi kamera terputus • menyambungkan kembali…"
                                             }
-                                            scheduleCameraReconnect(candidateRoom)
+                                            // While trying candidates, let the failover helper finish.
+                                            // The post-connect identity check below schedules recovery
+                                            // if the last candidate disconnected during its handshake.
+                                            if (!connecting) scheduleCameraReconnect(candidateRoom)
                                         }
                                     }
                                     else -> Unit
@@ -151,6 +157,13 @@ class CameraViewerActivity : Activity() {
                         }
                     }
                 )
+                if (room !== activeRoom) {
+                    // The room disconnected just as connect() completed.
+                    try { activeRoom.disconnect() } catch (_: Exception) { }
+                    try { activeRoom.release() } catch (_: Exception) { }
+                    scheduleCameraReconnect(null)
+                    return@launch
+                }
                 room = activeRoom
                 status.text = "Terhubung. Menunggu video dari HP anak…"
             } catch (error: Exception) {
