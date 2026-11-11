@@ -127,6 +127,7 @@ private var receivedMp3File: File? = null
     private var room: Room? = null
     private var isConnecting = false
     private var connectingRoomCode: String? = null
+    private var roomConnectionGeneration = 0L
     private val pendingRoomConnectedCallbacks = mutableListOf<() -> Unit>()
     private val pendingRoomFailureCallbacks = mutableListOf<(String) -> Unit>()
     private var isMicrophoneActive = false
@@ -1545,6 +1546,7 @@ private var receivedMp3File: File? = null
     }
 
     private fun selectChild(code: String) {
+        if (selectedChildCode != code) invalidatePendingRoomConnection()
         selectedChildCode = code
         isChildrenPanelExpanded = false
         childrenContainer.visibility = View.GONE
@@ -2601,6 +2603,14 @@ private var receivedMp3File: File? = null
             }
     }
 
+    private fun invalidatePendingRoomConnection() {
+        roomConnectionGeneration++
+        isConnecting = false
+        connectingRoomCode = null
+        pendingRoomConnectedCallbacks.clear()
+        pendingRoomFailureCallbacks.clear()
+    }
+
     private fun notifyRoomConnectionSucceeded() {
         val callbacks = pendingRoomConnectedCallbacks.toList()
         pendingRoomConnectedCallbacks.clear()
@@ -2650,6 +2660,7 @@ private var receivedMp3File: File? = null
 
         isConnecting = true
         connectingRoomCode = code
+        val attemptGeneration = ++roomConnectionGeneration
         pendingRoomConnectedCallbacks.clear()
         pendingRoomFailureCallbacks.clear()
         onConnected?.let { pendingRoomConnectedCallbacks.add(it) }
@@ -2667,6 +2678,7 @@ private var receivedMp3File: File? = null
 
         user.getIdToken(false)
             .addOnSuccessListener { result ->
+                if (attemptGeneration != roomConnectionGeneration) return@addOnSuccessListener
                 val idToken = result.token
                 if (idToken.isNullOrEmpty()) {
                     isConnecting = false
@@ -2681,6 +2693,9 @@ private var receivedMp3File: File? = null
                     try {
                         val response = withContext(Dispatchers.IO) {
                             requestLiveKitToken(idToken, code)
+                        }
+                        if (attemptGeneration != roomConnectionGeneration || selectedChildCode != code) {
+                            throw kotlinx.coroutines.CancellationException("Pilihan perangkat berubah")
                         }
 
                         val token = response.getString("token")
@@ -2706,6 +2721,9 @@ private var receivedMp3File: File? = null
                         createdRoom = newRoom
 
                         newRoom.connect(url = serverUrl, token = token)
+                        if (attemptGeneration != roomConnectionGeneration || selectedChildCode != code) {
+                            throw kotlinx.coroutines.CancellationException("Pilihan perangkat berubah")
+                        }
                         newRoom.localParticipant.setMicrophoneEnabled(false)
 
                         val newTransferManager = Mp3TransferManager(
@@ -2720,6 +2738,9 @@ private var receivedMp3File: File? = null
                             }
                         )
 
+                        if (attemptGeneration != roomConnectionGeneration || selectedChildCode != code) {
+                            throw kotlinx.coroutines.CancellationException("Pilihan perangkat berubah")
+                        }
                         room = newRoom
                         if (role == "parent") activeRoomCode = code
                         mp3TransferManager = newTransferManager
@@ -2743,22 +2764,27 @@ private var receivedMp3File: File? = null
                                 failedRoom.release()
                             } catch (_: Exception) { }
                         }
-                        statusText.text = "Gagal menghubungkan audio: ${error.message}"
-                        notifyRoomConnectionFailed(
-                            error.localizedMessage ?: "Koneksi audio gagal"
-                        )
-                        Toast.makeText(
-                            this@MainActivity,
-                            error.localizedMessage ?: "Koneksi gagal",
-                            Toast.LENGTH_LONG
-                        ).show()
+                        if (attemptGeneration == roomConnectionGeneration) {
+                            statusText.text = "Gagal menghubungkan audio: ${error.message}"
+                            notifyRoomConnectionFailed(
+                                error.localizedMessage ?: "Koneksi audio gagal"
+                            )
+                            Toast.makeText(
+                                this@MainActivity,
+                                error.localizedMessage ?: "Koneksi gagal",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
                     } finally {
-                        isConnecting = false
-                        connectingRoomCode = null
+                        if (attemptGeneration == roomConnectionGeneration) {
+                            isConnecting = false
+                            connectingRoomCode = null
+                        }
                     }
                 }
             }
             .addOnFailureListener { error ->
+                if (attemptGeneration != roomConnectionGeneration) return@addOnFailureListener
                 isConnecting = false
                 connectingRoomCode = null
                 statusText.text = "Gagal mendapatkan identitas Firebase"
@@ -2942,6 +2968,7 @@ private var receivedMp3File: File? = null
     }
 
     private fun stopMicrophone() {
+        invalidatePendingRoomConnection()
         val code = selectedChildCode
         activityScope.launch {
             try {
