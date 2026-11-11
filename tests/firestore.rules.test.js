@@ -407,3 +407,38 @@ test("any signed-in account can claim an active unclaimed code first (known limi
 });
 
 test.todo("Open unclaimed pairing codes can be guessed without server-side rate limiting; the five-minute expiry limits the exposure window.");
+
+
+test("parent can save an allowed LiveKit audio server selection", async () => {
+  const db = testEnv.authenticatedContext("parent-user").firestore();
+  await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    audioLiveKitServerId: "backup-2"
+  }));
+});
+
+test("parent can save an allowed LiveKit camera server selection", async () => {
+  const db = testEnv.authenticatedContext("parent-user").firestore();
+  await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    cameraLiveKitServerId: "backup-5"
+  }));
+});
+
+test("child cannot change either LiveKit server selection", async () => {
+  const db = testEnv.authenticatedContext("child-user").firestore();
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    audioLiveKitServerId: "backup-2"
+  }));
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    cameraLiveKitServerId: "backup-3"
+  }));
+});
+
+test("parent cannot save an unknown LiveKit server ID", async () => {
+  const db = testEnv.authenticatedContext("parent-user").firestore();
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    audioLiveKitServerId: "backup-6"
+  }));
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    cameraLiveKitServerId: "unknown"
+  }));
+});
