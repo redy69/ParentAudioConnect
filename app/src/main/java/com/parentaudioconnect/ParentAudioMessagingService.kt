@@ -115,7 +115,8 @@ class ParentAudioMessagingService : FirebaseMessagingService() {
                 if (command == "AUDIO_START") {
                     ContextCompat.startForegroundService(this, audioIntent)
                 } else {
-                    startService(audioIntent)
+                    // Stop an existing service without creating a new background service instance.
+                    stopService(audioIntent)
                 }
                 Log.i(TAG, "Remote audio command delivered: $command")
             } catch (error: Exception) {

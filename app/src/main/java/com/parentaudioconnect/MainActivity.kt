@@ -2202,20 +2202,6 @@ private var receivedMp3File: File? = null
         }
     }
 
-    private fun startChildAudioConnection() {
-        if (currentRole != "child") return
-        val intent = Intent(this, ChildAudioConnectionService::class.java).apply {
-            action = ChildAudioConnectionService.ACTION_CONNECT
-        }
-        try {
-            ContextCompat.startForegroundService(this, intent)
-            statusText.text = "Koneksi audio berjalan dengan notifikasi • mikrofon mati"
-        } catch (error: Exception) {
-            statusText.text = "Tidak dapat memulai koneksi latar: ${error.localizedMessage ?: "izin sistem"}"
-            Toast.makeText(this, "Buka aplikasi dan izinkan notifikasi agar koneksi dapat dipulihkan.", Toast.LENGTH_LONG).show()
-        }
-    }
-
     private fun generateCode(): String {
         val random = SecureRandom()
 
@@ -2585,10 +2571,9 @@ private var receivedMp3File: File? = null
                         codeText.text = code
                         showChildConnectedScreen()
                         watchChildPairingRemoval(code)
-                        statusText.text = "Berhasil dipasangkan! Memulihkan koneksi audio..."
+                        statusText.text = "Berhasil dipasangkan • menunggu perintah audio dari orang tua"
 
                         refreshFcmToken()
-                        startChildAudioConnection()
                     }
                     .addOnFailureListener { error ->
 
