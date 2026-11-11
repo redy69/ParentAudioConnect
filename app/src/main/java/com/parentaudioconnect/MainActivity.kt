@@ -2060,70 +2060,95 @@ private var receivedMp3File: File? = null
                             ?: return@mapNotNull null
                         if (until > now) Triple(pkg, name, until) else null
                     }
-                val activePackages = existingRules.map { it.first }.toSet()
-                val labels = apps.map { it.second }.toTypedArray()
-                val checked = BooleanArray(apps.size) { apps[it].first in activePackages }
+                val activeByPackage = existingRules.associateBy { it.first }
+                val labels = apps.map { (pkg, name) ->
+                    val until = activeByPackage[pkg]?.third
+                    if (until != null) {
+                        val time = android.text.format.DateFormat.getTimeFormat(this@MainActivity)
+                            .format(Date(until))
+                        "$name • diblokir sampai $time"
+                    } else {
+                        name
+                    }
+                }.toTypedArray()
+
                 AlertDialog.Builder(this)
-                    .setTitle("Pilih aplikasi yang diblokir")
-                    .setMessage("Pilih satu atau beberapa aplikasi. Selanjutnya tentukan berapa lama pemblokiran berlaku.")
-                    .setMultiChoiceItems(labels, checked) { _, which, isChecked -> checked[which] = isChecked }
-                    .setNegativeButton("Batal", null)
-                    .setPositiveButton("Lanjut") selection@{ _, _ ->
-                        if (checked.none { it }) {
-                            db.collection("pairings").document(code).update(
-                                "blockedApps", emptyList<Map<String, Any>>(),
-                                "appBlockUpdatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp()
-                            ).addOnSuccessListener {
-                                Toast.makeText(this, "Semua pemblokiran aplikasi dihentikan.", Toast.LENGTH_SHORT).show()
-                            }.addOnFailureListener {
-                                Toast.makeText(this, "Gagal memperbarui pemblokiran.", Toast.LENGTH_LONG).show()
-                            }
-                            return@selection
-                        }
+                    .setTitle("Pilih satu aplikasi")
+                    .setMessage("Pilih aplikasi yang ingin diblokir atau diubah durasinya. Setiap aplikasi memiliki durasi masing-masing.")
+                    .setItems(labels) { _, which ->
+                        val (pkg, name) = apps[which]
+                        val currentUntil = activeByPackage[pkg]?.third
                         val durationInput = EditText(this).apply {
                             inputType = android.text.InputType.TYPE_CLASS_NUMBER
                             hint = "Contoh: 60"
                             setText("60")
                             selectAll()
                         }
-                        AlertDialog.Builder(this)
-                            .setTitle("Durasi pemblokiran")
-                            .setMessage("Masukkan durasi dalam menit (1 sampai 10080). Setelah waktunya habis, aplikasi otomatis dapat dibuka kembali.")
+                        val durationDialog = AlertDialog.Builder(this)
+                            .setTitle("Durasi untuk $name")
+                            .setMessage(
+                                if (currentUntil != null) {
+                                    "Aplikasi ini sedang diblokir. Masukkan durasi baru dalam menit (1 sampai 10080) untuk memulai ulang hitungan waktunya."
+                                } else {
+                                    "Masukkan durasi blokir dalam menit (1 sampai 10080). Setelah waktunya habis, aplikasi otomatis dapat dibuka kembali."
+                                }
+                            )
                             .setView(durationInput)
                             .setNegativeButton("Batal", null)
-                            .setPositiveButton("Aktifkan blokir") duration@{ _, _ ->
+                            .setPositiveButton("Blokir") { _, _ ->
                                 val minutes = durationInput.text.toString().toLongOrNull()
                                 if (minutes == null || minutes !in 1L..10080L) {
                                     Toast.makeText(this, "Durasi harus 1–10080 menit.", Toast.LENGTH_LONG).show()
-                                    return@duration
-                                }
-                                val allAppPackages = apps.map { it.first }.toSet()
-                                val retained = existingRules.filter { it.first !in allAppPackages }
-                                    .map { (pkg, name, until) ->
-                                        mapOf<String, Any>(
-                                            "packageName" to pkg,
-                                            "appName" to name,
-                                            "blockedUntilMillis" to until
-                                        )
+                                } else {
+                                    val retained = existingRules.filter { it.first != pkg }
+                                        .map { (oldPkg, oldName, oldUntil) ->
+                                            mapOf<String, Any>(
+                                                "packageName" to oldPkg,
+                                                "appName" to oldName,
+                                                "blockedUntilMillis" to oldUntil
+                                            )
+                                        }
+                                    val newRule = mapOf<String, Any>(
+                                        "packageName" to pkg,
+                                        "appName" to name,
+                                        "blockedUntilMillis" to System.currentTimeMillis() + minutes * 60_000L
+                                    )
+                                    db.collection("pairings").document(code).update(
+                                        "blockedApps", retained + newRule,
+                                        "appBlockUpdatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp()
+                                    ).addOnSuccessListener {
+                                        Toast.makeText(this, "$name diblokir selama $minutes menit.", Toast.LENGTH_LONG).show()
+                                    }.addOnFailureListener {
+                                        Toast.makeText(this, "Gagal menyimpan pemblokiran.", Toast.LENGTH_LONG).show()
                                     }
-                                val expiresAt = System.currentTimeMillis() + minutes * 60_000L
-                                val selectedRules = apps.filterIndexed { index, _ -> checked[index] }
-                                    .map { (pkg, name) ->
-                                        mapOf<String, Any>(
-                                            "packageName" to pkg,
-                                            "appName" to name,
-                                            "blockedUntilMillis" to expiresAt
-                                        )
-                                    }
-                                db.collection("pairings").document(code).update(
-                                    "blockedApps", retained + selectedRules,
-                                    "appBlockUpdatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp()
-                                ).addOnSuccessListener {
-                                    Toast.makeText(this, "Pemblokiran aktif selama $minutes menit.", Toast.LENGTH_LONG).show()
-                                }.addOnFailureListener {
-                                    Toast.makeText(this, "Gagal menyimpan pemblokiran.", Toast.LENGTH_LONG).show()
                                 }
-                            }.show()
+                            }
+                        if (currentUntil != null) {
+                            durationDialog.setNeutralButton("Hapus blokir", null)
+                        }
+                        durationDialog.show().apply {
+                            if (currentUntil != null) {
+                                getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                                    val retained = existingRules.filter { it.first != pkg }
+                                        .map { (oldPkg, oldName, oldUntil) ->
+                                            mapOf<String, Any>(
+                                                "packageName" to oldPkg,
+                                                "appName" to oldName,
+                                                "blockedUntilMillis" to oldUntil
+                                            )
+                                        }
+                                    db.collection("pairings").document(code).update(
+                                        "blockedApps", retained,
+                                        "appBlockUpdatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp()
+                                    ).addOnSuccessListener {
+                                        Toast.makeText(this@MainActivity, "Blokir $name dihentikan.", Toast.LENGTH_SHORT).show()
+                                        dismiss()
+                                    }.addOnFailureListener {
+                                        Toast.makeText(this@MainActivity, "Gagal menghapus blokir.", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        }
                     }.show()
             }
             .addOnFailureListener {
