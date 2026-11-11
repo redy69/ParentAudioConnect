@@ -323,6 +323,11 @@ export default {
           (a.id === preferredServerId ? -1 : b.id === preferredServerId ? 1 : 0)
         );
       }
+      if (requestedServerId) {
+        const exact = liveKitProjects.filter(project => project.id === requestedServerId);
+        if (exact.length === 0) return jsonResponse({ error: "Selected LiveKit server is not configured" }, 409);
+        liveKitProjects.splice(0, liveKitProjects.length, ...exact);
+      }
 
       if (url.pathname === "/camera-token") {
         const cameraRoom = roomBase + "_camera";
