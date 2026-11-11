@@ -698,6 +698,7 @@ private var receivedMp3File: File? = null
         val childPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         if (childPrefs.getString("pair_role", null) == "child") {
             updateCameraStandbyButton()
+            updateChildAppBlockPanel()
             refreshFcmToken()
             restoreCameraStandbyIfNeeded()
         }
