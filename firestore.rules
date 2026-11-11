@@ -81,6 +81,10 @@ service cloud.firestore {
           'appUsageEnabled',
           'appUsagePermissionGranted',
           'appUsageAt',
+          'appActivityConsent',
+          'appActivityPackage',
+          'appActivityName',
+          'appActivityAt',
           'childScheduleQuietNow',
           'childScheduleCheckedAt',
           'childLatitude',
@@ -134,6 +138,16 @@ service cloud.firestore {
           || request.resource.data.appUsagePermissionGranted is bool)
         && (!changed.hasAny(['appUsageAt'])
           || request.resource.data.appUsageAt is timestamp)
+        && (!changed.hasAny(['appActivityConsent'])
+          || request.resource.data.appActivityConsent is bool)
+        && (!changed.hasAny(['appActivityPackage'])
+          || (request.resource.data.appActivityPackage is string
+            && request.resource.data.appActivityPackage.size() <= 200))
+        && (!changed.hasAny(['appActivityName'])
+          || (request.resource.data.appActivityName is string
+            && request.resource.data.appActivityName.size() <= 120))
+        && (!changed.hasAny(['appActivityAt'])
+          || request.resource.data.appActivityAt is timestamp)
         && (!changed.hasAny(['childScheduleQuietNow'])
           || request.resource.data.childScheduleQuietNow is bool)
         && (!changed.hasAny(['childScheduleCheckedAt'])
