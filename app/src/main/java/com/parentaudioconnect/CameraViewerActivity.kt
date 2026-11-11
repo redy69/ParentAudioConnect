@@ -40,6 +40,7 @@ class CameraViewerActivity : Activity() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var room: Room? = null
+    private var roomEventsJob: kotlinx.coroutines.Job? = null
     private lateinit var renderer: SurfaceViewRenderer
     private lateinit var status: TextView
     private var code: String = ""
@@ -116,24 +117,29 @@ class CameraViewerActivity : Activity() {
                 val activeRoom = LiveKitFailover.connect(
                     response = response,
                     createRoom = { LiveKit.create(applicationContext) },
-                    prepareRoom = { it.initVideoRenderer(renderer) }
-                )
-                room = activeRoom
-                launch {
-                    activeRoom.events.collect { event ->
-                        if (event is RoomEvent.TrackSubscribed) {
-                            val video = event.track as? VideoTrack
-                            if (video != null) {
-                                runOnUiThread {
-                                    video.addRenderer(renderer)
-                                    status.text = "KAMERA ANAK TERHUBUNG"
+                    prepareRoom = { candidateRoom ->
+                        candidateRoom.initVideoRenderer(renderer)
+                        roomEventsJob?.cancel()
+                        roomEventsJob = launch {
+                            candidateRoom.events.collect { event ->
+                                if (event is RoomEvent.TrackSubscribed) {
+                                    val video = event.track as? VideoTrack
+                                    if (video != null) {
+                                        runOnUiThread {
+                                            video.addRenderer(renderer)
+                                            status.text = "KAMERA ANAK TERHUBUNG"
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
-                }
+                )
+                room = activeRoom
                 status.text = "Terhubung. Menunggu video dari HP anak…"
             } catch (error: Exception) {
+                roomEventsJob?.cancel()
+                roomEventsJob = null
                 status.text = "Gagal menghubungkan kamera: ${error.localizedMessage ?: "periksa koneksi"}"
             }
         }
@@ -204,6 +210,8 @@ class CameraViewerActivity : Activity() {
 
     override fun onDestroy() {
         scope.cancel()
+        roomEventsJob?.cancel()
+        roomEventsJob = null
         val activeRoom = room
         room = null
         try { renderer.release() } catch (_: Exception) { }
