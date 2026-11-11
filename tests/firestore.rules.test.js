@@ -128,7 +128,7 @@ test("unrelated signed-in user cannot update an already claimed pairing", async 
 
 test("parent can create an eight-character pairing code with a maximum five-minute expiry", async () => {
   const db = testEnv.authenticatedContext("new-parent").firestore();
-  await assertSucceeds(setDoc(doc(db, "pairings", "ABCDEFGH"), {
+  await assertSucceeds(setDoc(doc(db, "pairings", "23456789"), {
     parentUid: "new-parent",
     childUid: null,
     createdAt: Timestamp.now(),
