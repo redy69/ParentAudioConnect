@@ -113,7 +113,12 @@ class CameraViewerActivity : Activity() {
                 if (response.optString("role") != "parent") {
                     throw IllegalStateException("Akun ini bukan orang tua untuk perangkat tersebut")
                 }
-                val activeRoom = room ?: return@launch
+                val activeRoom = LiveKitFailover.connect(
+                    response = response,
+                    createRoom = { LiveKit.create(applicationContext) },
+                    prepareRoom = { it.initVideoRenderer(renderer) }
+                )
+                room = activeRoom
                 launch {
                     activeRoom.events.collect { event ->
                         if (event is RoomEvent.TrackSubscribed) {
@@ -127,7 +132,6 @@ class CameraViewerActivity : Activity() {
                         }
                     }
                 }
-                activeRoom.connect(response.getString("serverUrl"), response.getString("token"))
                 status.text = "Terhubung. Menunggu video dari HP anak…"
             } catch (error: Exception) {
                 status.text = "Gagal menghubungkan kamera: ${error.localizedMessage ?: "periksa koneksi"}"
