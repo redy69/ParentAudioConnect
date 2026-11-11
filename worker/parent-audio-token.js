@@ -122,7 +122,7 @@ async function getFcmAccessToken(env) {
   return { accessToken: result.access_token, projectId: account.project_id };
 }
 
-async function sendCameraRequest(env, fcmToken, code, requestId, command, facing) {
+async function sendCameraRequest(env, fcmToken, code, requestId, command, facing, serverId) {
   const credentials = await getFcmAccessToken(env);
   const response = await fetch(
     "https://fcm.googleapis.com/v1/projects/" + encodeURIComponent(credentials.projectId) + "/messages:send",
@@ -135,7 +135,7 @@ async function sendCameraRequest(env, fcmToken, code, requestId, command, facing
       body: JSON.stringify({
         message: {
           token: fcmToken,
-          data: { command, code, requestId, facing, serverId: fields.cameraLiveKitServerId?.stringValue || "main" },
+          data: { command, code, requestId, facing, serverId: serverId || "main" },
           android: { priority: "HIGH", ttl: "30s" }
         }
       })
@@ -301,7 +301,7 @@ export default {
         const command = commands[action];
         if (!command) return jsonResponse({ error: "Invalid camera action" }, 400);
         const facing = body.facing === "front" ? "front" : "back";
-        await sendCameraRequest(env, childFcmToken, code, body.requestId, command, facing);
+        await sendCameraRequest(env, childFcmToken, code, body.requestId, command, facing, fields.cameraLiveKitServerId?.stringValue || "main");
         return jsonResponse({ sent: true, requestId: body.requestId, action });
       }
 
