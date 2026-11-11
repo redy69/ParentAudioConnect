@@ -85,6 +85,7 @@ service cloud.firestore {
           'appActivityPackage',
           'appActivityName',
           'appActivityAt',
+          'appActivityHistory',
           'childScheduleQuietNow',
           'childScheduleCheckedAt',
           'childLatitude',
@@ -148,6 +149,9 @@ service cloud.firestore {
             && request.resource.data.appActivityName.size() <= 120))
         && (!changed.hasAny(['appActivityAt'])
           || request.resource.data.appActivityAt is timestamp)
+        && (!changed.hasAny(['appActivityHistory'])
+          || (request.resource.data.appActivityHistory is list
+            && request.resource.data.appActivityHistory.size() <= 10))
         && (!changed.hasAny(['childScheduleQuietNow'])
           || request.resource.data.childScheduleQuietNow is bool)
         && (!changed.hasAny(['childScheduleCheckedAt'])
