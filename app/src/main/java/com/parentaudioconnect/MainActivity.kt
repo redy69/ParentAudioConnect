@@ -1467,8 +1467,21 @@ private var receivedMp3File: File? = null
             .putBoolean("child_location_sharing_enabled", false)
             .apply()
         ChildDeviceStatusWorker.cancel(this)
+        ChildUsageScheduleWorker.cancel(this)
+        prefs.edit()
+            .putBoolean("child_location_sharing_enabled", false)
+            .remove("child_schedule_config_enabled")
+            .remove("child_schedule_start")
+            .remove("child_schedule_end")
+            .remove("child_schedule_days")
+            .remove("child_schedule_zone")
+            .remove("child_schedule_state_known")
+            .remove("child_schedule_quiet")
+            .remove("child_schedule_enabled")
+            .apply()
+        (getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager)
+            .cancel(2510)
         stopService(Intent(this, ChildLocationSharingService::class.java))
-        prefs.edit().putBoolean("child_location_sharing_enabled", false).apply()
 
         try {
             startService(Intent(this, RemoteCameraService::class.java).apply {
