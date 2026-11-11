@@ -34,7 +34,7 @@ object LiveKitFailover {
                 .put("id", response.optString("serverId", "main")))
         }
         val preferred = response.optString("preferredServerId")
-        val lastError: Exception?
+        var lastError: Exception? = null
 
         for (index in 0 until candidates.length()) {
             val candidate = candidates.optJSONObject(index) ?: continue
