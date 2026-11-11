@@ -24,7 +24,11 @@ object ChildDeviceStatusReporter {
     suspend fun publish(context: Context) {
         val prefs = context.getSharedPreferences("parent_audio", Context.MODE_PRIVATE)
         val code = prefs.getString("pair_code", null)
-        if (code.isNullOrBlank() || prefs.getString("pair_role", null) != "child") return
+        val role = prefs.getString("pair_role", null)
+        if (code.isNullOrBlank() || role != "child") {
+            Log.w(TAG, "Skipping report: child pairing is missing (role=$role)")
+            return
+        }
 
         try {
             val batteryIntent = context.registerReceiver(
@@ -98,7 +102,11 @@ object ChildDeviceStatusReporter {
                 )
             }
         } catch (error: Exception) {
-            Log.w(TAG, "Unable to collect child device status", error)
+            Log.e(
+                TAG,
+                "Unable to publish child device status (\${error.javaClass.simpleName}): \${error.message}",
+                error
+            )
             throw error
         }
     }

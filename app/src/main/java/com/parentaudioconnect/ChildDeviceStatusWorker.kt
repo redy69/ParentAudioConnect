@@ -28,13 +28,20 @@ class ChildDeviceStatusWorker(
         suspend fun runReporter(name: String, report: suspend () -> Unit) {
             try {
                 report()
+                Log.i(TAG, "Reporter succeeded: $name")
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
                 hasFailure = true
-                Log.w(TAG, "Reporter failed: $name", error)
+                Log.e(
+                    TAG,
+                    "Reporter failed: $name (\${error.javaClass.simpleName}): \${error.message}",
+                    error
+                )
             }
         }
+
+        Log.i(TAG, "Device status worker started")
 
         runReporter("battery and network status") {
             ChildDeviceStatusReporter.publish(applicationContext)

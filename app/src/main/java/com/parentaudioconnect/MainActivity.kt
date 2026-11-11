@@ -724,10 +724,9 @@ private var receivedMp3File: File? = null
             rootLayout.postDelayed({ maybeRequestOperatorPermission() }, 1200)
             updateCameraStandbyButton()
             updateChildAppBlockPanel()
-            if (childPrefs.getBoolean("child_usage_audit_enabled", false) &&
-                AppUsageReporter.hasUsageAccess(this)) {
-                ChildDeviceStatusWorker.schedule(this)
-            }
+            // Device battery/network reporting is independent of Usage Access.
+            // Always re-enqueue the lightweight status worker when the child app resumes.
+            ChildDeviceStatusWorker.schedule(this)
             refreshFcmToken()
             restoreCameraStandbyIfNeeded()
         }
@@ -1166,6 +1165,11 @@ private var receivedMp3File: File? = null
         if (childNames.isEmpty() && !legacyCode.isNullOrBlank()) {
             childNames[legacyCode] = "Anak 1"
             persistChildren()
+        }
+        // Select a child before attaching listeners so the first Firestore snapshot
+        // can render its device status instead of being ignored during initialization.
+        if (selectedChildCode !in childNames.keys) {
+            selectedChildCode = childNames.keys.firstOrNull()
         }
         childNames.keys.forEach { code ->
             childConnected.putIfAbsent(code, false)
