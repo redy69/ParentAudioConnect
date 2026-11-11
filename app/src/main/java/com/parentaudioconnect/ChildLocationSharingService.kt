@@ -99,6 +99,8 @@ class ChildLocationSharingService : Service() {
         val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val code = prefs.getString("pair_code", null)
         if (prefs.getString("pair_role", null) != "child" || code.isNullOrBlank()) return
+        // Ignore delayed location callbacks after the user has stopped sharing.
+        if (!prefs.getBoolean("child_location_sharing_enabled", false)) return
 
         val payload = mapOf(
             "childLatitude" to location.latitude,
