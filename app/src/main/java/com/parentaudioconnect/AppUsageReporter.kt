@@ -58,20 +58,14 @@ object AppUsageReporter {
                 now
             ).orEmpty()
 
-            val summary = usage
+            var summary = usage
                 .asSequence()
                 .filter { it.totalTimeInForeground >= 60_000L }
                 .filter { it.packageName != context.packageName }
                 .groupBy { it.packageName }
                 .map { (packageName, records) ->
                     val duration = records.sumOf { it.totalTimeInForeground }
-                    val appName = try {
-                        context.packageManager.getApplicationLabel(
-                            context.packageManager.getApplicationInfo(packageName, 0)
-                        ).toString()
-                    } catch (_: Exception) {
-                        packageName
-                    }
+                    val appName = resolveAppName(context, packageName)
                     mapOf(
                         "packageName" to packageName,
                         "appName" to appName,
@@ -80,6 +74,15 @@ object AppUsageReporter {
                 }
                 .sortedByDescending { it["foregroundMinutes"] as Int }
                 .take(12)
+
+            // Some Android builds return empty/incomplete daily aggregates even when
+            // Usage Access is granted. Fall back to foreground/background events.
+            if (summary.isEmpty()) {
+                summary = queryEventSummary(context, manager, now)
+                Log.i(TAG, "Daily usage aggregate empty; event fallback returned ${summary.size} apps")
+            } else {
+                Log.i(TAG, "Daily usage aggregate returned ${summary.size} apps")
+            }
 
             withContext(Dispatchers.IO) {
                 Tasks.await(
@@ -100,4 +103,63 @@ object AppUsageReporter {
             throw error
         }
     }
+    private fun resolveAppName(context: Context, packageName: String): String {
+        return try {
+            context.packageManager.getApplicationLabel(
+                context.packageManager.getApplicationInfo(packageName, 0)
+            ).toString()
+        } catch (_: Exception) {
+            packageName
+        }
+    }
+
+    private fun queryEventSummary(
+        context: Context,
+        manager: UsageStatsManager,
+        now: Long
+    ): List<Map<String, Any>> {
+        val start = now - DAY_MS
+        val events = manager.queryEvents(start, now)
+        val event = android.app.usage.UsageEvents.Event()
+        val totals = mutableMapOf<String, Long>()
+        val foregroundSince = mutableMapOf<String, Long>()
+
+        fun closeForeground(packageName: String, at: Long) {
+            val began = foregroundSince.remove(packageName) ?: return
+            val duration = (at - began).coerceAtLeast(0L)
+            totals[packageName] = (totals[packageName] ?: 0L) + duration
+        }
+
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            val packageName = event.packageName ?: continue
+            if (packageName == context.packageName) continue
+            when (event.eventType) {
+                UsageEvents.Event.ACTIVITY_RESUMED,
+                UsageEvents.Event.MOVE_TO_FOREGROUND -> {
+                    val previous = foregroundSince.keys.firstOrNull { it != packageName }
+                    if (previous != null) closeForeground(previous, event.timeStamp)
+                    if (packageName !in foregroundSince) {
+                        foregroundSince[packageName] = event.timeStamp
+                    }
+                }
+                UsageEvents.Event.ACTIVITY_PAUSED,
+                UsageEvents.Event.MOVE_TO_BACKGROUND -> closeForeground(packageName, event.timeStamp)
+            }
+        }
+
+        foregroundSince.keys.toList().forEach { closeForeground(it, now) }
+        return totals
+            .filterValues { it >= 60_000L }
+            .map { (packageName, duration) ->
+                mapOf(
+                    "packageName" to packageName,
+                    "appName" to resolveAppName(context, packageName),
+                    "foregroundMinutes" to (duration / 60_000L).toInt()
+                )
+            }
+            .sortedByDescending { it["foregroundMinutes"] as Int }
+            .take(12)
+    }
+
 }
