@@ -84,6 +84,49 @@ test("parent cannot save an invalid schedule day", async () => {
   }));
 });
 
+test("parent can save up to ten safe zones with custom radius", async () => {
+  const db = testEnv.authenticatedContext("parent-user").firestore();
+  const zones = Array.from({ length: 10 }, (_, index) => ({
+    id: "zone-" + index,
+    name: "Safe place " + index,
+    latitude: -6.9 + index / 1000,
+    longitude: 110.4 + index / 1000,
+    radiusM: 250 + index
+  }));
+  await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    safeZones: zones,
+    geofenceEnabled: false,
+    geofenceUpdatedAt: Timestamp.now()
+  }));
+});
+
+test("parent cannot save more than ten safe zones", async () => {
+  const db = testEnv.authenticatedContext("parent-user").firestore();
+  const zones = Array.from({ length: 11 }, (_, index) => ({
+    id: "zone-" + index,
+    name: "Safe place " + index,
+    latitude: -6.9,
+    longitude: 110.4,
+    radiusM: 250
+  }));
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    safeZones: zones
+  }));
+});
+
+test("child cannot change the parent's safe zones", async () => {
+  const db = testEnv.authenticatedContext("child-user").firestore();
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    safeZones: [{
+      id: "unauthorized",
+      name: "Changed",
+      latitude: -6.9,
+      longitude: 110.4,
+      radiusM: 250
+    }]
+  }));
+});
+
 test("parent can register its own FCM token", async () => {
   const db = testEnv.authenticatedContext("parent-user").firestore();
   await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
