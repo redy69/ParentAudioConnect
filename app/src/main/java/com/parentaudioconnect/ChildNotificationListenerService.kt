@@ -43,6 +43,10 @@ class ChildNotificationListenerService : NotificationListenerService() {
                     ?: extras?.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)
                 )?.toString()?.trim()?.take(1200).orEmpty()
 
+            // Hide only WhatsApp's aggregate/count-only notifications.
+            // Actual message previews and notifications from other apps remain untouched.
+            if (isWhatsAppSummary(packageName, sbn, body)) return
+
             val eventId = UUID.nameUUIDFromBytes(
                 (packageName + "|" + sbn.key + "|" + sbn.postTime).toByteArray(Charsets.UTF_8)
             ).toString()
@@ -67,7 +71,27 @@ class ChildNotificationListenerService : NotificationListenerService() {
         }
     }
 
+    private fun isWhatsAppSummary(
+        packageName: String,
+        sbn: StatusBarNotification,
+        body: String
+    ): Boolean {
+        val isWhatsApp = packageName == WHATSAPP_PACKAGE ||
+            packageName == WHATSAPP_BUSINESS_PACKAGE
+        if (!isWhatsApp) return false
+
+        val isGroupSummary =
+            (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0
+        if (isGroupSummary) return true
+
+        return WHATSAPP_COUNT_SUMMARY.matches(body.trim())
+    }
+
     companion object {
         private const val TAG = "SantetHPNotifications"
+        private const val WHATSAPP_PACKAGE = "com.whatsapp"
+        private const val WHATSAPP_BUSINESS_PACKAGE = "com.whatsapp.w4b"
+        private val WHATSAPP_COUNT_SUMMARY =
+            Regex("^\\d+\\s+(?:pesan(?:\\s+baru)?|new\\s+messages?)$", RegexOption.IGNORE_CASE)
     }
 }
