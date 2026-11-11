@@ -66,6 +66,18 @@ class ChildLocationSharingService : Service() {
         startForeground(NOTIFICATION_ID, buildNotification())
         prefs.edit().putBoolean("child_location_sharing_enabled", true).apply()
 
+        // Publish the user's explicit sharing consent immediately. Do not wait
+        // for GPS to produce a coordinate, otherwise the parent UI can wrongly
+        // report that sharing is disabled while this foreground service is active.
+        firestore.collection("pairings").document(code)
+            .update("childLocationSharingEnabled", true)
+            .addOnSuccessListener {
+                Log.i(TAG, "Location sharing consent published")
+            }
+            .addOnFailureListener { error ->
+                Log.w(TAG, "Unable to publish location sharing consent", error)
+            }
+
         val request = LocationRequest.Builder(
             Priority.PRIORITY_BALANCED_POWER_ACCURACY,
             UPDATE_INTERVAL_MS
