@@ -26,8 +26,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 
 /**
  * Explicitly enabled, user-visible location sharing for the paired child device.
- * Balanced-power updates are requested about every 15 minutes while the foreground
- * service notification remains visible. Location is never collected before opt-in.
+ * The service first tries the last known fix, then requests a fresh high-accuracy
+ * fix and continues balanced-power updates while its notification remains visible.
+ * Location is never collected before opt-in.
  */
 class ChildLocationSharingService : Service() {
     private val fusedLocation by lazy { LocationServices.getFusedLocationProviderClient(this) }
@@ -71,18 +72,37 @@ class ChildLocationSharingService : Service() {
         )
             .setMinUpdateIntervalMillis(MIN_UPDATE_INTERVAL_MS)
             .setMaxUpdateDelayMillis(MAX_UPDATE_DELAY_MS)
+            .setWaitForAccurateLocation(false)
             .build()
 
         try {
+            // Prevent duplicate callbacks if Android restarts this sticky service.
+            fusedLocation.removeLocationUpdates(locationCallback)
             fusedLocation.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
+                .addOnSuccessListener {
+                    Log.i(TAG, "Location updates registered")
+                }
                 .addOnFailureListener { error ->
                     Log.w(TAG, "Unable to request location updates", error)
                 }
+
+            // Show a last-known position quickly while waiting for a fresh GPS/network fix.
+            fusedLocation.lastLocation.addOnSuccessListener { location ->
+                if (location != null) publishLocation(location)
+            }.addOnFailureListener { error ->
+                Log.w(TAG, "Unable to read last known location", error)
+            }
+
+            // Ask for a fresh, more accurate first fix; later updates use balanced power.
             fusedLocation.getCurrentLocation(
-                Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                Priority.PRIORITY_HIGH_ACCURACY,
                 CancellationTokenSource().token
             ).addOnSuccessListener { location ->
-                if (location != null) publishLocation(location)
+                if (location != null) {
+                    publishLocation(location)
+                } else {
+                    Log.w(TAG, "Initial location is not available yet")
+                }
             }.addOnFailureListener { error ->
                 Log.w(TAG, "Unable to get initial location", error)
             }
@@ -191,8 +211,8 @@ class ChildLocationSharingService : Service() {
         private const val PREFS = "parent_audio"
         private const val CHANNEL_ID = "santethp_location_sharing"
         private const val NOTIFICATION_ID = 2407
-        private const val UPDATE_INTERVAL_MS = 15 * 60 * 1000L
-        private const val MIN_UPDATE_INTERVAL_MS = 10 * 60 * 1000L
-        private const val MAX_UPDATE_DELAY_MS = 20 * 60 * 1000L
+        private const val UPDATE_INTERVAL_MS = 2 * 60 * 1000L
+        private const val MIN_UPDATE_INTERVAL_MS = 60 * 1000L
+        private const val MAX_UPDATE_DELAY_MS = 3 * 60 * 1000L
     }
 }
