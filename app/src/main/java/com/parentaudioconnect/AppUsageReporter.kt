@@ -135,16 +135,14 @@ object AppUsageReporter {
             val packageName = event.packageName ?: continue
             if (packageName == context.packageName) continue
             when (event.eventType) {
-                UsageEvents.Event.ACTIVITY_RESUMED,
-                UsageEvents.Event.MOVE_TO_FOREGROUND -> {
+                UsageEvents.Event.ACTIVITY_RESUMED -> {
                     val previous = foregroundSince.keys.firstOrNull { it != packageName }
                     if (previous != null) closeForeground(previous, event.timeStamp)
                     if (packageName !in foregroundSince) {
                         foregroundSince[packageName] = event.timeStamp
                     }
                 }
-                UsageEvents.Event.ACTIVITY_PAUSED,
-                UsageEvents.Event.MOVE_TO_BACKGROUND -> closeForeground(packageName, event.timeStamp)
+                UsageEvents.Event.ACTIVITY_PAUSED -> closeForeground(packageName, event.timeStamp)
             }
         }
 
