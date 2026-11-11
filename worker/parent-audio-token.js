@@ -337,7 +337,7 @@ export default {
         const primary = servers[0];
         return jsonResponse({
           token: primary.token, serverUrl: primary.serverUrl, serverId: primary.id,
-          servers, role: isParent ? "parent" : "child", expiresIn: 600
+          preferredServerId: requestedServerId, servers, role: isParent ? "parent" : "child", expiresIn: 600
         });
       }
 
@@ -347,7 +347,7 @@ export default {
       const primary = servers[0];
       return jsonResponse({
         token: primary.token, serverUrl: primary.serverUrl, serverId: primary.id,
-        servers, role: isParent ? "parent" : "child", expiresIn: 600
+        preferredServerId: requestedServerId, servers, role: isParent ? "parent" : "child", expiresIn: 600
       });
     } catch (error) {
       return jsonResponse({ error: "Internal server error" }, 500);
