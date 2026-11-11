@@ -2960,7 +2960,10 @@ private var receivedMp3File: File? = null
 
     private fun enableMicrophoneOnConnectedRoom(code: String) {
         activityScope.launch {
-            if (selectedChildCode != code || activeRoomCode != code) return@launch
+            if (selectedChildCode != code || activeRoomCode != code) {
+                stopRemoteAudioAfterSetupFailure(code, "Pilihan perangkat berubah sebelum audio aktif")
+                return@launch
+            }
             try {
                 val success = room?.localParticipant?.setMicrophoneEnabled(true) ?: false
                 if (success) {
