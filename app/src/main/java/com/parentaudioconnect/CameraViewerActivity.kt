@@ -118,7 +118,7 @@ class CameraViewerActivity : Activity() {
                 if (response.optString("role") != "parent") {
                     throw IllegalStateException("Akun ini bukan orang tua untuk perangkat tersebut")
                 }
-                val activeRoom = LiveKitFailover.connect(
+                val liveKitConnection = LiveKitFailover.connectWithServer(
                     response = response,
                     createRoom = { LiveKit.create(applicationContext) },
                     prepareRoom = { candidateRoom ->
@@ -157,12 +157,18 @@ class CameraViewerActivity : Activity() {
                         }
                     }
                 )
+                val activeRoom = liveKitConnection.room
                 if (room !== activeRoom) {
                     // The room disconnected just as connect() completed.
                     try { activeRoom.disconnect() } catch (_: Exception) { }
                     try { activeRoom.release() } catch (_: Exception) { }
                     scheduleCameraReconnect(null)
                     return@launch
+                }
+                val selection = JSONObject().put("idToken", idToken).put("code", code)
+                    .put("kind", "camera").put("serverId", liveKitConnection.serverId)
+                withContext(Dispatchers.IO) {
+                    postJson("$WORKER_BASE/select-server", selection)
                 }
                 room = activeRoom
                 status.text = "Terhubung. Menunggu video dari HP anak…"
