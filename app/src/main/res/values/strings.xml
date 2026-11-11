@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="child_app_block_accessibility_description">SantetHP memeriksa nama paket aplikasi yang sedang dibuka untuk menerapkan daftar blokir yang disetujui. Layanan tidak membaca isi layar.</string>
+    <string name="child_app_block_accessibility_description">Jika fitur blokir atau pemantauan aplikasi aktif disetujui di HP anak, SantetHP hanya memeriksa nama paket aplikasi yang tampil. Layanan tidak membaca isi layar, pesan, foto, kata sandi, atau ketikan.</string>
 </resources>
