@@ -2283,7 +2283,10 @@ private var receivedMp3File: File? = null
             val usageAt = snapshot.getTimestamp("appUsageAt")
             val usageAge = usageAt?.toDate()?.time?.let { System.currentTimeMillis() - it }
             val usageFresh = usageAge != null && usageAge in -60_000L..30 * 60 * 1000L
-            if (!permissionGranted) {
+            val usageEnabled = snapshot.getBoolean("appUsageEnabled") == true
+            if (!usageEnabled) {
+                append("\nRiwayat penggunaan belum diaktifkan dari HP anak")
+            } else if (!permissionGranted) {
                 append("\nMenunggu izin Usage Access dari HP anak")
             } else {
                 val apps = snapshot.get("appUsageSummary") as? List<*>

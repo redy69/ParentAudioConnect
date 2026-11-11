@@ -32,13 +32,20 @@ object AppUsageReporter {
         if (code.isNullOrBlank() || prefs.getString("pair_role", null) != "child") return
 
         try {
-            if (!prefs.getBoolean("child_usage_audit_enabled", false) ||
-                !hasUsageAccess(context)) {
+            val auditEnabled = prefs.getBoolean("child_usage_audit_enabled", false)
+            val usageAccessGranted = auditEnabled && hasUsageAccess(context)
+            if (!usageAccessGranted) {
                 withContext(Dispatchers.IO) {
                     Tasks.await(
                         FirebaseFirestore.getInstance().collection("pairings").document(code)
                             .update(
-                                mapOf("appUsagePermissionGranted" to false, "appUsageAt" to FieldValue.serverTimestamp()))
+                                mapOf(
+                                    "appUsageEnabled" to auditEnabled,
+                                    "appUsagePermissionGranted" to false,
+                                    "appUsageSummary" to FieldValue.delete(),
+                                    "appUsageAt" to FieldValue.serverTimestamp()
+                                )
+                            )
                     )
                 }
                 return
@@ -82,6 +89,7 @@ object AppUsageReporter {
                         .update(
                             mapOf(
                                 "appUsageSummary" to summary,
+                                "appUsageEnabled" to true,
                                 "appUsagePermissionGranted" to true,
                                 "appUsageAt" to FieldValue.serverTimestamp()
                             ))
