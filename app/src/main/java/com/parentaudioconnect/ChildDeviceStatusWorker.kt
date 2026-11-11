@@ -61,6 +61,8 @@ class ChildDeviceStatusWorker(
         private const val INITIAL_NAME = "child-device-status-initial"
 
         fun schedule(context: Context) {
+            // Local schedule reminders must run even when the child device is offline.
+            ChildUsageScheduleWorker.schedule(context)
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
@@ -81,6 +83,7 @@ class ChildDeviceStatusWorker(
         fun cancel(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork(INITIAL_NAME)
             WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_NAME)
+            ChildUsageScheduleWorker.cancel(context)
         }
     }
 }
