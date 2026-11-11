@@ -7,6 +7,38 @@ function base64url(bytes) {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+async function readJsonRequest(request, maxBytes = 16 * 1024) {
+  if (!request.headers.get("content-type")?.toLowerCase().includes("application/json")) {
+    return { error: "Content-Type must be application/json", status: 415 };
+  }
+  const declaredLength = Number(request.headers.get("content-length") || 0);
+  if (declaredLength > maxBytes) {
+    return { error: "Request body is too large", status: 413 };
+  }
+  if (!request.body) return { error: "Request body is required", status: 400 };
+
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let total = 0;
+  let bodyText = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        return { error: "Request body is too large", status: 413 };
+      }
+      bodyText += decoder.decode(value, { stream: true });
+    }
+    bodyText += decoder.decode();
+    return { data: JSON.parse(bodyText) };
+  } catch (_) {
+    return { error: "Invalid JSON request body", status: 400 };
+  }
+}
+
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -153,7 +185,12 @@ export default {
       const allowedPaths = ["/token", "/register-device", "/request-camera", "/request-audio", "/camera-token", "/safe-zone-event", "/select-server"];
       if (!allowedPaths.includes(url.pathname)) return jsonResponse({ error: "Not found" }, 404);
 
-      const body = await request.json();
+      const parsedBody = await readJsonRequest(request);
+      if (parsedBody.error) return jsonResponse({ error: parsedBody.error }, parsedBody.status);
+      const body = parsedBody.data;
+      if (!body || typeof body !== "object" || Array.isArray(body)) {
+        return jsonResponse({ error: "JSON body must be an object" }, 400);
+      }
       const code = String(body.code || "").trim().toUpperCase();
       if (!/^[A-HJ-NP-Z2-9]{8}$/.test(code)) return jsonResponse({ error: "Invalid pairing code" }, 400);
 
@@ -318,14 +355,21 @@ export default {
         ? fields.cameraLiveKitServerId?.stringValue
         : fields.audioLiveKitServerId?.stringValue;
       const preferredServerId = requestedServerId || storedServerId || "";
-      if (preferredServerId) {
-        liveKitProjects.sort((a, b) =>
-          (a.id === preferredServerId ? -1 : b.id === preferredServerId ? 1 : 0)
-        );
+      const allowedServerIds = ["main", "backup-2", "backup-3", "backup-4", "backup-5"];
+      if (storedServerId && !allowedServerIds.includes(storedServerId)) {
+        return jsonResponse({ error: "Stored LiveKit server selection is invalid; parent must select a server again" }, 409);
       }
-      if (requestedServerId) {
-        const exact = liveKitProjects.filter(project => project.id === requestedServerId);
-        if (exact.length === 0) return jsonResponse({ error: "Selected LiveKit server is not configured" }, 409);
+      if (requestedServerId && !allowedServerIds.includes(requestedServerId)) {
+        return jsonResponse({ error: "Requested LiveKit server selection is invalid" }, 400);
+      }
+      if (storedServerId && requestedServerId && storedServerId !== requestedServerId) {
+        return jsonResponse({ error: "Requested server does not match the paired device selection" }, 409);
+      }
+      if (preferredServerId) {
+        const exact = liveKitProjects.filter(project => project.id === preferredServerId);
+        if (exact.length === 0) {
+          return jsonResponse({ error: "Selected LiveKit server is not configured; parent must choose an available server" }, 409);
+        }
         liveKitProjects.splice(0, liveKitProjects.length, ...exact);
       }
 
