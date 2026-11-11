@@ -126,6 +126,9 @@ private var receivedMp3File: File? = null
     }
     private var room: Room? = null
     private var isConnecting = false
+    private var connectingRoomCode: String? = null
+    private val pendingRoomConnectedCallbacks = mutableListOf<() -> Unit>()
+    private val pendingRoomFailureCallbacks = mutableListOf<(String) -> Unit>()
     private var isMicrophoneActive = false
     private var currentRole = ""
 
@@ -2598,32 +2601,83 @@ private var receivedMp3File: File? = null
             }
     }
 
-    private fun connectToLiveKit(code: String, onConnected: (() -> Unit)? = null) {
-        if (room != null || isConnecting) return
+    private fun notifyRoomConnectionSucceeded() {
+        val callbacks = pendingRoomConnectedCallbacks.toList()
+        pendingRoomConnectedCallbacks.clear()
+        pendingRoomFailureCallbacks.clear()
+        callbacks.forEach { callback ->
+            try {
+                callback()
+            } catch (error: Exception) {
+                android.util.Log.w("ParentAudio", "Room success callback failed", error)
+            }
+        }
+    }
+
+    private fun notifyRoomConnectionFailed(message: String) {
+        val callbacks = pendingRoomFailureCallbacks.toList()
+        pendingRoomConnectedCallbacks.clear()
+        pendingRoomFailureCallbacks.clear()
+        callbacks.forEach { callback ->
+            try {
+                callback(message)
+            } catch (error: Exception) {
+                android.util.Log.w("ParentAudio", "Room failure callback failed", error)
+            }
+        }
+    }
+
+    private fun connectToLiveKit(
+        code: String,
+        onConnected: (() -> Unit)? = null,
+        onFailure: ((String) -> Unit)? = null
+    ) {
+        if (room != null) {
+            if (activeRoomCode == code) onConnected?.invoke()
+            else onFailure?.invoke("Ruang audio perangkat lain masih aktif")
+            return
+        }
+
+        if (isConnecting) {
+            if (connectingRoomCode == code) {
+                onConnected?.let { pendingRoomConnectedCallbacks.add(it) }
+                onFailure?.let { pendingRoomFailureCallbacks.add(it) }
+            } else {
+                onFailure?.invoke("Sedang menyiapkan koneksi audio perangkat lain")
+            }
+            return
+        }
 
         isConnecting = true
+        connectingRoomCode = code
+        pendingRoomConnectedCallbacks.clear()
+        pendingRoomFailureCallbacks.clear()
+        onConnected?.let { pendingRoomConnectedCallbacks.add(it) }
+        onFailure?.let { pendingRoomFailureCallbacks.add(it) }
         statusText.text = "Meminta akses audio..."
 
         val user = auth.currentUser
-
         if (user == null) {
             isConnecting = false
+            connectingRoomCode = null
             statusText.text = "Firebase belum terhubung!"
+            notifyRoomConnectionFailed("Firebase belum terhubung")
             return
         }
 
         user.getIdToken(false)
             .addOnSuccessListener { result ->
-
                 val idToken = result.token
-
                 if (idToken.isNullOrEmpty()) {
                     isConnecting = false
+                    connectingRoomCode = null
                     statusText.text = "Gagal mendapatkan token Firebase"
+                    notifyRoomConnectionFailed("Token Firebase tidak tersedia")
                     return@addOnSuccessListener
                 }
 
                 activityScope.launch {
+                    var createdRoom: Room? = null
                     try {
                         val response = withContext(Dispatchers.IO) {
                             requestLiveKitToken(idToken, code)
@@ -2649,50 +2703,50 @@ private var receivedMp3File: File? = null
                         } else {
                             LiveKit.create(applicationContext)
                         }
+                        createdRoom = newRoom
 
-                        newRoom.connect(
-                            url = serverUrl,
-                            token = token
+                        newRoom.connect(url = serverUrl, token = token)
+                        newRoom.localParticipant.setMicrophoneEnabled(false)
+
+                        val newTransferManager = Mp3TransferManager(
+                            context = this@MainActivity,
+                            room = newRoom,
+                            scope = activityScope,
+                            onStatus = { message -> statusText.text = message },
+                            onReceived = { file ->
+                                receivedMp3File = file
+                                playMp3Button.visibility = View.VISIBLE
+                                playReceivedMp3()
+                            }
                         )
 
                         room = newRoom
                         if (role == "parent") activeRoomCode = code
-                        mp3TransferManager = Mp3TransferManager(
-    context = this@MainActivity,
-    room = newRoom,
-    scope = activityScope,
-    onStatus = { message ->
-        statusText.text = message
-    },
-    onReceived = { file ->
-    receivedMp3File = file
-    playMp3Button.visibility = View.VISIBLE
-    playReceivedMp3()
-}
-)
+                        mp3TransferManager = newTransferManager
 
                         if (role == "parent") {
-                            newRoom.localParticipant
-                                .setMicrophoneEnabled(false)
                             isMicrophoneActive = false
-
                             statusText.text = "Ruang audio siap"
                             showParentDashboard()
-                            onConnected?.invoke()
-
+                            notifyRoomConnectionSucceeded()
                         } else {
-                            newRoom.localParticipant
-                                .setMicrophoneEnabled(false)
-
-                            statusText.text =
-                                "TERHUBUNG • MENUNGGU AUDIO ORANG TUA"
+                            statusText.text = "TERHUBUNG • MENUNGGU AUDIO ORANG TUA"
                             showChildConnectedScreen()
                         }
-
                     } catch (error: Exception) {
-                        statusText.text =
-                            "Gagal menghubungkan audio: ${error.message}"
-
+                        val failedRoom = createdRoom
+                        if (failedRoom != null && room !== failedRoom) {
+                            try {
+                                failedRoom.disconnect()
+                            } catch (_: Exception) { }
+                            try {
+                                failedRoom.release()
+                            } catch (_: Exception) { }
+                        }
+                        statusText.text = "Gagal menghubungkan audio: ${error.message}"
+                        notifyRoomConnectionFailed(
+                            error.localizedMessage ?: "Koneksi audio gagal"
+                        )
                         Toast.makeText(
                             this@MainActivity,
                             error.localizedMessage ?: "Koneksi gagal",
@@ -2700,13 +2754,17 @@ private var receivedMp3File: File? = null
                         ).show()
                     } finally {
                         isConnecting = false
+                        connectingRoomCode = null
                     }
                 }
             }
             .addOnFailureListener { error ->
                 isConnecting = false
+                connectingRoomCode = null
                 statusText.text = "Gagal mendapatkan identitas Firebase"
-
+                notifyRoomConnectionFailed(
+                    error.localizedMessage ?: "Gagal mendapatkan identitas Firebase"
+                )
                 Toast.makeText(
                     this,
                     error.localizedMessage ?: "Koneksi gagal",
@@ -2854,7 +2912,13 @@ private var receivedMp3File: File? = null
             if (room != null && activeRoomCode == code) {
                 enableMicrophoneOnConnectedRoom()
             } else {
-                connectToLiveKit(code) { enableMicrophoneOnConnectedRoom() }
+                connectToLiveKit(
+                    code,
+                    onConnected = { enableMicrophoneOnConnectedRoom() },
+                    onFailure = { error ->
+                        statusText.text = "Audio Live gagal disiapkan: $error"
+                    }
+                )
             }
         }
     }
@@ -2956,8 +3020,17 @@ override fun onActivityResult(
                     manager.send(uri)
                 }
             }
-            if (room != null && activeRoomCode == code) sendFile()
-            else connectToLiveKit(code, sendFile)
+            if (room != null && activeRoomCode == code) {
+                sendFile()
+            } else {
+                connectToLiveKit(
+                    code,
+                    onConnected = sendFile,
+                    onFailure = { error ->
+                        statusText.text = "Gagal menyiapkan ruang MP3: $error"
+                    }
+                )
+            }
         }
     }
 }
