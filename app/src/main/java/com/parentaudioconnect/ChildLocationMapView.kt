@@ -129,7 +129,21 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
               .leaflet-container{font-family:Arial,sans-serif}
               .child-pin{width:18px;height:18px;border-radius:50%;background:#2878ed;border:4px solid white;box-shadow:0 2px 12px #17345b88}
               .leaflet-control-attribution{font-size:9px}
-            </style></head><body><div id="map"></div>
+              #searchPanel{display:none;position:absolute;z-index:1000;top:10px;left:10px;right:10px;background:#fff;padding:9px;border-radius:13px;box-shadow:0 2px 12px #17345b44}
+              #placeSearch{width:100%;box-sizing:border-box;border:1px solid #d5deeb;border-radius:9px;padding:11px;font-size:14px;outline:none}
+              #searchResults{max-height:150px;overflow:auto}
+              .searchResult{padding:10px 6px;border-bottom:1px solid #edf1f6;font-size:12px;color:#243b60}
+              #selectionPanel{display:none;position:absolute;z-index:1000;bottom:18px;left:12px;right:12px;text-align:center}
+              #confirmPoint{border:0;border-radius:22px;background:#245ba9;color:white;padding:13px 22px;font-weight:bold;box-shadow:0 2px 10px #17345b55}
+              #searchHint{font-size:10px;color:#68758c;padding:5px 2px}
+            </style></head><body>
+            <div id="searchPanel">
+              <input id="placeSearch" type="search" placeholder="Cari alamat, sekolah, toko, atau tempat..." autocomplete="off">
+              <div id="searchHint">Ketik nama tempat, lalu pilih hasil pencarian</div>
+              <div id="searchResults"></div>
+            </div>
+            <div id="selectionPanel"><button id="confirmPoint" onclick="confirmSelectedPoint()">Gunakan titik ini</button></div>
+            <div id="map"></div>
             <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
             <script>
               const map=L.map('map',{zoomControl:true}).setView([-6.9,110.4],13);
@@ -139,6 +153,56 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
               let marker=null,accuracyCircle=null,selectionMarker=null;
               let fences=[];
               let mapTapMode=false;
+              let searchTimer=null;
+              const searchInput=document.getElementById('placeSearch');
+              const searchResults=document.getElementById('searchResults');
+              function placeSelection(lat,lon){
+                if(selectionMarker)map.removeLayer(selectionMarker);
+                selectionMarker=L.marker([lat,lon],{draggable:true}).addTo(map);
+                selectionMarker.on('dragend',function(){
+                  const p=selectionMarker.getLatLng();
+                  document.getElementById('selectionPanel').style.display='block';
+                });
+                document.getElementById('selectionPanel').style.display='block';
+              }
+              function confirmSelectedPoint(){
+                if(!selectionMarker)return;
+                const p=selectionMarker.getLatLng();
+                setMapTapMode(false);
+                if(window.SantetMap&&window.SantetMap.onMapTap)window.SantetMap.onMapTap(p.lat,p.lng);
+              }
+              searchInput.addEventListener('input',function(){
+                clearTimeout(searchTimer);
+                const q=searchInput.value.trim();
+                if(q.length<3){searchResults.innerHTML='';return;}
+                searchResults.innerHTML='<div class="searchResult">Mencari lokasi...</div>';
+                searchTimer=setTimeout(async function(){
+                  try{
+                    const url='https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&countrycodes=id&q='+encodeURIComponent(q);
+                    const response=await fetch(url,{headers:{'Accept-Language':'id'}});
+                    if(!response.ok)throw new Error('search');
+                    const places=await response.json();
+                    searchResults.innerHTML='';
+                    if(!places.length){searchResults.innerHTML='<div class="searchResult">Tempat tidak ditemukan. Coba nama jalan atau kecamatan.</div>';return;}
+                    places.forEach(function(place){
+                      const item=document.createElement('div');
+                      item.className='searchResult';
+                      item.textContent=place.display_name;
+                      item.onclick=function(){
+                        const lat=Number(place.lat),lon=Number(place.lon);
+                        map.setView([lat,lon],17,{animate:true});
+                        placeSelection(lat,lon);
+                        searchResults.innerHTML='';
+                        document.getElementById('searchHint').textContent='Geser pin bila perlu, lalu tekan Gunakan titik ini';
+                        setTimeout(()=>map.invalidateSize(),150);
+                      };
+                      searchResults.appendChild(item);
+                    });
+                  }catch(e){
+                    searchResults.innerHTML='<div class="searchResult">Pencarian gagal. Periksa koneksi internet lalu coba lagi.</div>';
+                  }
+                },700);
+              });
               function clearFences(){fences.forEach(item=>map.removeLayer(item));fences=[];}
               function showWaiting(){
                 if(marker){map.removeLayer(marker);marker=null;}
@@ -148,15 +212,16 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
               function setMapTapMode(enabled){
                 mapTapMode=!!enabled;
                 map.getContainer().style.cursor=mapTapMode?'crosshair':'';
+                document.getElementById('searchPanel').style.display=mapTapMode?'block':'none';
+                if(!mapTapMode){
+                  document.getElementById('selectionPanel').style.display='none';
+                  searchResults.innerHTML='';
+                }
               }
               function focusLocation(lat,lon){map.setView([lat,lon],17,{animate:true});}
               map.on('click',function(event){
                 if(!mapTapMode)return;
-                const lat=event.latlng.lat,lon=event.latlng.lng;
-                if(selectionMarker)map.removeLayer(selectionMarker);
-                selectionMarker=L.marker([lat,lon]).addTo(map);
-                setMapTapMode(false);
-                if(window.SantetMap&&window.SantetMap.onMapTap)window.SantetMap.onMapTap(lat,lon);
+                placeSelection(event.latlng.lat,event.latlng.lng);
               });
               function updateMap(lat,lon,acc,zones){
                 const p=[lat,lon];
