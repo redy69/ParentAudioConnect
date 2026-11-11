@@ -72,6 +72,8 @@ class MainActivity : Activity(), LifecycleOwner {
     private val db = FirebaseFirestore.getInstance()
 
     private lateinit var statusText: TextView
+    private lateinit var connectionStatusText: TextView
+    private lateinit var updateInfoText: TextView
     private lateinit var childAudioActivityText: TextView
     private lateinit var childDeviceStatusText: TextView
     private lateinit var codeText: TextView
@@ -241,6 +243,41 @@ private var receivedMp3File: File? = null
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { setMargins(0, dp(4), 0, dp(6)) }
+        }
+
+        connectionStatusText = TextView(this).apply {
+            text = "○ OFFLINE"
+            textSize = 10.5f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(105, 116, 137))
+            gravity = Gravity.CENTER
+            setPadding(dp(10), dp(8), dp(10), dp(8))
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(239, 243, 249))
+                cornerRadius = dp(14).toFloat()
+            }
+            maxLines = 1
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)
+            ).apply { setMargins(dp(6), 0, dp(6), 0) }
+        }
+
+        updateInfoText = TextView(this).apply {
+            text = "Belum ada pemeriksaan pembaruan."
+            textSize = 11.5f
+            setTextColor(Color.rgb(91, 108, 137))
+            gravity = Gravity.CENTER_VERTICAL
+            setLineSpacing(dp(2).toFloat(), 1f)
+            setPadding(dp(14), dp(10), dp(14), dp(10))
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(247, 249, 253))
+                cornerRadius = dp(14).toFloat()
+                setStroke(dp(1), Color.rgb(222, 230, 243))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(3), 0, dp(7)) }
+            visibility = View.GONE
         }
 
         childAudioActivityText = TextView(this).apply {
@@ -468,7 +505,7 @@ private var receivedMp3File: File? = null
                         android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                     )
                 }
-                statusText.text = styledMessage
+                updateInfoText.text = styledMessage
             }
         }
 
@@ -596,16 +633,18 @@ private var receivedMp3File: File? = null
             gravity = Gravity.CENTER_VERTICAL
         }
         childHeaderRow.addView(selectedChildButton, LinearLayout.LayoutParams(0, dp(52), 1f))
+        childHeaderRow.addView(connectionStatusText)
         childHeaderRow.addView(addChildButton)
         rootLayout.addView(childHeaderRow)
         parentOnlyViews.add(childHeaderRow)
         rootLayout.addView(childrenContainer)
         parentOnlyViews.add(childrenContainer)
         rootLayout.addView(updateButton)
+        rootLayout.addView(updateInfoText)
         rootLayout.addView(parentButton)
         rootLayout.addView(childButton)
         val statusHeading = TextView(this).apply {
-            text = "STATUS KONEKSI"
+            text = "STATUS APLIKASI"
             textSize = 11.5f
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -808,6 +847,8 @@ private var receivedMp3File: File? = null
         parentButton.visibility = View.VISIBLE
         childButton.visibility = View.VISIBLE
         selectedChildButton.visibility = View.GONE
+        connectionStatusText.visibility = View.GONE
+        updateInfoText.visibility = View.GONE
         pairingInstructionText.visibility = View.GONE
         codeText.visibility = View.GONE
         childAudioActivityText.visibility = View.GONE
@@ -834,6 +875,8 @@ private var receivedMp3File: File? = null
         parentButton.visibility = View.GONE
         childButton.visibility = View.GONE
         selectedChildButton.visibility = View.GONE
+        connectionStatusText.visibility = View.GONE
+        updateInfoText.visibility = View.GONE
         pairingInstructionText.visibility = View.VISIBLE
         codeText.visibility = View.VISIBLE
         childAudioActivityText.visibility = View.GONE
@@ -861,6 +904,8 @@ private var receivedMp3File: File? = null
         parentButton.visibility = View.GONE
         childButton.visibility = View.GONE
         selectedChildButton.visibility = View.VISIBLE
+        connectionStatusText.visibility = View.VISIBLE
+        updateInfoText.visibility = View.VISIBLE
         pairingInstructionText.visibility = View.GONE
         codeText.visibility = View.GONE
         childAudioActivityText.visibility = View.VISIBLE
@@ -889,6 +934,7 @@ private var receivedMp3File: File? = null
         updateChildAppBlockPanel()
         updateChildPermissionAuditPanel()
         updateButton.visibility = View.VISIBLE
+        updateInfoText.visibility = View.VISIBLE
         updateButton.text = "PERIKSA PEMBARUAN APLIKASI"
         actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.GONE
@@ -1202,6 +1248,14 @@ private var receivedMp3File: File? = null
         val name = selectedChildCode?.let { childNames[it] }
         val arrow = if (isChildrenPanelExpanded) "▴" else "▾"
         selectedChildButton.text = if (name.isNullOrBlank()) "▣  Pilih perangkat anak  $arrow" else "▣  $name  $arrow"
+        val connected = selectedChildCode?.let { childConnected[it] == true } == true
+        connectionStatusText.text = if (connected) "● ONLINE" else "○ OFFLINE"
+        connectionStatusText.setTextColor(
+            if (connected) Color.rgb(24, 128, 82) else Color.rgb(105, 116, 137)
+        )
+        (connectionStatusText.background as? GradientDrawable)?.setColor(
+            if (connected) Color.rgb(226, 247, 237) else Color.rgb(239, 243, 249)
+        )
     }
 
     private fun toggleChildrenPanel() {
