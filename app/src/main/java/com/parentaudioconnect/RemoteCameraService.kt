@@ -49,6 +49,7 @@ class RemoteCameraService : Service() {
         const val ACTION_SWITCH_CAMERA = "com.santethp.camera.SWITCH"
         const val ACTION_DISARM = "com.santethp.camera.DISARM"
         const val EXTRA_REQUEST_ID = "request_id"
+        const val EXTRA_SERVER_ID = "livekit_server_id"
         private const val CHANNEL_ID = "remote_camera"
         private const val NOTIFICATION_ID = 4301
         private const val CAMERA_URL = "https://parent-audio-token.yudhis-r15.workers.dev/camera-token"
@@ -64,6 +65,7 @@ class RemoteCameraService : Service() {
     private var pendingCameraRequestId: String? = null
     private var pendingCameraFacing: String = "back"
     @Volatile private var connecting = false
+    @Volatile private var preferredServerId: String? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -74,6 +76,7 @@ class RemoteCameraService : Service() {
         when (intent?.action) {
             ACTION_ARM -> armFromVisibleApp()
             ACTION_START_CAMERA -> {
+                preferredServerId = intent.getStringExtra(EXTRA_SERVER_ID)?.takeIf { it.isNotBlank() }
                 if (isArmed()) {
                     val requestId = intent.getStringExtra(EXTRA_REQUEST_ID)
                     val facing = intent.getStringExtra("facing") ?: "back"
@@ -161,7 +164,7 @@ class RemoteCameraService : Service() {
             val idToken = user.getIdToken(false).await().token
                 ?: throw IllegalStateException("Token Firebase kosong")
             updateNotification("Menghubungkan ruang kamera aman…")
-            val response = withContext(Dispatchers.IO) { requestCameraToken(idToken, code) }
+            val response = withContext(Dispatchers.IO) { requestCameraToken(idToken, code, preferredServerId) }
             if (response.optString("role") != "child") {
                 throw IllegalStateException("Server tidak memberikan akses kamera anak")
             }
@@ -286,7 +289,7 @@ class RemoteCameraService : Service() {
     private fun isArmed(): Boolean =
         getSharedPreferences("parent_audio", MODE_PRIVATE).getBoolean("remote_camera_armed", false)
 
-    private fun requestCameraToken(idToken: String, code: String): JSONObject {
+    private fun requestCameraToken(idToken: String, code: String, preferredServerId: String?): JSONObject {
         val connection = URL(CAMERA_URL).openConnection() as HttpURLConnection
         try {
             connection.requestMethod = "POST"
@@ -296,6 +299,7 @@ class RemoteCameraService : Service() {
             connection.setRequestProperty("Content-Type", "application/json")
             connection.outputStream.use {
                 it.write(JSONObject().put("idToken", idToken).put("code", code)
+                    .put("preferredServerId", preferredServerId ?: "")
                     .toString().toByteArray(Charsets.UTF_8))
             }
             val status = connection.responseCode
