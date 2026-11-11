@@ -167,6 +167,10 @@ class CameraViewerActivity : Activity() {
                 room = activeRoom
                 status.text = "Terhubung. Menunggu video dari HP anak…"
             } catch (error: Exception) {
+                // LiveKitFailover releases failed candidate rooms, but clear the
+                // activity reference too so the retry guard does not mistake a
+                // failed candidate for an active connection.
+                room = null
                 roomEventsJob?.cancel()
                 roomEventsJob = null
                 status.text = "Gagal menghubungkan kamera: ${error.localizedMessage ?: "periksa koneksi"}"
