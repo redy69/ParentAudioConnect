@@ -87,19 +87,32 @@ object AppUpdateManager {
                     activity.runOnUiThread {
                         if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
                         onStatus("$installStatus • $installStatusMessage\nPembaruan aplikasi tersedia: build $remoteVersion")
-                        AlertDialog.Builder(activity)
-                            .setTitle("Pembaruan SantetHP tersedia")
+                        val updateDialog = AlertDialog.Builder(activity)
+                            .setTitle(
+                                if (installStatus == "NORMAL") {
+                                    "Pembaruan SantetHP tersedia"
+                                } else {
+                                    "Pembaruan belum layak dipasang"
+                                }
+                            )
                             .setMessage(
                                 "$installStatus — $installStatusMessage\n\n" +
                                     "Versi baru build $remoteVersion tersedia. " +
                                     (if (dataUpdated) "Data aplikasi juga sudah diperbarui. " else "") +
-                                    "Unduh APK dan lanjutkan instalasi Android?"
+                                    if (installStatus == "NORMAL") {
+                                        "APK boleh diunduh dan dipasang."
+                                    } else {
+                                        "Tombol instalasi dinonaktifkan sampai status berubah menjadi NORMAL."
+                                    }
                             )
-                            .setNegativeButton("Nanti", null)
-                            .setPositiveButton("Unduh APK") { _, _ ->
+                            .setNegativeButton("Tutup", null)
+
+                        if (installStatus == "NORMAL") {
+                            updateDialog.setPositiveButton("Unduh APK") { _, _ ->
                                 beginInstallFlow(activity, downloadUrl)
                             }
-                            .show()
+                        }
+                        updateDialog.show()
                     }
                 } else {
                     activity.runOnUiThread {
