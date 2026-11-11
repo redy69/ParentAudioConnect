@@ -1,0 +1,41 @@
+name: SantetHP Firestore Rules Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/device-health-monitoring
+    paths:
+      - 'firestore.rules'
+      - 'firebase.json'
+      - 'package.json'
+      - 'tests/**'
+      - '.github/workflows/firestore-rules-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  firestore-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Set up Java for Firestore Emulator
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install test dependencies
+        run: npm install
+
+      - name: Run Firestore Rules Emulator tests
+        run: npx firebase emulators:exec --project demo-santethp --only firestore "npm run test:rules"
