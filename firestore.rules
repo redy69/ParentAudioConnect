@@ -78,6 +78,7 @@ service cloud.firestore {
           'deviceStatusAt',
           'childFcmToken',
           'appUsageSummary',
+          'appUsageEnabled',
           'appUsagePermissionGranted',
           'appUsageAt',
           'childScheduleQuietNow',
@@ -126,6 +127,8 @@ service cloud.firestore {
         && (!changed.hasAny(['appUsageSummary'])
           || (request.resource.data.appUsageSummary is list
             && request.resource.data.appUsageSummary.size() <= 12))
+        && (!changed.hasAny(['appUsageEnabled'])
+          || request.resource.data.appUsageEnabled is bool)
         && (!changed.hasAny(['appUsagePermissionGranted'])
           || request.resource.data.appUsagePermissionGranted is bool)
         && (!changed.hasAny(['appUsageAt'])
