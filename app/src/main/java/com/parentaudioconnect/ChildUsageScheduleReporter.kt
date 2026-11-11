@@ -15,8 +15,8 @@ import java.util.Calendar
 import java.util.TimeZone
 
 /**
- * Syncs the parent's transparent rest schedule to the child device.
- * The first version provides visible reminders; it does not lock the whole phone.
+ * Keeps a local copy of the parent's transparent rest schedule.
+ * Local reminders continue when internet is unavailable; this feature never locks the phone.
  */
 object ChildUsageScheduleReporter {
     private const val TAG = "ChildUsageSchedule"
@@ -32,10 +32,7 @@ object ChildUsageScheduleReporter {
         try {
             val snapshot = withContext(Dispatchers.IO) {
                 Tasks.await(
-                    FirebaseFirestore.getInstance()
-                        .collection("pairings")
-                        .document(code)
-                        .get()
+                    FirebaseFirestore.getInstance().collection("pairings").document(code).get()
                 )
             }
             if (!snapshot.exists()) return
@@ -47,43 +44,74 @@ object ChildUsageScheduleReporter {
             val zoneId = snapshot.getString("usageScheduleTimeZone")
                 ?.takeIf { it.isNotBlank() } ?: TimeZone.getDefault().id
 
-            val quietNow = enabled && start != end && isQuietTime(
-                System.currentTimeMillis(), start, end, days, TimeZone.getTimeZone(zoneId)
-            )
-            val previousKnown = prefs.getBoolean("child_schedule_state_known", false)
-            val previousQuiet = prefs.getBoolean("child_schedule_quiet", false)
-
             prefs.edit()
-                .putBoolean("child_schedule_state_known", true)
-                .putBoolean("child_schedule_quiet", quietNow)
-                .putBoolean("child_schedule_enabled", enabled)
+                .putBoolean("child_schedule_config_enabled", enabled)
+                .putInt("child_schedule_start", start)
+                .putInt("child_schedule_end", end)
+                .putStringSet("child_schedule_days", days.map { it.toString() }.toSet())
+                .putString("child_schedule_zone", zoneId)
                 .apply()
 
-            if (!enabled) {
-                notificationManager(context).cancel(NOTIFICATION_ID)
-            } else if (!previousKnown) {
-                // On first sync, announce only if a rest period is already active.
-                // Avoid a misleading "rest time ended" notification before it ever started.
-                if (quietNow) showScheduleNotification(context, true, start, end)
-            } else if (previousQuiet != quietNow) {
-                showScheduleNotification(context, quietNow, start, end)
-            }
+            evaluateCachedAndNotify(context, code, publishStatus = true)
+        } catch (error: Exception) {
+            Log.w(TAG, "Unable to sync child usage schedule", error)
+            throw error
+        }
+    }
 
+    /** Evaluates the last synchronized schedule locally, without requiring a network connection. */
+    suspend fun evaluateCachedAndNotify(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (prefs.getString("pair_role", null) != "child") return
+        val code = prefs.getString("pair_code", null)
+        evaluateCachedAndNotify(context, code, publishStatus = false)
+    }
+
+    private suspend fun evaluateCachedAndNotify(
+        context: Context,
+        code: String?,
+        publishStatus: Boolean
+    ) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val enabled = prefs.getBoolean("child_schedule_config_enabled", false)
+        val start = prefs.getInt("child_schedule_start", 21 * 60)
+        val end = prefs.getInt("child_schedule_end", 6 * 60)
+        val days = prefs.getStringSet("child_schedule_days", emptySet())
+            ?.mapNotNull { it.toIntOrNull() }?.toSet().orEmpty()
+        val zoneId = prefs.getString("child_schedule_zone", null)
+            ?.takeIf { it.isNotBlank() } ?: TimeZone.getDefault().id
+        val quietNow = enabled && start != end && isQuietTime(
+            System.currentTimeMillis(), start, end, days, TimeZone.getTimeZone(zoneId)
+        )
+        val previousKnown = prefs.getBoolean("child_schedule_state_known", false)
+        val previousQuiet = prefs.getBoolean("child_schedule_quiet", false)
+
+        prefs.edit()
+            .putBoolean("child_schedule_state_known", true)
+            .putBoolean("child_schedule_quiet", quietNow)
+            .putBoolean("child_schedule_enabled", enabled)
+            .apply()
+
+        if (!enabled) {
+            notificationManager(context).cancel(NOTIFICATION_ID)
+        } else if (!previousKnown) {
+            if (quietNow) showScheduleNotification(context, true, start, end)
+        } else if (previousQuiet != quietNow) {
+            showScheduleNotification(context, quietNow, start, end)
+        }
+
+        if (publishStatus && !code.isNullOrBlank()) {
             withContext(Dispatchers.IO) {
                 Tasks.await(
-                    FirebaseFirestore.getInstance()
-                        .collection("pairings")
-                        .document(code)
+                    FirebaseFirestore.getInstance().collection("pairings").document(code)
                         .update(
                             mapOf(
                                 "childScheduleQuietNow" to quietNow,
                                 "childScheduleCheckedAt" to FieldValue.serverTimestamp()
-                            ))
+                            )
+                        )
                 )
             }
-        } catch (error: Exception) {
-            Log.w(TAG, "Unable to sync child usage schedule", error)
-            throw error
         }
     }
 
@@ -98,9 +126,7 @@ object ChildUsageScheduleReporter {
         val calendar = Calendar.getInstance(zone).apply { timeInMillis = nowMillis }
         val minute = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
         val today = calendar.get(Calendar.DAY_OF_WEEK)
-        if (start < end) {
-            return today in selectedDays && minute >= start && minute < end
-        }
+        if (start < end) return today in selectedDays && minute >= start && minute < end
         if (minute >= start) return today in selectedDays
         if (minute < end) {
             calendar.add(Calendar.DAY_OF_YEAR, -1)
