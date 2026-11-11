@@ -66,6 +66,7 @@ class RemoteCameraService : Service() {
     private var pendingCameraFacing: String = "back"
     @Volatile private var connecting = false
     @Volatile private var preferredServerId: String? = null
+    @Volatile private var activeServerId: String? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -80,7 +81,22 @@ class RemoteCameraService : Service() {
                 if (isArmed()) {
                     val requestId = intent.getStringExtra(EXTRA_REQUEST_ID)
                     val facing = intent.getStringExtra("facing") ?: "back"
-                    if (room != null) {
+                    if (room != null && preferredServerId != null && activeServerId != preferredServerId) {
+                        pendingCameraRequestId = requestId
+                        pendingCameraFacing = facing
+                        val oldRoom = room
+                        room = null
+                        cameraTrack = null
+                        roomEventsJob?.cancel()
+                        roomEventsJob = null
+                        scope.launch {
+                            try { oldRoom?.localParticipant?.setCameraEnabled(false) } catch (_: Exception) { }
+                            try { oldRoom?.disconnect() } catch (_: Exception) { }
+                            try { oldRoom?.release() } catch (_: Exception) { }
+                            activeServerId = null
+                            ensureCameraRoomConnected()
+                        }
+                    } else if (room != null) {
                         startCamera(requestId, facing)
                     } else {
                         pendingCameraRequestId = requestId
@@ -168,7 +184,7 @@ class RemoteCameraService : Service() {
             if (response.optString("role") != "child") {
                 throw IllegalStateException("Server tidak memberikan akses kamera anak")
             }
-            val newRoom = LiveKitFailover.connect(
+            val liveKitConnection = LiveKitFailover.connectWithServer(
                 response = response,
                 createRoom = { LiveKit.create(applicationContext) },
                 prepareRoom = { candidateRoom ->
@@ -190,6 +206,8 @@ class RemoteCameraService : Service() {
                     }
                 }
             )
+            val newRoom = liveKitConnection.room
+            activeServerId = liveKitConnection.serverId
             if (room !== newRoom) {
                 try { newRoom.disconnect() } catch (_: Exception) { }
                 try { newRoom.release() } catch (_: Exception) { }
@@ -206,6 +224,7 @@ class RemoteCameraService : Service() {
             throw error
         } catch (error: Exception) {
             room = null
+            activeServerId = null
             updateNotification("Kamera belum siap: ${error.localizedMessage ?: "koneksi gagal"}")
             scheduleCameraReconnect()
         } finally {
