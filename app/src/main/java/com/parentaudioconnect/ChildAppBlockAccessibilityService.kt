@@ -13,7 +13,7 @@ import com.google.firebase.firestore.ListenerRegistration
 class ChildAppBlockAccessibilityService : AccessibilityService() {
     private var pairingListener: ListenerRegistration? = null
     private var boundPairingCode: String? = null
-    @Volatile private var blockedPackages: Set<String> = emptySet()
+    @Volatile private var blockedUntilByPackage: Map<String, Long> = emptyMap()
     private var lastBlockedPackage: String? = null
     private var lastBlockedAt = 0L
     private var lastReportedActivityPackage: String? = null
@@ -36,7 +36,7 @@ class ChildAppBlockAccessibilityService : AccessibilityService() {
             pairingListener?.remove()
             pairingListener = null
             boundPairingCode = null
-            blockedPackages = emptySet()
+            blockedUntilByPackage = emptyMap()
             lastReportedActivityPackage = null
             return
         }
@@ -45,23 +45,30 @@ class ChildAppBlockAccessibilityService : AccessibilityService() {
         pairingListener?.remove()
         pairingListener = null
         boundPairingCode = code
-        blockedPackages = emptySet()
+        blockedUntilByPackage = emptyMap()
         lastReportedActivityPackage = null
         pairingListener = FirebaseFirestore.getInstance()
             .collection("pairings").document(code)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null || !snapshot.exists()) {
-                    blockedPackages = emptySet()
+                    blockedUntilByPackage = emptyMap()
                     return@addSnapshotListener
                 }
                 val childConsent = getSharedPreferences("parent_audio", MODE_PRIVATE)
                     .getBoolean("child_app_block_consent", false)
                 if (!childConsent || snapshot.getBoolean("appBlockConsent") != true) {
-                    blockedPackages = emptySet()
+                    blockedUntilByPackage = emptyMap()
                     return@addSnapshotListener
                 }
-                blockedPackages = (snapshot.get("blockedApps") as? List<*>)
-                    ?.filterIsInstance<String>()?.toSet().orEmpty()
+                val now = System.currentTimeMillis()
+                blockedUntilByPackage = (snapshot.get("blockedApps") as? List<*>)
+                    .orEmpty().mapNotNull { raw ->
+                        val rule = raw as? Map<*, *> ?: return@mapNotNull null
+                        val pkg = rule["packageName"] as? String ?: return@mapNotNull null
+                        val until = (rule["blockedUntilMillis"] as? Number)?.toLong()
+                            ?: return@mapNotNull null
+                        if (until > now) pkg to until else null
+                    }.toMap()
             }
     }
 
@@ -105,8 +112,9 @@ class ChildAppBlockAccessibilityService : AccessibilityService() {
 
         // App blocking remains independently controlled by its own child consent.
         if (!prefs.getBoolean("child_app_block_consent", false)) return
-        if (packageName !in blockedPackages) return
         val now = System.currentTimeMillis()
+        val blockedUntil = blockedUntilByPackage[packageName] ?: return
+        if (blockedUntil <= now) return
         if (packageName == lastBlockedPackage && now - lastBlockedAt < 1200L) return
         lastBlockedPackage = packageName
         lastBlockedAt = now
@@ -120,7 +128,7 @@ class ChildAppBlockAccessibilityService : AccessibilityService() {
         pairingListener?.remove()
         pairingListener = null
         boundPairingCode = null
-        blockedPackages = emptySet()
+        blockedUntilByPackage = emptyMap()
         lastReportedActivityPackage = null
         super.onDestroy()
     }
