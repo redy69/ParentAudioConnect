@@ -9,5 +9,11 @@
   ],
   "notes": "Uji Hybrid Update SantetHP: satu file teks non-eksekusi untuk memverifikasi unduhan dan SHA-256.",
   "installStatus": "DURONG ONO UPDATE",
-  "installStatusMessage": "lagi di kembangno"
+  "installStatusMessage": "lagi di kembangno",
+  "changes": [
+    "Indikator kelayakan instalasi ditampilkan saat memeriksa update.",
+    "Unduhan APK hanya tersedia jika status sudah NORMAL.",
+    "Catatan perubahan versi dapat ditampilkan sebagai daftar.",
+    "Jika status update gagal diperiksa, instalasi tetap diblokir."
+  ]
 }
