@@ -169,7 +169,8 @@ class RemoteCameraService : Service() {
                 response = response,
                 createRoom = { LiveKit.create(applicationContext) },
                 prepareRoom = { candidateRoom ->
-                    // Attach before connect so an immediate disconnect cannot be missed.
+                    // Track the in-flight candidate so a handshake-time disconnect is visible.
+                    room = candidateRoom
                     roomEventsJob?.cancel()
                     roomEventsJob = scope.launch {
                         candidateRoom.events.collect { event ->
@@ -179,14 +180,19 @@ class RemoteCameraService : Service() {
                                 room = null
                                 cameraTrack = null
                                 updateNotification("Koneksi kamera terputus • mencoba menyambungkan kembali…")
+                                // The retry loop waits for this connection attempt to finish.
                                 scheduleCameraReconnect()
                             }
                         }
                     }
                 }
             )
+            if (room !== newRoom) {
+                try { newRoom.disconnect() } catch (_: Exception) { }
+                try { newRoom.release() } catch (_: Exception) { }
+                throw IllegalStateException("Koneksi kamera terputus saat proses penyambungan")
+            }
             newRoom.localParticipant.setMicrophoneEnabled(false)
-            room = newRoom
             updateNotification("Siaga kamera aktif • menunggu permintaan orang tua")
             val queuedRequestId = pendingCameraRequestId
             if (queuedRequestId != null) {
