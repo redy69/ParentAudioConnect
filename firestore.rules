@@ -32,7 +32,12 @@ service cloud.firestore {
           'usageScheduleUpdatedAt',
           'parentFcmToken',
           'blockedApps',
-          'appBlockUpdatedAt'
+          'appBlockUpdatedAt',
+          'geofenceEnabled',
+          'geofenceLatitude',
+          'geofenceLongitude',
+          'geofenceRadiusM',
+          'geofenceUpdatedAt'
         ])
         && (!changed.hasAny(['usageScheduleEnabled'])
           || request.resource.data.usageScheduleEnabled is bool)
@@ -63,7 +68,23 @@ service cloud.firestore {
             && request.resource.data.blockedApps is list
             && request.resource.data.blockedApps.size() <= 100))
         && (!changed.hasAny(['appBlockUpdatedAt'])
-          || request.resource.data.appBlockUpdatedAt is timestamp);
+          || request.resource.data.appBlockUpdatedAt is timestamp)
+        && (!changed.hasAny(['geofenceEnabled'])
+          || request.resource.data.geofenceEnabled is bool)
+        && (!changed.hasAny(['geofenceLatitude'])
+          || (request.resource.data.geofenceLatitude is number
+            && request.resource.data.geofenceLatitude >= -90
+            && request.resource.data.geofenceLatitude <= 90))
+        && (!changed.hasAny(['geofenceLongitude'])
+          || (request.resource.data.geofenceLongitude is number
+            && request.resource.data.geofenceLongitude >= -180
+            && request.resource.data.geofenceLongitude <= 180))
+        && (!changed.hasAny(['geofenceRadiusM'])
+          || (request.resource.data.geofenceRadiusM is int
+            && request.resource.data.geofenceRadiusM >= 50
+            && request.resource.data.geofenceRadiusM <= 5000))
+        && (!changed.hasAny(['geofenceUpdatedAt'])
+          || request.resource.data.geofenceUpdatedAt is timestamp);
     }
 
     function validChildStatusUpdate() {
