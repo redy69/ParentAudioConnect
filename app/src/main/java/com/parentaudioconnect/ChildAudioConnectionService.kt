@@ -49,6 +49,7 @@ class ChildAudioConnectionService : Service() {
     companion object {
         const val ACTION_CONNECT = "com.parentaudioconnect.action.CONNECT_CHILD_AUDIO"
         const val ACTION_DISCONNECT = "com.parentaudioconnect.action.DISCONNECT_CHILD_AUDIO"
+        const val EXTRA_SERVER_ID = "livekit_server_id"
         private const val CHANNEL_ID = "child_audio_connection"
         private const val NOTIFICATION_ID = 4201
         private const val WORKER_URL = "https://parent-audio-token.yudhis-r15.workers.dev/token"
@@ -63,6 +64,7 @@ class ChildAudioConnectionService : Service() {
     private var liveHeartbeatJob: Job? = null
     private var pairingRemovalListener: ListenerRegistration? = null
     @Volatile private var connecting = false
+    @Volatile private var preferredServerId: String? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -78,6 +80,7 @@ class ChildAudioConnectionService : Service() {
         if (intent?.action != null && intent.action != ACTION_CONNECT) {
             return START_NOT_STICKY
         }
+        preferredServerId = intent?.getStringExtra(EXTRA_SERVER_ID)?.takeIf { it.isNotBlank() }
         startForeground(NOTIFICATION_ID, notification("Mengaktifkan koneksi audio…"))
         watchForPairingRemoval()
         if (!connecting && room == null) {
@@ -135,7 +138,7 @@ class ChildAudioConnectionService : Service() {
 
                     updateNotification("Menghubungkan ke ruang audio…")
                     val response = withContext(Dispatchers.IO) {
-                        requestToken(idToken, code)
+                        requestToken(idToken, code, preferredServerId)
                     }
                     val returnedRole = response.optString("role")
                     if (returnedRole != "child") {
@@ -359,7 +362,7 @@ class ChildAudioConnectionService : Service() {
         liveHeartbeatJob = null
     }
 
-    private fun requestToken(idToken: String, code: String): JSONObject {
+    private fun requestToken(idToken: String, code: String, preferredServerId: String?): JSONObject {
         val connection = URL(WORKER_URL).openConnection() as HttpURLConnection
         try {
             connection.requestMethod = "POST"
@@ -370,6 +373,7 @@ class ChildAudioConnectionService : Service() {
             val body = JSONObject().apply {
                 put("idToken", idToken)
                 put("code", code)
+                if (!preferredServerId.isNullOrBlank()) put("preferredServerId", preferredServerId)
             }
             connection.outputStream.use {
                 it.write(body.toString().toByteArray(Charsets.UTF_8))
