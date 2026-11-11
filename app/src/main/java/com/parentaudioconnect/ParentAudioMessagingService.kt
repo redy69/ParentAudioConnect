@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import androidx.core.content.ContextCompat
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -97,6 +98,31 @@ class ParentAudioMessagingService : FirebaseMessagingService() {
         val savedCode = prefs.getString("pair_code", null)
         val isChild = prefs.getString("pair_role", null) == "child"
         val isArmed = prefs.getBoolean("remote_camera_armed", false)
+
+        if (command in setOf("AUDIO_START", "AUDIO_STOP") &&
+            isChild && !code.isNullOrBlank() && code == savedCode
+        ) {
+            try {
+                val audioIntent = android.content.Intent(
+                    this, ChildAudioConnectionService::class.java
+                ).apply {
+                    action = if (command == "AUDIO_START") {
+                        ChildAudioConnectionService.ACTION_CONNECT
+                    } else {
+                        ChildAudioConnectionService.ACTION_DISCONNECT
+                    }
+                }
+                if (command == "AUDIO_START") {
+                    ContextCompat.startForegroundService(this, audioIntent)
+                } else {
+                    startService(audioIntent)
+                }
+                Log.i(TAG, "Remote audio command delivered: $command")
+            } catch (error: Exception) {
+                Log.w(TAG, "Could not deliver remote audio command: $command", error)
+            }
+            return
+        }
 
         if (command in setOf("CAMERA_START", "CAMERA_SWITCH", "CAMERA_STOP") &&
             isChild && isArmed && !code.isNullOrBlank() && code == savedCode

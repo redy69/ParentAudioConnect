@@ -48,6 +48,7 @@ class ChildAudioConnectionService : Service() {
 
     companion object {
         const val ACTION_CONNECT = "com.parentaudioconnect.action.CONNECT_CHILD_AUDIO"
+        const val ACTION_DISCONNECT = "com.parentaudioconnect.action.DISCONNECT_CHILD_AUDIO"
         private const val CHANNEL_ID = "child_audio_connection"
         private const val NOTIFICATION_ID = 4201
         private const val WORKER_URL = "https://parent-audio-token.yudhis-r15.workers.dev/token"
@@ -68,7 +69,15 @@ class ChildAudioConnectionService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, notification("Memulihkan koneksi audio…"))
+        if (intent?.action == ACTION_DISCONNECT) {
+            updateNotification("Menghentikan koneksi audio…")
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
+        if (intent?.action != null && intent.action != ACTION_CONNECT) {
+            return START_NOT_STICKY
+        }
+        startForeground(NOTIFICATION_ID, notification("Mengaktifkan koneksi audio…"))
         watchForPairingRemoval()
         if (!connecting && room == null) {
             connecting = true

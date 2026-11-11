@@ -118,7 +118,7 @@ export default {
     try {
       if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
       const url = new URL(request.url);
-      const allowedPaths = ["/token", "/register-device", "/request-camera", "/camera-token"];
+      const allowedPaths = ["/token", "/register-device", "/request-camera", "/request-audio", "/camera-token"];
       if (!allowedPaths.includes(url.pathname)) return jsonResponse({ error: "Not found" }, 404);
 
       const body = await request.json();
@@ -162,6 +162,36 @@ export default {
           return jsonResponse({ error: "Could not register device. Check Firestore permissions." }, 403);
         }
         return jsonResponse({ registered: true, role: callerUid === parentUid ? "parent" : "child" });
+      }
+
+      if (url.pathname === "/request-audio") {
+        if (callerUid !== parentUid) return jsonResponse({ error: "Only the parent can control remote audio" }, 403);
+        const childFcmToken = fields.childFcmToken?.stringValue;
+        if (!childFcmToken) return jsonResponse({ error: "Child device has not registered for notifications" }, 409);
+        const action = body.action || "start";
+        const commands = { start: "AUDIO_START", stop: "AUDIO_STOP" };
+        const command = commands[action];
+        if (!command) return jsonResponse({ error: "Invalid audio action" }, 400);
+        const credentials = await getFcmAccessToken(env);
+        const response = await fetch(
+          "https://fcm.googleapis.com/v1/projects/" + encodeURIComponent(credentials.projectId) + "/messages:send",
+          {
+            method: "POST",
+            headers: {
+              Authorization: "Bearer " + credentials.accessToken,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              message: {
+                token: childFcmToken,
+                data: { command, code },
+                android: { priority: "HIGH", ttl: "30s" }
+              }
+            })
+          }
+        );
+        if (!response.ok) throw new Error("FCM rejected audio request");
+        return jsonResponse({ sent: true, action });
       }
 
       if (url.pathname === "/request-camera") {
