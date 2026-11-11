@@ -167,23 +167,26 @@ class RemoteCameraService : Service() {
             }
             val newRoom = LiveKitFailover.connect(
                 response = response,
-                createRoom = { LiveKit.create(applicationContext) }
-            )
-            newRoom.localParticipant.setMicrophoneEnabled(false)
-            roomEventsJob?.cancel()
-            room = newRoom
-            roomEventsJob = scope.launch {
-                newRoom.events.collect { event ->
-                    if (event is RoomEvent.Disconnected && isArmed()) {
-                        if (room === newRoom) {
-                            room = null
-                            cameraTrack = null
-                            updateNotification("Koneksi kamera terputus • mencoba menyambungkan kembali…")
-                            scheduleCameraReconnect()
+                createRoom = { LiveKit.create(applicationContext) },
+                prepareRoom = { candidateRoom ->
+                    // Attach before connect so an immediate disconnect cannot be missed.
+                    roomEventsJob?.cancel()
+                    roomEventsJob = scope.launch {
+                        candidateRoom.events.collect { event ->
+                            if (event is RoomEvent.Disconnected && isArmed() &&
+                                room === candidateRoom
+                            ) {
+                                room = null
+                                cameraTrack = null
+                                updateNotification("Koneksi kamera terputus • mencoba menyambungkan kembali…")
+                                scheduleCameraReconnect()
+                            }
                         }
                     }
                 }
-            }
+            )
+            newRoom.localParticipant.setMicrophoneEnabled(false)
+            room = newRoom
             updateNotification("Siaga kamera aktif • menunggu permintaan orang tua")
             val queuedRequestId = pendingCameraRequestId
             if (queuedRequestId != null) {
