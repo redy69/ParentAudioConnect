@@ -14,19 +14,46 @@ function jsonResponse(data, status = 200) {
   });
 }
 
-async function createLiveKitToken(env, uid, room, canPublish) {
+async function createLiveKitToken(apiKey, apiSecret, uid, room, canPublish) {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "HS256", typ: "JWT" };
   const payload = {
-    iss: env.LIVEKIT_API_KEY, sub: uid, iat: now, nbf: now - 5, exp: now + 600,
+    iss: apiKey, sub: uid, iat: now, nbf: now - 5, exp: now + 600,
     video: { roomJoin: true, room, canPublish, canSubscribe: true, canPublishData: canPublish }
   };
   const unsigned = base64url(encoder.encode(JSON.stringify(header))) + "." +
     base64url(encoder.encode(JSON.stringify(payload)));
-  const key = await crypto.subtle.importKey("raw", encoder.encode(env.LIVEKIT_API_SECRET),
+  const key = await crypto.subtle.importKey("raw", encoder.encode(apiSecret),
     { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(unsigned));
   return unsigned + "." + base64url(new Uint8Array(signature));
+}
+
+function getLiveKitProjects(env) {
+  const projects = [];
+  const add = (id, key, secret, url) => {
+    if (typeof key === "string" && key && typeof secret === "string" && secret &&
+        typeof url === "string" && /^wss:\/\/[a-z0-9.-]+$/i.test(url)) {
+      projects.push({ id, apiKey: key, apiSecret: secret, url });
+    }
+  };
+  add("main", env.LIVEKIT_API_KEY, env.LIVEKIT_API_SECRET, env.LIVEKIT_URL);
+  for (let i = 2; i <= 5; i++) {
+    add("backup-" + i, env["LIVEKIT_BACKUP_" + i + "_API_KEY"],
+      env["LIVEKIT_BACKUP_" + i + "_API_SECRET"], env["LIVEKIT_BACKUP_" + i + "_URL"]);
+  }
+  return projects;
+}
+
+async function createLiveKitCandidates(projects, uid, room, canPublish) {
+  const candidates = [];
+  for (const project of projects) {
+    const token = await createLiveKitToken(
+      project.apiKey, project.apiSecret, uid, room, canPublish
+    );
+    candidates.push({ id: project.id, token, serverUrl: project.url });
+  }
+  return candidates;
 }
 
 async function authenticate(idToken, env) {
@@ -255,8 +282,9 @@ export default {
         return jsonResponse({ sent: true, requestId: body.requestId, action });
       }
 
-      if (!env.LIVEKIT_API_KEY || !env.LIVEKIT_API_SECRET || !env.LIVEKIT_URL) {
-        return jsonResponse({ error: "Server configuration error" }, 500);
+      const liveKitProjects = getLiveKitProjects(env);
+      if (liveKitProjects.length === 0) {
+        return jsonResponse({ error: "No LiveKit server is configured" }, 500);
       }
       const digest = await crypto.subtle.digest("SHA-256", encoder.encode(code));
       const roomBase = "pair_" + Array.from(new Uint8Array(digest))
@@ -265,15 +293,24 @@ export default {
 
       if (url.pathname === "/camera-token") {
         const cameraRoom = roomBase + "_camera";
-        const token = await createLiveKitToken(env, callerUid, cameraRoom, !isParent);
+        const servers = await createLiveKitCandidates(
+          liveKitProjects, callerUid, cameraRoom, !isParent
+        );
+        const primary = servers[0];
         return jsonResponse({
-          token, serverUrl: env.LIVEKIT_URL,
-          role: isParent ? "parent" : "child", expiresIn: 600
+          token: primary.token, serverUrl: primary.serverUrl, serverId: primary.id,
+          servers, role: isParent ? "parent" : "child", expiresIn: 600
         });
       }
 
-      const token = await createLiveKitToken(env, callerUid, roomBase, isParent);
-      return jsonResponse({ token, serverUrl: env.LIVEKIT_URL, role: isParent ? "parent" : "child", expiresIn: 600 });
+      const servers = await createLiveKitCandidates(
+        liveKitProjects, callerUid, roomBase, isParent
+      );
+      const primary = servers[0];
+      return jsonResponse({
+        token: primary.token, serverUrl: primary.serverUrl, serverId: primary.id,
+        servers, role: isParent ? "parent" : "child", expiresIn: 600
+      });
     } catch (error) {
       return jsonResponse({ error: "Internal server error" }, 500);
     }
