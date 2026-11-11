@@ -446,7 +446,25 @@ private var receivedMp3File: File? = null
         cancelPairingButton.setOnClickListener { cancelPendingPairingCode() }
         updateButton.setOnClickListener {
             val versionCode = packageManager.getPackageInfo(packageName, 0).versionCode
-            AppUpdateManager.checkForUpdates(this, versionCode) { message -> statusText.text = message }
+            AppUpdateManager.checkForUpdates(this, versionCode) { message ->
+                val styledMessage = android.text.SpannableString(message)
+                val detailStart = message.indexOf('\n')
+                if (detailStart >= 0 && detailStart < message.length - 1) {
+                    styledMessage.setSpan(
+                        android.text.style.RelativeSizeSpan(0.78f),
+                        detailStart + 1,
+                        message.length,
+                        android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                    styledMessage.setSpan(
+                        android.text.style.StyleSpan(android.graphics.Typeface.NORMAL),
+                        detailStart + 1,
+                        message.length,
+                        android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                }
+                statusText.text = styledMessage
+            }
         }
 
         rootLayout.addView(title, LinearLayout.LayoutParams(
