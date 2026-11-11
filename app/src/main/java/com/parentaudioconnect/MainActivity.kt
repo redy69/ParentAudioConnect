@@ -537,13 +537,12 @@ private var receivedMp3File: File? = null
             AlertDialog.Builder(this)
                 .setTitle("Riwayat penggunaan aplikasi")
                 .setMessage(
-                    "Fitur ini membagikan nama aplikasi dan perkiraan durasi penggunaan 24 jam terakhir kepada HP orang tua. Isi pesan, kata sandi, dan aktivitas di dalam aplikasi tidak dibaca. Izin Usage Access harus diaktifkan secara sadar melalui Pengaturan Android."
+                    "SantetHP perlu izin khusus Android bernama Akses penggunaan aplikasi (Usage Access). Ketuk Buka pengaturan, cari SantetHP, lalu aktifkan sakelarnya. Setelah kembali ke SantetHP, status izin akan diperiksa langsung oleh Android. Yang dibagikan hanya nama aplikasi dan perkiraan durasi penggunaan 24 jam terakhir."
                 )
                 .setNegativeButton("Nanti", null)
                 .setPositiveButton("Buka pengaturan") { _, _ ->
                     getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
                         .putBoolean("child_usage_audit_enabled", true).apply()
-                    ChildDeviceStatusWorker.schedule(this)
                     try {
                         startActivity(Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS))
                     } catch (_: Exception) {
@@ -552,8 +551,7 @@ private var receivedMp3File: File? = null
                 }
                 .show()
         }
-        childModePanel.text =
-            "🛡️  HP ANAK SIAP\n\nPerangkat berhasil terhubung\nMenunggu perintah dari HP orang tua\n\nKetuk di sini untuk membaca penjelasan dan mengatur izin riwayat aplikasi (opsional)."
+        updateChildUsageAccessPanel()
         rootLayout.addView(roleIntroText)
         rootLayout.addView(childModePanel)
         childLocationPanel = TextView(this).apply {
@@ -763,6 +761,7 @@ private var receivedMp3File: File? = null
         // Retry registration whenever the child app returns to foreground.
         val childPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         if (childPrefs.getString("pair_role", null) == "child") {
+            updateChildUsageAccessPanel()
             maybeRequestScheduleNotificationPermission()
             rootLayout.postDelayed({ maybeRequestOperatorPermission() }, 1200)
             updateCameraStandbyButton()
@@ -773,6 +772,22 @@ private var receivedMp3File: File? = null
             refreshFcmToken()
             restoreCameraStandbyIfNeeded()
         }
+    }
+
+    private fun updateChildUsageAccessPanel() {
+        if (!::childModePanel.isInitialized) return
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        val optedIn = prefs.getBoolean("child_usage_audit_enabled", false)
+        val granted = AppUsageReporter.hasUsageAccess(this)
+        childModePanel.text = when {
+            !optedIn ->
+                "🛡️  HP ANAK SIAP\n\nPerangkat berhasil terhubung\nRiwayat penggunaan aplikasi: BELUM DIAKTIFKAN\n\nKetuk untuk membaca penjelasan dan mengatur izin secara opsional."
+            granted ->
+                "🛡️  HP ANAK SIAP\n\nPerangkat berhasil terhubung\nRIWAYAT PENGGUNAAN: IZIN ANDROID AKTIF ✓\nSantetHP telah memverifikasi Akses penggunaan aplikasi dari Android."
+            else ->
+                "🛡️  HP ANAK SIAP\n\nPerangkat berhasil terhubung\nRIWAYAT PENGGUNAAN: IZIN ANDROID BELUM AKTIF\nKetuk di sini, pilih Buka pengaturan, lalu aktifkan sakelar SantetHP pada halaman Akses penggunaan aplikasi Android."
+        }
+        if (optedIn) ChildDeviceStatusWorker.schedule(this)
     }
 
     private fun maybeRequestScheduleNotificationPermission() {
