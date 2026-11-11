@@ -98,6 +98,7 @@ private lateinit var playMp3Button: Button
     private lateinit var updateButton: Button
     private lateinit var cameraStandbyButton: Button
     private lateinit var cameraLiveButton: LinearLayout
+    private lateinit var liveKitTestButton: Button
     private lateinit var childModePanel: TextView
     private lateinit var childLocationPanel: TextView
     private lateinit var childLocationMapView: ChildLocationMapView
@@ -480,6 +481,8 @@ private var receivedMp3File: File? = null
         cancelPairingButton = createButton("BATALKAN KODE")
         updateButton = createButton("PERIKSA PEMBARUAN")
         cameraStandbyButton = createButton("AKTIFKAN SIAGA KAMERA")
+        liveKitTestButton = createButton("UJI SERVER LIVEKIT")
+        liveKitTestButton.setOnClickListener { showLiveKitServerTestDialog() }
         childrenContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
@@ -776,6 +779,8 @@ private var receivedMp3File: File? = null
         rootLayout.addView(controlHeading)
         parentOnlyViews.add(controlHeading)
         rootLayout.addView(actionButtonsRow)
+        rootLayout.addView(liveKitTestButton)
+        parentOnlyViews.add(liveKitTestButton)
         rootLayout.addView(playMp3Button)
         rootLayout.addView(cameraStandbyButton)
 
@@ -3595,6 +3600,89 @@ private var receivedMp3File: File? = null
         requestRemoteAudio(code, "stop") { sent, error ->
             if (!sent) {
                 statusText.text = "$message • perintah berhenti ke HP anak belum terkirim: ${error ?: "koneksi"}"
+            }
+        }
+    }
+
+    private fun showLiveKitServerTestDialog() {
+        if (currentRole != "parent") return
+        val code = selectedChildCode
+        if (code.isNullOrBlank() || childConnected[code] != true) {
+            statusText.text = "Pilih HP anak yang sudah terhubung terlebih dahulu"
+            return
+        }
+        if (isMicrophoneActive) {
+            statusText.text = "Hentikan Audio Live sebelum mengganti server"
+            return
+        }
+
+        val serverIds = arrayOf("main", "backup-2", "backup-3", "backup-4", "backup-5")
+        val labels = arrayOf(
+            "Server utama",
+            "Server cadangan 2",
+            "Server cadangan 3",
+            "Server cadangan 4",
+            "Server cadangan 5"
+        )
+        val selectedIndex = serverIds.indexOf(activeLiveKitServerId).coerceAtLeast(0)
+        AlertDialog.Builder(this)
+            .setTitle("Uji Server LiveKit")
+            .setMessage("Pilih server untuk koneksi audio berikutnya. HP anak akan disamakan saat Audio Live dimulai.")
+            .setSingleChoiceItems(labels, selectedIndex) { dialog, which ->
+                dialog.dismiss()
+                applyLiveKitTestServer(code, serverIds[which], labels[which])
+            }
+            .setNegativeButton("Batal", null)
+            .show()
+    }
+
+    private fun applyLiveKitTestServer(code: String, serverId: String, serverLabel: String) {
+        if (isMicrophoneActive) {
+            statusText.text = "Hentikan Audio Live sebelum mengganti server"
+            return
+        }
+        statusText.text = "Menyiapkan $serverLabel..."
+        requestRemoteAudio(code, "stop") { stopped, stopError ->
+            if (!stopped) {
+                statusText.text = "Belum bisa menghentikan koneksi HP anak: ${stopError ?: "coba lagi"}"
+                return@requestRemoteAudio
+            }
+            activityScope.launch {
+                try {
+                    invalidatePendingRoomConnection()
+                    room?.localParticipant?.setMicrophoneEnabled(false)
+                    room?.disconnect()
+                    room?.release()
+                    room = null
+                    activeRoomCode = null
+                    activeLiveKitServerId = null
+                    mp3TransferManager = null
+                    isMicrophoneActive = false
+
+                    selectLiveKitServer(code, "audio", serverId) { saved, saveError ->
+                        if (!saved) {
+                            statusText.text = "Gagal menyimpan server: ${saveError ?: "coba lagi"}"
+                            return@selectLiveKitServer
+                        }
+                        statusText.text = "$serverLabel tersimpan • menghubungkan HP orang tua..."
+                        connectToLiveKit(
+                            code,
+                            onConnected = {
+                                statusText.text = "$serverLabel siap • tekan BICARA LIVE untuk menguji"
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    "$serverLabel siap diuji",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            },
+                            onFailure = { error ->
+                                statusText.text = "Gagal terhubung ke $serverLabel: $error"
+                            }
+                        )
+                    }
+                } catch (error: Exception) {
+                    statusText.text = "Gagal menyiapkan server: ${error.localizedMessage ?: "kesalahan koneksi"}"
+                }
             }
         }
     }
