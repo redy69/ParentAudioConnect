@@ -1216,10 +1216,12 @@ private var receivedMp3File: File? = null
             childNames[legacyCode] = "Anak 1"
             persistChildren()
         }
-        // Select a child before attaching listeners so the first Firestore snapshot
-        // can render its device status instead of being ignored during initialization.
-        if (selectedChildCode !in childNames.keys) {
-            selectedChildCode = childNames.keys.firstOrNull()
+        // Restore the parent's last selected child across app restarts.
+        val savedSelectedCode = prefs.getString("selected_child_code", null)
+        selectedChildCode = savedSelectedCode?.takeIf { it in childNames.keys }
+            ?: childNames.keys.firstOrNull()
+        if (selectedChildCode != savedSelectedCode) {
+            prefs.edit().putString("selected_child_code", selectedChildCode).apply()
         }
         childNames.keys.forEach { code ->
             childConnected.putIfAbsent(code, false)
@@ -1241,6 +1243,8 @@ private var receivedMp3File: File? = null
         childConnected[code] = false
         selectedChildCode = code
         persistChildren()
+        getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+            .putString("selected_child_code", code).apply()
         renderChildrenList()
     }
 
@@ -1605,6 +1609,8 @@ private var receivedMp3File: File? = null
     private fun selectChild(code: String) {
         if (selectedChildCode != code) invalidatePendingRoomConnection()
         selectedChildCode = code
+        getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+            .putString("selected_child_code", code).apply()
         isChildrenPanelExpanded = false
         childrenContainer.visibility = View.GONE
         updateSelectedChildButton()
