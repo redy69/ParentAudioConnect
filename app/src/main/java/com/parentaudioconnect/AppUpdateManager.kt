@@ -54,7 +54,7 @@ object AppUpdateManager {
                         if (changes != null && changes.length() > 0) {
                             (0 until changes.length())
                                 .mapNotNull { index -> changes.optString(index).takeIf { it.isNotBlank() } }
-                                .joinToString("\\n") { "• $it" }
+                                .joinToString("\n") { "• $it" }
                                 .take(240)
                         } else {
                             manifest.optString("installStatusMessage", "APK dinyatakan layak dipasang.").take(240)
