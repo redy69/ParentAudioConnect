@@ -141,13 +141,18 @@ class ChildAudioConnectionService : Service() {
                         throw IllegalStateException("Server tidak mengembalikan akses anak")
                     }
 
-                    val newRoom = LiveKit.create(
-                        appContext = applicationContext,
-                        overrides = LiveKitOverrides(
-                            audioOptions = AudioOptions(
-                                audioOutputType = AudioType.MediaAudioType()
+                    val newRoom = LiveKitFailover.connect(
+                        response = response,
+                        createRoom = {
+                            LiveKit.create(
+                                appContext = applicationContext,
+                                overrides = LiveKitOverrides(
+                                    audioOptions = AudioOptions(
+                                        audioOutputType = AudioType.MediaAudioType()
+                                    )
+                                )
                             )
-                        )
+                        }
                     )
                     roomEventsJob?.cancel()
                     roomEventsJob = serviceScope.launch {
