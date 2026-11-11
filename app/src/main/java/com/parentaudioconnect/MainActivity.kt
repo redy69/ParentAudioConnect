@@ -806,6 +806,25 @@ private var receivedMp3File: File? = null
         mapsPage.addView(childLocationMapView, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
         ))
+        val geofenceButton = Button(this).apply {
+            text = "ATUR AREA AMAN (GEO-FENCE)"
+            isAllCaps = false
+            textSize = 13f
+            setTextColor(Color.WHITE)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(Color.rgb(36, 91, 169))
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(52)
+            ).apply { setMargins(0, dp(12), 0, dp(8)) }
+            setOnClickListener { showGeofenceOptions() }
+        }
+        mapsPage.addView(geofenceButton)
+        val geofenceHint = TextView(this).apply {
+            text = "Tandai lokasi saat ini sebagai pusat area aman. Batas area akan ditampilkan pada peta."
+            textSize = 11f
+            setTextColor(Color.rgb(104, 117, 140))
+            setPadding(dp(4), dp(2), dp(4), dp(8))
+        }
+        mapsPage.addView(geofenceHint)
         rootLayout.addView(mapsPage)
         mapsPage.tag = "santethp_maps_page"
 
@@ -975,6 +994,56 @@ private var receivedMp3File: File? = null
         cameraStandbyButton.visibility = View.GONE
         cameraLiveButton.visibility = View.GONE
         updateButton.visibility = View.GONE
+    }
+
+    private fun showGeofenceOptions() {
+        val code = selectedChildCode
+        val snapshot = code?.let { childSnapshots[it] }
+        val latitude = snapshot?.getDouble("childLatitude")
+        val longitude = snapshot?.getDouble("childLongitude")
+        if (code == null || snapshot == null || latitude == null || longitude == null ||
+            snapshot.getBoolean("childLocationSharingEnabled") != true
+        ) {
+            Toast.makeText(this, "Lokasi anak belum tersedia atau berbagi lokasi belum aktif.", Toast.LENGTH_LONG).show()
+            return
+        }
+        val choices = arrayOf("100 meter", "250 meter", "500 meter", "1.000 meter", "2.000 meter", "Nonaktifkan Geo-fence")
+        AlertDialog.Builder(this)
+            .setTitle("Atur area aman • ${childNames[code] ?: "Anak"}")
+            .setMessage("Pusat area akan menggunakan koordinat lokasi anak saat ini.")
+            .setItems(choices) { _, which ->
+                val enabled = which < 5
+                val radius = when (which) {
+                    0 -> 100
+                    1 -> 250
+                    2 -> 500
+                    3 -> 1000
+                    4 -> 2000
+                    else -> 0
+                }
+                val update = hashMapOf<String, Any>(
+                    "geofenceEnabled" to enabled,
+                    "geofenceUpdatedAt" to Timestamp(Date())
+                )
+                if (enabled) {
+                    update["geofenceLatitude"] = latitude
+                    update["geofenceLongitude"] = longitude
+                    update["geofenceRadiusM"] = radius
+                }
+                db.collection("pairings").document(code).update(update)
+                    .addOnSuccessListener {
+                        Toast.makeText(
+                            this,
+                            if (enabled) "Area aman ${radius} m disimpan." else "Geo-fence dinonaktifkan.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    .addOnFailureListener { error ->
+                        Toast.makeText(this, "Gagal menyimpan Geo-fence: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
+                    }
+            }
+            .setNegativeButton("Batal", null)
+            .show()
     }
 
     private fun showMapsPage() {
@@ -2662,7 +2731,11 @@ private var receivedMp3File: File? = null
         val locationFresh = locationAge != null && locationAge in -60_000L..45 * 60 * 1000L
         if (latitude != null && longitude != null) {
             childLocationMapView.showLocation(
-                latitude, longitude, accuracy, locationAt, sharingEnabled, locationFresh
+                latitude, longitude, accuracy, locationAt, sharingEnabled, locationFresh,
+                snapshot.getBoolean("geofenceEnabled") == true,
+                snapshot.getDouble("geofenceLatitude"),
+                snapshot.getDouble("geofenceLongitude"),
+                snapshot.getLong("geofenceRadiusM")?.toInt() ?: 0
             )
         } else {
             childLocationMapView.showUnavailable(sharingEnabled)
