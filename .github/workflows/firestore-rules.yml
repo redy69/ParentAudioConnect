@@ -1,0 +1,41 @@
+name: Test Firestore Security Rules
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/livekit-multi-server-failover
+    paths:
+      - 'firestore.rules'
+      - 'tests/firestore.rules.test.js'
+      - 'firebase.json'
+      - 'package.json'
+      - '.github/workflows/firestore-rules.yml'
+  pull_request:
+    paths:
+      - 'firestore.rules'
+      - 'tests/firestore.rules.test.js'
+      - 'firebase.json'
+      - 'package.json'
+      - '.github/workflows/firestore-rules.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  firestore-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install test dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run Firestore rules tests in emulator
+        run: npx firebase-tools emulators:exec --project demo-santethp --only firestore "npm run test:rules"
