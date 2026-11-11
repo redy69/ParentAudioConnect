@@ -154,6 +154,7 @@ private var receivedMp3File: File? = null
     private const val LOCATION_NOTIFICATION_PERMISSION = 1005
     private const val SCHEDULE_NOTIFICATION_PERMISSION = 1006
     private const val OPERATOR_PERMISSION = 1007
+    private const val SAFE_ZONE_NOTIFICATION_PERMISSION = 1008
 }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -1298,7 +1299,31 @@ private var receivedMp3File: File? = null
         rootLayout.findViewWithTag<View>("santethp_maps_page")?.visibility = View.VISIBLE
     }
 
+    private fun requestParentNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT < 33 || currentRole != "parent") return
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        ) return
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        if (prefs.getBoolean("safe_zone_notification_prompted", false)) return
+        AlertDialog.Builder(this)
+            .setTitle("Aktifkan notifikasi zona aman")
+            .setMessage("Izinkan SantetHP menampilkan pemberitahuan saat HP anak masuk atau keluar dari titik aman.")
+            .setNegativeButton("Nanti") { _, _ ->
+                prefs.edit().putBoolean("safe_zone_notification_prompted", true).apply()
+            }
+            .setPositiveButton("Izinkan") { _, _ ->
+                prefs.edit().putBoolean("safe_zone_notification_prompted", true).apply()
+                requestPermissions(
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    SAFE_ZONE_NOTIFICATION_PERMISSION
+                )
+            }
+            .show()
+    }
+
     private fun showParentDashboard() {
+        requestParentNotificationPermission()
         childLocationMapView.setMapTapMode(false)
         roleIntroText.visibility = View.GONE
         rootLayout.findViewWithTag<View>("santethp_maps_page")?.visibility = View.GONE
