@@ -118,7 +118,7 @@ export default {
     try {
       if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
       const url = new URL(request.url);
-      const allowedPaths = ["/token", "/register-device", "/request-camera", "/request-audio", "/camera-token"];
+      const allowedPaths = ["/token", "/register-device", "/request-camera", "/request-audio", "/camera-token", "/safe-zone-event"];
       if (!allowedPaths.includes(url.pathname)) return jsonResponse({ error: "Not found" }, 404);
 
       const body = await request.json();
@@ -162,6 +162,51 @@ export default {
           return jsonResponse({ error: "Could not register device. Check Firestore permissions." }, 403);
         }
         return jsonResponse({ registered: true, role: callerUid === parentUid ? "parent" : "child" });
+      }
+
+      if (url.pathname === "/safe-zone-event") {
+        if (callerUid !== childUid) return jsonResponse({ error: "Only the paired child can report safe-zone events" }, 403);
+        const eventId = String(body.eventId || "");
+        const zoneName = String(body.zoneName || "").trim().slice(0, 80);
+        const transition = body.transition;
+        if (!/^[A-Za-z0-9_-]{8,80}$/.test(eventId) || !zoneName ||
+            !["ENTER", "EXIT"].includes(transition)) {
+          return jsonResponse({ error: "Invalid safe-zone event" }, 400);
+        }
+        const parentFcmToken = fields.parentFcmToken?.stringValue;
+        if (!parentFcmToken) return jsonResponse({ error: "Parent device has not registered for notifications" }, 409);
+        const credentials = await getFcmAccessToken(env);
+        const title = transition === "ENTER" ? "SantetHP • Masuk zona aman" : "SantetHP • Keluar zona aman";
+        const notificationBody = transition === "ENTER"
+          ? "Perangkat anak tiba di " + zoneName + "."
+          : "Perangkat anak keluar dari " + zoneName + ".";
+        const response = await fetch(
+          "https://fcm.googleapis.com/v1/projects/" + encodeURIComponent(credentials.projectId) + "/messages:send",
+          {
+            method: "POST",
+            headers: {
+              Authorization: "Bearer " + credentials.accessToken,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              message: {
+                token: parentFcmToken,
+                notification: { title, body: notificationBody },
+                data: { command: "SAFE_ZONE_EVENT", code, eventId, zoneName, transition },
+                android: {
+                  priority: "HIGH",
+                  ttl: "3600s",
+                  notification: { channel_id: "santethp_safe_zone_events" }
+                }
+              }
+            })
+          }
+        );
+        if (!response.ok) {
+          const detail = await response.text();
+          return jsonResponse({ error: "FCM rejected safe-zone notification", detail: detail.slice(0, 300) }, 502);
+        }
+        return jsonResponse({ sent: true, eventId, transition });
       }
 
       if (url.pathname === "/request-audio") {

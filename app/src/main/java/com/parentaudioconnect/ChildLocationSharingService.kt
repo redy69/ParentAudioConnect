@@ -23,6 +23,14 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.Timestamp
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.UUID
+import java.util.concurrent.Executors
 
 /**
  * Explicitly enabled, user-visible location sharing for the paired child device.
@@ -33,6 +41,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 class ChildLocationSharingService : Service() {
     private val fusedLocation by lazy { LocationServices.getFusedLocationProviderClient(this) }
     private val firestore by lazy { FirebaseFirestore.getInstance() }
+    @Volatile private var safeZoneEvaluationInProgress = false
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
@@ -143,9 +152,110 @@ class ChildLocationSharingService : Service() {
         )
         firestore.collection("pairings").document(code)
             .update(payload)
+            .addOnSuccessListener { evaluateSafeZones(location, code, prefs) }
             .addOnFailureListener { error ->
                 Log.w(TAG, "Unable to publish child location", error)
             }
+    }
+
+    /** Detect transitions only while explicit, visible location sharing is active. */
+    private fun evaluateSafeZones(location: Location, code: String, prefs: android.content.SharedPreferences) {
+        if (location.accuracy > 250f || safeZoneEvaluationInProgress) return
+        safeZoneEvaluationInProgress = true
+        val pairing = firestore.collection("pairings").document(code)
+        pairing.get().addOnSuccessListener { snapshot ->
+            try {
+                if (!prefs.getBoolean("child_location_sharing_enabled", false)) return@addOnSuccessListener
+                val zones = snapshot.get("safeZones") as? List<*> ?: emptyList<Any>()
+                val events = mutableListOf<Map<String, Any>>()
+                zones.forEach { raw ->
+                    val zone = raw as? Map<*, *> ?: return@forEach
+                    val id = zone["id"] as? String ?: return@forEach
+                    val name = zone["name"] as? String ?: "Zona aman"
+                    val latitude = (zone["latitude"] as? Number)?.toDouble() ?: return@forEach
+                    val longitude = (zone["longitude"] as? Number)?.toDouble() ?: return@forEach
+                    val radius = (zone["radiusM"] as? Number)?.toFloat() ?: return@forEach
+                    if (id.isBlank() || radius !in 50f..5000f) return@forEach
+                    if (location.accuracy > maxOf(150f, radius * 1.5f)) return@forEach
+                    val center = Location("safe-zone").apply {
+                        this.latitude = latitude
+                        this.longitude = longitude
+                    }
+                    val distance = location.distanceTo(center)
+                    val stateKey = "safe_zone_state_$id"
+                    val previous = prefs.getString(stateKey, null)
+                    val hysteresis = maxOf(20f, minOf(location.accuracy, 80f))
+                    val next = when (previous) {
+                        "inside" -> if (distance > radius + hysteresis) "outside" else "inside"
+                        "outside" -> if (distance < radius - hysteresis) "inside" else "outside"
+                        else -> if (distance <= radius) "inside" else "outside"
+                    }
+                    if (previous == null) {
+                        prefs.edit().putString(stateKey, next).apply()
+                    } else if (previous != next) {
+                        prefs.edit().putString(stateKey, next).apply()
+                        events.add(mapOf(
+                            "eventId" to UUID.randomUUID().toString(),
+                            "zoneId" to id,
+                            "zoneName" to name,
+                            "transition" to if (next == "inside") "ENTER" else "EXIT",
+                            "occurredAt" to Timestamp.now(),
+                            "latitude" to location.latitude,
+                            "longitude" to location.longitude
+                        ))
+                    }
+                }
+                if (events.isNotEmpty()) persistSafeZoneEvents(pairing, snapshot, code, events)
+            } finally {
+                safeZoneEvaluationInProgress = false
+            }
+        }.addOnFailureListener { error ->
+            safeZoneEvaluationInProgress = false
+            Log.w(TAG, "Unable to evaluate safe zones", error)
+        }
+    }
+
+    private fun persistSafeZoneEvents(
+        pairing: com.google.firebase.firestore.DocumentReference,
+        snapshot: DocumentSnapshot,
+        code: String,
+        events: List<Map<String, Any>>
+    ) {
+        val previous = snapshot.get("safeZoneEvents") as? List<*> ?: emptyList<Any>()
+        pairing.update("safeZoneEvents", (previous + events).takeLast(MAX_SAFE_ZONE_EVENTS))
+            .addOnSuccessListener { events.forEach { sendSafeZoneNotification(code, it) } }
+            .addOnFailureListener { error -> Log.w(TAG, "Unable to save safe-zone history", error) }
+    }
+
+    private fun sendSafeZoneNotification(code: String, event: Map<String, Any>) {
+        val user = FirebaseAuth.getInstance().currentUser ?: return
+        user.getIdToken(false).addOnSuccessListener { result ->
+            val idToken = result.token ?: return@addOnSuccessListener
+            networkExecutor.execute {
+                val connection = URL(SAFE_ZONE_EVENT_URL).openConnection() as HttpURLConnection
+                try {
+                    connection.requestMethod = "POST"
+                    connection.connectTimeout = 15000
+                    connection.readTimeout = 15000
+                    connection.doOutput = true
+                    connection.setRequestProperty("Content-Type", "application/json")
+                    val body = JSONObject()
+                        .put("idToken", idToken)
+                        .put("code", code)
+                        .put("eventId", event["eventId"])
+                        .put("zoneName", event["zoneName"])
+                        .put("transition", event["transition"])
+                    connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+                    val status = connection.responseCode
+                    if (status !in 200..299) {
+                        val detail = connection.errorStream?.bufferedReader()?.use { it.readText() }
+                        Log.w(TAG, "Safe-zone notification rejected: HTTP $status $detail")
+                    }
+                } catch (error: Exception) {
+                    Log.w(TAG, "Unable to send safe-zone notification", error)
+                } finally { connection.disconnect() }
+            }
+        }.addOnFailureListener { error -> Log.w(TAG, "Unable to authenticate safe-zone notification", error) }
     }
 
     private fun stopSharing() {
@@ -154,7 +264,9 @@ class ChildLocationSharingService : Service() {
         } catch (_: Exception) { }
         val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val code = prefs.getString("pair_code", null)
-        prefs.edit().putBoolean("child_location_sharing_enabled", false).apply()
+        val editor = prefs.edit().putBoolean("child_location_sharing_enabled", false)
+        prefs.all.keys.filter { it.startsWith("safe_zone_state_") }.forEach(editor::remove)
+        editor.apply()
         if (prefs.getString("pair_role", null) == "child" && !code.isNullOrBlank()) {
             firestore.collection("pairings").document(code)
                 .update(
@@ -226,5 +338,8 @@ class ChildLocationSharingService : Service() {
         private const val UPDATE_INTERVAL_MS = 2 * 60 * 1000L
         private const val MIN_UPDATE_INTERVAL_MS = 60 * 1000L
         private const val MAX_UPDATE_DELAY_MS = 3 * 60 * 1000L
+        private const val MAX_SAFE_ZONE_EVENTS = 30
+        private const val SAFE_ZONE_EVENT_URL = "https://parent-audio-token.yudhis-r15.workers.dev/safe-zone-event"
+        private val networkExecutor = Executors.newSingleThreadExecutor()
     }
 }

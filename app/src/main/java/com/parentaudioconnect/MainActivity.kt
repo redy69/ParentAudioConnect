@@ -1069,6 +1069,7 @@ private var receivedMp3File: File? = null
                 textSize = 12f
                 setTextColor(Color.rgb(104, 117, 140))
             })
+            renderSafeZoneHistory(snapshot)
             return
         }
         zones.forEach { zone ->
@@ -1121,6 +1122,50 @@ private var receivedMp3File: File? = null
             }, LinearLayout.LayoutParams(0, dp(42), 1f))
             card.addView(row)
             safeZonesContainer.addView(card)
+        }
+        renderSafeZoneHistory(snapshot)
+    }
+
+    private fun renderSafeZoneHistory(snapshot: DocumentSnapshot) {
+        val events = (snapshot.get("safeZoneEvents") as? List<*>)
+            ?.filterIsInstance<Map<String, Any>>()
+            ?.takeLast(30)?.reversed() ?: emptyList()
+        safeZonesContainer.addView(TextView(this).apply {
+            text = "RIWAYAT AKTIVITAS ZONA AMAN"
+            textSize = 12f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(39, 70, 122))
+            setPadding(dp(3), dp(16), dp(3), dp(7))
+        })
+        if (events.isEmpty()) {
+            safeZonesContainer.addView(TextView(this).apply {
+                text = "Belum ada aktivitas masuk atau keluar zona aman."
+                textSize = 11.5f
+                setTextColor(Color.rgb(104, 117, 140))
+            })
+            return
+        }
+        val formatter = java.text.SimpleDateFormat("dd MMM, HH:mm", java.util.Locale("id", "ID"))
+        events.take(10).forEach { event ->
+            val entering = event["transition"] == "ENTER"
+            val zoneName = event["zoneName"]?.toString() ?: "Zona aman"
+            val timestamp = event["occurredAt"] as? Timestamp
+            val dateText = timestamp?.toDate()?.let { formatter.format(it) } ?: "Waktu tidak tersedia"
+            safeZonesContainer.addView(TextView(this).apply {
+                text = (if (entering) "● MASUK  " else "○ KELUAR  ") + zoneName + "\\n" + dateText
+                textSize = 11.5f
+                setLineSpacing(dp(2).toFloat(), 1f)
+                setTextColor(Color.rgb(48, 68, 105))
+                setPadding(dp(11), dp(9), dp(11), dp(9))
+                background = GradientDrawable().apply {
+                    setColor(Color.WHITE)
+                    cornerRadius = dp(11).toFloat()
+                    setStroke(dp(1), Color.rgb(225, 233, 247))
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, dp(3), 0, dp(3)) }
+            })
         }
     }
 

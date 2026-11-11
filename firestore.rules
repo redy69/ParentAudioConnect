@@ -130,7 +130,8 @@ service cloud.firestore {
           'mp3AudioActive',
           'audioActivityAt',
           'liveAudioActivityAt',
-          'mp3AudioActivityAt'
+          'mp3AudioActivityAt',
+          'safeZoneEvents'
         ])
         && (!changed.hasAny(['deviceBatteryPercent'])
           || (request.resource.data.deviceBatteryPercent is int
@@ -225,7 +226,10 @@ service cloud.firestore {
         && (!changed.hasAny(['liveAudioActivityAt'])
           || request.resource.data.liveAudioActivityAt is timestamp)
         && (!changed.hasAny(['mp3AudioActivityAt'])
-          || request.resource.data.mp3AudioActivityAt is timestamp);
+          || request.resource.data.mp3AudioActivityAt is timestamp)
+        && (!changed.hasAny(['safeZoneEvents'])
+          || (request.resource.data.safeZoneEvents is list
+            && request.resource.data.safeZoneEvents.size() <= 30));
     }
 
     match /pairings/{code} {

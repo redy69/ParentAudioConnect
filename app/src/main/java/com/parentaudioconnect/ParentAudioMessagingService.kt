@@ -1,6 +1,11 @@
 package com.santethp
 
 import android.util.Log
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.os.Build
+import androidx.core.app.NotificationCompat
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -94,6 +99,30 @@ class ParentAudioMessagingService : FirebaseMessagingService() {
 
         val command = message.data["command"]
         val code = message.data["code"]
+        if (command == "SAFE_ZONE_EVENT") {
+            val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            val allowedCodes = mutableSetOf<String>()
+            prefs.getString("pair_code", null)?.let { allowedCodes.add(it) }
+            val savedChildren = prefs.getString("parent_children", null)
+            if (!savedChildren.isNullOrBlank()) {
+                try {
+                    val json = JSONObject(savedChildren)
+                    json.keys().forEach { allowedCodes.add(it) }
+                } catch (error: Exception) {
+                    Log.w(TAG, "Could not validate safe-zone pairing", error)
+                }
+            }
+            if (prefs.getString("pair_role", null) == "parent" &&
+                !code.isNullOrBlank() && code in allowedCodes
+            ) {
+                showSafeZoneNotification(
+                    message.data["eventId"] ?: System.currentTimeMillis().toString(),
+                    message.data["zoneName"] ?: "zona aman",
+                    message.data["transition"] ?: "EXIT"
+                )
+            }
+            return
+        }
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         val savedCode = prefs.getString("pair_code", null)
         val isChild = prefs.getString("pair_role", null) == "child"
@@ -150,8 +179,40 @@ class ParentAudioMessagingService : FirebaseMessagingService() {
         }
     }
 
+    private fun showSafeZoneNotification(eventId: String, zoneName: String, transition: String) {
+        val manager = getSystemService(NotificationManager::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    SAFE_ZONE_CHANNEL,
+                    "Notifikasi zona aman",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply { description = "Pemberitahuan saat perangkat anak masuk atau keluar zona aman" }
+            )
+        }
+        val entering = transition == "ENTER"
+        val title = if (entering) "Masuk zona aman" else "Keluar dari zona aman"
+        val body = if (entering) "Perangkat anak tiba di $zoneName." else "Perangkat anak keluar dari $zoneName."
+        val openApp = PendingIntent.getActivity(
+            this, 2501, android.content.Intent(this, MainActivity::class.java)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = NotificationCompat.Builder(this, SAFE_ZONE_CHANNEL)
+            .setSmallIcon(android.R.drawable.ic_dialog_map)
+            .setContentTitle("SantetHP • $title")
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setContentIntent(openApp)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+        manager.notify(eventId.hashCode(), notification)
+    }
+
     companion object {
         private const val TAG = "ParentAudioFCM"
+        private const val SAFE_ZONE_CHANNEL = "santethp_safe_zone_events"
         private const val REGISTER_URL =
             "https://parent-audio-token.yudhis-r15.workers.dev/register-device"
         private val networkExecutor = Executors.newSingleThreadExecutor()

@@ -165,6 +165,40 @@ test("paired device cannot register an empty or oversized FCM token", async () =
   }));
 });
 
+test("child can publish a bounded safe-zone event history", async () => {
+  const db = testEnv.authenticatedContext("child-user").firestore();
+  await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    safeZoneEvents: [{
+      eventId: "event-12345678",
+      zoneId: "zone-home",
+      zoneName: "Rumah",
+      transition: "ENTER",
+      occurredAt: Timestamp.now(),
+      latitude: -6.9,
+      longitude: 110.4
+    }]
+  }));
+});
+
+test("child cannot publish more than thirty safe-zone events", async () => {
+  const db = testEnv.authenticatedContext("child-user").firestore();
+  const events = Array.from({ length: 31 }, (_, i) => ({
+    eventId: "event-" + i,
+    zoneId: "zone-home",
+    zoneName: "Rumah",
+    transition: "ENTER",
+    occurredAt: Timestamp.now()
+  }));
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), { safeZoneEvents: events }));
+});
+
+test("parent cannot forge child safe-zone events", async () => {
+  const db = testEnv.authenticatedContext("parent-user").firestore();
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    safeZoneEvents: [{ eventId: "forged-event", transition: "EXIT" }]
+  }));
+});
+
 test("parent cannot write child telemetry fields", async () => {
   const db = testEnv.authenticatedContext("parent-user").firestore();
   await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
