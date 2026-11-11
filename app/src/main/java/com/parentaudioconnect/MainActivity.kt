@@ -2527,17 +2527,37 @@ private var receivedMp3File: File? = null
             if (snapshot.getBoolean("appActivityConsent") != true) {
                 append("\nBelum diaktifkan dari HP anak")
             } else {
-                val activeName = snapshot.getString("appActivityName")
-                val activityAt = snapshot.getTimestamp("appActivityAt")
-                val activityTime = activityAt?.let {
-                    android.text.format.DateFormat.getTimeFormat(this@MainActivity).format(it.toDate())
-                }
-                if (activeName.isNullOrBlank()) {
-                    append("\nMenunggu pergantian aplikasi pertama")
+                val history = (snapshot.get("appActivityHistory") as? List<*>)
+                    .orEmpty()
+                    .mapNotNull { raw ->
+                        val item = raw as? Map<*, *> ?: return@mapNotNull null
+                        val name = item["appName"] as? String ?: return@mapNotNull null
+                        val openedAt = item["lastOpenedAt"] as? com.google.firebase.Timestamp
+                        name to openedAt
+                    }
+                    .take(10)
+
+                if (history.isEmpty()) {
+                    val activeName = snapshot.getString("appActivityName")
+                    val activityAt = snapshot.getTimestamp("appActivityAt")
+                    if (activeName.isNullOrBlank()) {
+                        append("\nMenunggu pergantian aplikasi pertama")
+                    } else {
+                        val activityTime = activityAt?.let {
+                            android.text.format.DateFormat.getTimeFormat(this@MainActivity).format(it.toDate())
+                        }
+                        append("\nTerakhir terdeteksi: $activeName")
+                        if (activityTime != null) append(" • $activityTime")
+                    }
                 } else {
-                    append("\nTerakhir terdeteksi: $activeName")
-                    if (activityTime != null) append(" • $activityTime")
-                    append("\nDiperbarui saat aplikasi berganti")
+                    append("\n10 aplikasi terakhir dibuka:")
+                    history.forEachIndexed { index, entry ->
+                        val time = entry.second?.let {
+                            android.text.format.DateFormat.getTimeFormat(this@MainActivity).format(it.toDate())
+                        } ?: "waktu tidak tersedia"
+                        append("\n${index + 1}. ${entry.first} • $time")
+                    }
+                    append("\nDiurutkan dari yang paling baru")
                 }
             }
         }
