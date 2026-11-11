@@ -46,7 +46,8 @@ service cloud.firestore {
         && (!changed.hasAny(['usageScheduleDays'])
           || (request.resource.data.usageScheduleDays is list
             && request.resource.data.usageScheduleDays.size() >= 1
-            && request.resource.data.usageScheduleDays.size() <= 7))
+            && request.resource.data.usageScheduleDays.size() <= 7
+            && request.resource.data.usageScheduleDays.hasOnly([1, 2, 3, 4, 5, 6, 7])))
         && (!changed.hasAny(['usageScheduleTimeZone'])
           || (request.resource.data.usageScheduleTimeZone is string
             && request.resource.data.usageScheduleTimeZone.size() <= 64))
