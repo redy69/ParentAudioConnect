@@ -2103,7 +2103,7 @@ private var receivedMp3File: File? = null
         val enabled = snapshot.getBoolean("appPermissionAuditEnabled") == true
         val updated = snapshot.getTimestamp("appPermissionAuditAt")
         val time = updated?.let {
-            android.text.format.DateFormat.getTimeFormat(this).format(it.toDate())
+            android.text.format.DateFormat.getTimeFormat(this@MainActivity).format(it.toDate())
         } ?: "belum tersedia"
         if (!enabled) {
             parentPermissionAuditPanel.text =
