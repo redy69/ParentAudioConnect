@@ -155,6 +155,9 @@ class ChildAudioConnectionService : Service() {
                             )
                         },
                         prepareRoom = { candidateRoom ->
+                        // Track the in-flight candidate before connect so a disconnect during
+                        // the handshake cannot be mistaken for a healthy connected room.
+                        room = candidateRoom
                         roomEventsJob?.cancel()
                         roomEventsJob = serviceScope.launch {
                             candidateRoom.events.collect { event ->
@@ -218,13 +221,18 @@ class ChildAudioConnectionService : Service() {
                                         }
                                     }
                                     is RoomEvent.Disconnected -> {
-                                        activeRemoteAudioTrackIds.clear()
-                                        stopLiveAudioHeartbeat()
-                                        ChildAudioActivityReporter.setLiveAudioActive(
-                                            applicationContext, false
-                                        )
-                                        updateNotification("Koneksi audio terputus • mencoba kembali")
-                                        scheduleAudioReconnect(candidateRoom)
+                                        if (room === candidateRoom) {
+                                            room = null
+                                            activeRemoteAudioTrackIds.clear()
+                                            stopLiveAudioHeartbeat()
+                                            ChildAudioActivityReporter.setLiveAudioActive(
+                                                applicationContext, false
+                                            )
+                                            updateNotification("Koneksi audio terputus • mencoba kembali")
+                                            // Let the candidate loop finish first; the check below
+                                            // handles a disconnect during the initial handshake.
+                                            if (!connecting) scheduleAudioReconnect(candidateRoom)
+                                        }
                                     }
                                     else -> Unit
                                 }
@@ -234,6 +242,12 @@ class ChildAudioConnectionService : Service() {
     
                         }
                     )
+                    if (room !== newRoom) {
+                        // A disconnect may arrive immediately after connect() succeeds.
+                        try { newRoom.disconnect() } catch (_: Exception) { }
+                        try { newRoom.release() } catch (_: Exception) { }
+                        throw IllegalStateException("Koneksi audio terputus saat proses penyambungan")
+                    }
                     newRoom.localParticipant.setMicrophoneEnabled(false)
                     // LiveKit MediaAudioType uses Android's normal media route and STREAM_MUSIC.
                     maximizeMediaVolume()
@@ -268,6 +282,7 @@ class ChildAudioConnectionService : Service() {
                 } catch (error: Exception) {
                     roomEventsJob?.cancel()
                     roomEventsJob = null
+                    room = null
                     mp3TransferManager = null
                     activeRemoteAudioTrackIds.clear()
                     stopLiveAudioHeartbeat()
