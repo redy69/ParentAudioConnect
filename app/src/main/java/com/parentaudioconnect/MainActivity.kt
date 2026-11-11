@@ -2914,6 +2914,15 @@ private var receivedMp3File: File? = null
         }
     }
 
+    private fun stopRemoteAudioAfterSetupFailure(code: String, message: String) {
+        statusText.text = message
+        requestRemoteAudio(code, "stop") { sent, error ->
+            if (!sent) {
+                statusText.text = "$message • perintah berhenti ke HP anak belum terkirim: ${error ?: "koneksi"}"
+            }
+        }
+    }
+
     private fun startMicrophone() {
         if (currentRole != "parent") return
         val code = selectedChildCode
@@ -2936,21 +2945,22 @@ private var receivedMp3File: File? = null
                 return@requestRemoteAudio
             }
             if (room != null && activeRoomCode == code) {
-                enableMicrophoneOnConnectedRoom()
+                enableMicrophoneOnConnectedRoom(code)
             } else {
                 connectToLiveKit(
                     code,
-                    onConnected = { enableMicrophoneOnConnectedRoom() },
+                    onConnected = { enableMicrophoneOnConnectedRoom(code) },
                     onFailure = { error ->
-                        statusText.text = "Audio Live gagal disiapkan: $error"
+                        stopRemoteAudioAfterSetupFailure(code, "Audio Live gagal disiapkan: $error")
                     }
                 )
             }
         }
     }
 
-    private fun enableMicrophoneOnConnectedRoom() {
+    private fun enableMicrophoneOnConnectedRoom(code: String) {
         activityScope.launch {
+            if (selectedChildCode != code || activeRoomCode != code) return@launch
             try {
                 val success = room?.localParticipant?.setMicrophoneEnabled(true) ?: false
                 if (success) {
@@ -2959,10 +2969,10 @@ private var receivedMp3File: File? = null
                     startButton.visibility = View.GONE
                     stopButton.visibility = View.VISIBLE
                 } else {
-                    statusText.text = "Ruang audio belum siap. Coba mulai Audio Live lagi."
+                    stopRemoteAudioAfterSetupFailure(code, "Ruang audio belum siap. Coba mulai Audio Live lagi.")
                 }
             } catch (_: Exception) {
-                statusText.text = "Gagal mengaktifkan mikrofon"
+                stopRemoteAudioAfterSetupFailure(code, "Gagal mengaktifkan mikrofon")
             }
         }
     }
@@ -3042,7 +3052,7 @@ override fun onActivityResult(
             val sendFile = {
                 val manager = mp3TransferManager
                 if (manager == null) {
-                    statusText.text = "Ruang audio belum siap. Silakan pilih MP3 lagi."
+                    stopRemoteAudioAfterSetupFailure(code, "Ruang audio belum siap. Silakan pilih MP3 lagi.")
                 } else {
                     manager.send(uri)
                 }
@@ -3054,7 +3064,7 @@ override fun onActivityResult(
                     code,
                     onConnected = sendFile,
                     onFailure = { error ->
-                        statusText.text = "Gagal menyiapkan ruang MP3: $error"
+                        stopRemoteAudioAfterSetupFailure(code, "Gagal menyiapkan ruang MP3: $error")
                     }
                 )
             }
