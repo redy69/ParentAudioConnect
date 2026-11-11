@@ -126,14 +126,14 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
               L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
                 maxZoom:19,attribution:'&copy; OpenStreetMap'
               }).addTo(map);
-              let marker=null,accuracy=null,fence=null;
-              function showWaiting(){ if(marker){map.removeLayer(marker);marker=null;} if(accuracy){map.removeLayer(accuracy);accuracy=null;} if(fence){map.removeLayer(fence);fence=null;} }
+              let marker=null,accuracyCircle=null,fence=null;
+              function showWaiting(){ if(marker){map.removeLayer(marker);marker=null;} if(accuracyCircle){map.removeLayer(accuracyCircle);accuracyCircle=null;} if(fence){map.removeLayer(fence);fence=null;} }
               function updateMap(lat,lon,acc,fenceOn,fLat,fLon,radius){
                 const p=[lat,lon];
                 if(!marker){marker=L.marker(p,{icon:L.divIcon({className:'',html:'<div class="child-pin"></div>',iconSize:[26,26],iconAnchor:[13,13]})}).addTo(map);}
                 else marker.setLatLng(p);
-                if(accuracy>0 && window._accuracyCircle){map.removeLayer(window._accuracyCircle);}
-                if(acc>0){window._accuracyCircle=L.circle(p,{radius:Math.min(acc,1000),color:'#2878ed',weight:1,fillOpacity:.08}).addTo(map);}
+                if(accuracyCircle){map.removeLayer(accuracyCircle);accuracyCircle=null;}
+                if(acc>0){accuracyCircle=L.circle(p,{radius:Math.min(acc,1000),color:'#2878ed',weight:1,fillOpacity:.08}).addTo(map);}
                 if(fence){map.removeLayer(fence);fence=null;}
                 if(fenceOn){fence=L.circle([fLat,fLon],{radius:radius,color:'#16a36a',weight:2,fillColor:'#16a36a',fillOpacity:.12}).addTo(map);}
                 map.setView(p,Math.max(map.getZoom(),15),{animate:true});
