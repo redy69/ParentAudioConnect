@@ -6,6 +6,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.ViewGroup
 import android.webkit.WebView
+import android.webkit.JavascriptInterface
 import android.webkit.WebViewClient
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -18,6 +19,7 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
     private val map = WebView(context)
     private var pageLoaded = false
     private var pendingScript: String? = null
+    var onMapPointSelected: ((Double, Double) -> Unit)? = null
 
     init {
         orientation = VERTICAL
@@ -50,6 +52,12 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
         map.settings.domStorageEnabled = true
         map.settings.loadsImagesAutomatically = true
         map.settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
+        map.addJavascriptInterface(object {
+            @JavascriptInterface
+            fun onMapTap(latitude: Double, longitude: Double) {
+                post { onMapPointSelected?.invoke(latitude, longitude) }
+            }
+        }, "SantetMap")
         map.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 pageLoaded = true
@@ -73,10 +81,7 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
         updatedAt: Timestamp?,
         sharingEnabled: Boolean,
         fresh: Boolean,
-        geofenceEnabled: Boolean = false,
-        geofenceLatitude: Double? = null,
-        geofenceLongitude: Double? = null,
-        geofenceRadiusMeters: Int = 0
+        safeZonesJson: String = "[]"
     ) {
         val timeLabel = updatedAt?.let {
             android.text.format.DateFormat.getTimeFormat(context).format(it.toDate())
@@ -92,12 +97,17 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
         status.setTextColor(
             if (sharingEnabled && fresh) Color.rgb(28, 130, 83) else Color.rgb(104, 117, 140)
         )
-        val fence = if (geofenceEnabled && geofenceLatitude != null && geofenceLongitude != null && geofenceRadiusMeters > 0) {
-            "true,${geofenceLatitude},${geofenceLongitude},$geofenceRadiusMeters"
-        } else "false,0,0,0"
         runMapScript(
-            "updateMap($latitude,$longitude,${accuracyMeters ?: 0.0},$fence);"
+            "updateMap($latitude,$longitude,${accuracyMeters ?: 0.0},$safeZonesJson);"
         )
+    }
+
+    fun setMapTapMode(enabled: Boolean) {
+        runMapScript("setMapTapMode(" + enabled + ");")
+    }
+
+    fun focusLocation(latitude: Double, longitude: Double) {
+        runMapScript("focusLocation(" + latitude + "," + longitude + ");")
     }
 
     fun showUnavailable(sharingEnabled: Boolean) {
@@ -126,16 +136,43 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
               L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
                 maxZoom:19,attribution:'&copy; OpenStreetMap'
               }).addTo(map);
-              let marker=null,accuracyCircle=null,fence=null;
-              function showWaiting(){ if(marker){map.removeLayer(marker);marker=null;} if(accuracyCircle){map.removeLayer(accuracyCircle);accuracyCircle=null;} if(fence){map.removeLayer(fence);fence=null;} }
-              function updateMap(lat,lon,acc,fenceOn,fLat,fLon,radius){
+              let marker=null,accuracyCircle=null,selectionMarker=null;
+              let fences=[];
+              let mapTapMode=false;
+              function clearFences(){fences.forEach(item=>map.removeLayer(item));fences=[];}
+              function showWaiting(){
+                if(marker){map.removeLayer(marker);marker=null;}
+                if(accuracyCircle){map.removeLayer(accuracyCircle);accuracyCircle=null;}
+                clearFences();
+              }
+              function setMapTapMode(enabled){
+                mapTapMode=!!enabled;
+                map.getContainer().style.cursor=mapTapMode?'crosshair':'';
+              }
+              function focusLocation(lat,lon){map.setView([lat,lon],17,{animate:true});}
+              map.on('click',function(event){
+                if(!mapTapMode)return;
+                const lat=event.latlng.lat,lon=event.latlng.lng;
+                if(selectionMarker)map.removeLayer(selectionMarker);
+                selectionMarker=L.marker([lat,lon]).addTo(map);
+                setMapTapMode(false);
+                if(window.SantetMap&&window.SantetMap.onMapTap)window.SantetMap.onMapTap(lat,lon);
+              });
+              function updateMap(lat,lon,acc,zones){
                 const p=[lat,lon];
                 if(!marker){marker=L.marker(p,{icon:L.divIcon({className:'',html:'<div class="child-pin"></div>',iconSize:[26,26],iconAnchor:[13,13]})}).addTo(map);}
                 else marker.setLatLng(p);
                 if(accuracyCircle){map.removeLayer(accuracyCircle);accuracyCircle=null;}
                 if(acc>0){accuracyCircle=L.circle(p,{radius:Math.min(acc,1000),color:'#2878ed',weight:1,fillOpacity:.08}).addTo(map);}
-                if(fence){map.removeLayer(fence);fence=null;}
-                if(fenceOn){fence=L.circle([fLat,fLon],{radius:radius,color:'#16a36a',weight:2,fillColor:'#16a36a',fillOpacity:.12}).addTo(map);}
+                clearFences();
+                (Array.isArray(zones)?zones:[]).forEach(function(zone){
+                  const circle=L.circle([zone.latitude,zone.longitude],{
+                    radius:zone.radiusM,color:'#16a36a',weight:2,fillColor:'#16a36a',fillOpacity:.12
+                  }).addTo(map);
+                  const label=String(zone.name||'Area aman').replace(/[&<>"']/g,'');
+                  circle.bindPopup('<b>'+label+'</b><br>Radius '+zone.radiusM+' m');
+                  fences.push(circle);
+                });
                 map.setView(p,Math.max(map.getZoom(),15),{animate:true});
                 setTimeout(()=>map.invalidateSize(),150);
               }
