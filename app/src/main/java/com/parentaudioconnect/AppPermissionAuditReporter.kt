@@ -2,6 +2,7 @@ package com.santethp
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
@@ -69,7 +70,7 @@ object AppPermissionAuditReporter {
                         Build.VERSION.SDK_INT < 33
                     ) return@forEachIndexed
                     val isGranted = index < flags.size &&
-                        (flags[index] and PackageManager.REQUESTED_PERMISSION_GRANTED) != 0
+                        (flags[index] and PackageInfo.REQUESTED_PERMISSION_GRANTED) != 0
                     if (isGranted) granted.add(label) else notGranted.add(label)
                 }
                 if (granted.isEmpty() && notGranted.isEmpty()) return@mapNotNull null
