@@ -2,6 +2,7 @@ package com.santethp
 
 import android.app.AppOpsManager
 import android.app.usage.UsageStatsManager
+import android.app.usage.UsageEvents
 import android.content.Context
 import android.os.Process
 import android.util.Log
@@ -58,7 +59,7 @@ object AppUsageReporter {
                 now
             ).orEmpty()
 
-            var summary = usage
+            var summary: List<Map<String, Any>> = usage
                 .asSequence()
                 .filter { it.totalTimeInForeground >= 60_000L }
                 .filter { it.packageName != context.packageName }
@@ -66,7 +67,7 @@ object AppUsageReporter {
                 .map { (packageName, records) ->
                     val duration = records.sumOf { it.totalTimeInForeground }
                     val appName = resolveAppName(context, packageName)
-                    mapOf(
+                    mapOf<String, Any>(
                         "packageName" to packageName,
                         "appName" to appName,
                         "foregroundMinutes" to (duration / 60_000L).toInt()
