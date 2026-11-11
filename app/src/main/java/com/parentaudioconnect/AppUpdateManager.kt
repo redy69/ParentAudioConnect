@@ -42,16 +42,16 @@ object AppUpdateManager {
             try {
                 var dataUpdated = false
                 var dataVersionMessage = "Data aplikasi sudah terbaru"
-                var installStatus = "OJO DI INSTALL"
-                var installStatusMessage = "Status kelayakan belum diverifikasi."
+                var installStatus = "DURONG ONO UPDATE"
+                var installStatusMessage = "lagi di kembangno"
 
                 try {
                     val manifest = fetchJson(DATA_MANIFEST_URL, github = false)
                     val requestedStatus = manifest.optString("installStatus", "")
-                    installStatus = if (requestedStatus == "NORMAL") "NORMAL" else "OJO DI INSTALL"
+                    installStatus = if (requestedStatus == "NORMAL") "NORMAL" else "DURONG ONO UPDATE"
                     installStatusMessage = manifest.optString(
                         "installStatusMessage",
-                        if (installStatus == "NORMAL") "APK dinyatakan layak dipasang." else "Jangan instal APK sebelum ada pemberitahuan NORMAL."
+                        if (installStatus == "NORMAL") "APK dinyatakan layak dipasang." else "lagi di kembangno"
                     ).take(240)
                     val remoteDataVersion = manifest.optInt("dataVersion", 0)
                     val prefs = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -66,8 +66,8 @@ object AppUpdateManager {
                 } catch (error: Exception) {
                     android.util.Log.w("AppUpdateManager", "Data update check failed", error)
                     dataVersionMessage = "Pembaruan data tidak dapat diperiksa"
-                    installStatus = "OJO DI INSTALL"
-                    installStatusMessage = "Status kelayakan tidak dapat diverifikasi. Jangan instal dulu."
+                    installStatus = "DURONG ONO UPDATE"
+                    installStatusMessage = "Status belum dapat diperiksa. Coba lagi saat internet tersedia."
                 }
 
                 val release = fetchJson(RELEASE_API, github = true)
@@ -132,7 +132,7 @@ object AppUpdateManager {
                 android.util.Log.w("AppUpdateManager", "App update check failed", error)
                 activity.runOnUiThread {
                     if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
-                    val message = "OJO DI INSTALL — Status kelayakan belum dapat diverifikasi. Gagal memeriksa pembaruan: ${error.localizedMessage ?: "koneksi bermasalah"}"
+                    val message = "DURONG ONO UPDATE — DURONG ONO UPDATE — lagi di kembangno. Gagal memeriksa pembaruan: ${error.localizedMessage ?: "koneksi bermasalah"}"
                     onStatus(message)
                     Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
                 }
