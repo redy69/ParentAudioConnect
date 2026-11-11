@@ -2068,7 +2068,7 @@ private var receivedMp3File: File? = null
                     .setMessage("Pilih satu atau beberapa aplikasi. Selanjutnya tentukan berapa lama pemblokiran berlaku.")
                     .setMultiChoiceItems(labels, checked) { _, which, isChecked -> checked[which] = isChecked }
                     .setNegativeButton("Batal", null)
-                    .setPositiveButton("Lanjut") { _, _ ->
+                    .setPositiveButton("Lanjut") selection@{ _, _ ->
                         if (checked.none { it }) {
                             db.collection("pairings").document(code).update(
                                 "blockedApps", emptyList<Map<String, Any>>(),
@@ -2078,7 +2078,7 @@ private var receivedMp3File: File? = null
                             }.addOnFailureListener {
                                 Toast.makeText(this, "Gagal memperbarui pemblokiran.", Toast.LENGTH_LONG).show()
                             }
-                            return@setPositiveButton
+                            return@selection
                         }
                         val durationInput = EditText(this).apply {
                             inputType = android.text.InputType.TYPE_CLASS_NUMBER
@@ -2091,11 +2091,11 @@ private var receivedMp3File: File? = null
                             .setMessage("Masukkan durasi dalam menit (1 sampai 10080). Setelah waktunya habis, aplikasi otomatis dapat dibuka kembali.")
                             .setView(durationInput)
                             .setNegativeButton("Batal", null)
-                            .setPositiveButton("Aktifkan blokir") { _, _ ->
+                            .setPositiveButton("Aktifkan blokir") duration@{ _, _ ->
                                 val minutes = durationInput.text.toString().toLongOrNull()
                                 if (minutes == null || minutes !in 1L..10080L) {
                                     Toast.makeText(this, "Durasi harus 1–10080 menit.", Toast.LENGTH_LONG).show()
-                                    return@setPositiveButton
+                                    return@duration
                                 }
                                 val allAppPackages = apps.map { it.first }.toSet()
                                 val retained = existingRules.filter { it.first !in allAppPackages }
