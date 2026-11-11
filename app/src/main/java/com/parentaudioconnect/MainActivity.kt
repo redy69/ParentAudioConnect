@@ -1256,6 +1256,9 @@ private var receivedMp3File: File? = null
         (connectionStatusText.background as? GradientDrawable)?.setColor(
             if (connected) Color.rgb(226, 247, 237) else Color.rgb(239, 243, 249)
         )
+        val conditionTitle = "KONDISI HP ${name?.takeIf { it.isNotBlank() } ?: "ANAK"}"
+        childDeviceStatusText.text = childDeviceStatusText.text.toString()
+            .replaceFirst(Regex("^KONDISI HP [^\\n]*"), conditionTitle)
     }
 
     private fun toggleChildrenPanel() {
@@ -2424,8 +2427,8 @@ private var receivedMp3File: File? = null
         } ?: ""
         val internetLabel = if (internetValidated) "Internet aktif" else "Internet belum terverifikasi"
 
-        childDeviceStatusText.text = buildString {
-            append("KONDISI HP ANAK\n")
+        val selectedName = selectedChildCode?.let { childNames[it] }\n            ?.takeIf { it.isNotBlank() } ?: "ANAK"\n        childDeviceStatusText.text = buildString {
+            append("KONDISI HP $selectedName\n")
             append("Baterai: $batteryLabel$chargeLabel$temperatureLabel\n")
             append("Jaringan: $network\n")
             append("Operator SIM: $operator\n")
