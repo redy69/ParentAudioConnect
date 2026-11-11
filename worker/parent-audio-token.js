@@ -135,7 +135,7 @@ async function sendCameraRequest(env, fcmToken, code, requestId, command, facing
       body: JSON.stringify({
         message: {
           token: fcmToken,
-          data: { command, code, requestId, facing },
+          data: { command, code, requestId, facing, serverId: fields.cameraLiveKitServerId?.stringValue || "main" },
           android: { priority: "HIGH", ttl: "30s" }
         }
       })
@@ -150,7 +150,7 @@ export default {
     try {
       if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
       const url = new URL(request.url);
-      const allowedPaths = ["/token", "/register-device", "/request-camera", "/request-audio", "/camera-token", "/safe-zone-event"];
+      const allowedPaths = ["/token", "/register-device", "/request-camera", "/request-audio", "/camera-token", "/safe-zone-event", "/select-server"];
       if (!allowedPaths.includes(url.pathname)) return jsonResponse({ error: "Not found" }, 404);
 
       const body = await request.json();
@@ -194,6 +194,24 @@ export default {
           return jsonResponse({ error: "Could not register device. Check Firestore permissions." }, 403);
         }
         return jsonResponse({ registered: true, role: callerUid === parentUid ? "parent" : "child" });
+      }
+
+      if (url.pathname === "/select-server") {
+        if (callerUid !== parentUid) return jsonResponse({ error: "Only the parent can select a LiveKit server" }, 403);
+        const kind = body.kind === "camera" ? "camera" : body.kind === "audio" ? "audio" : null;
+        const serverId = String(body.serverId || "");
+        const projects = getLiveKitProjects(env);
+        if (!kind || !projects.some(project => project.id === serverId)) {
+          return jsonResponse({ error: "Invalid LiveKit server selection" }, 400);
+        }
+        const field = kind === "camera" ? "cameraLiveKitServerId" : "audioLiveKitServerId";
+        const saved = await fetch(pairingUrl(code) + "?updateMask.fieldPaths=" + field, {
+          method: "PATCH",
+          headers: { Authorization: "Bearer " + body.idToken, "Content-Type": "application/json" },
+          body: JSON.stringify({ fields: { [field]: { stringValue: serverId } } })
+        });
+        if (!saved.ok) return jsonResponse({ error: "Could not save LiveKit server selection" }, 403);
+        return jsonResponse({ saved: true, kind, serverId });
       }
 
       if (url.pathname === "/safe-zone-event") {
@@ -261,7 +279,7 @@ export default {
             body: JSON.stringify({
               message: {
                 token: childFcmToken,
-                data: { command, code },
+                data: { command, code, serverId: fields.audioLiveKitServerId?.stringValue || "main" },
                 android: { priority: "HIGH", ttl: "30s" }
               }
             })
@@ -295,6 +313,16 @@ export default {
       const roomBase = "pair_" + Array.from(new Uint8Array(digest))
         .map(byte => byte.toString(16).padStart(2, "0")).join("");
       const isParent = callerUid === parentUid;
+      const requestedServerId = String(body.preferredServerId || "");
+      const storedServerId = url.pathname === "/camera-token"
+        ? fields.cameraLiveKitServerId?.stringValue
+        : fields.audioLiveKitServerId?.stringValue;
+      const preferredServerId = requestedServerId || storedServerId || "";
+      if (preferredServerId) {
+        liveKitProjects.sort((a, b) =>
+          (a.id === preferredServerId ? -1 : b.id === preferredServerId ? 1 : 0)
+        );
+      }
 
       if (url.pathname === "/camera-token") {
         const cameraRoom = roomBase + "_camera";
