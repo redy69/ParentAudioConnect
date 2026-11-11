@@ -41,6 +41,8 @@ class CameraViewerActivity : Activity() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var room: Room? = null
     private var roomEventsJob: kotlinx.coroutines.Job? = null
+    private var reconnectJob: kotlinx.coroutines.Job? = null
+    private var connecting = false
     private lateinit var renderer: SurfaceViewRenderer
     private lateinit var status: TextView
     private var code: String = ""
@@ -101,6 +103,8 @@ class CameraViewerActivity : Activity() {
     }
 
     private fun connectToCameraRoom() {
+        if (connecting || isFinishing || isDestroyed) return
+        connecting = true
         scope.launch {
             try {
                 status.text = "Meminta akses tayangan kamera…"
@@ -122,14 +126,26 @@ class CameraViewerActivity : Activity() {
                         roomEventsJob?.cancel()
                         roomEventsJob = launch {
                             candidateRoom.events.collect { event ->
-                                if (event is RoomEvent.TrackSubscribed) {
-                                    val video = event.track as? VideoTrack
-                                    if (video != null) {
-                                        runOnUiThread {
-                                            video.addRenderer(renderer)
-                                            status.text = "KAMERA ANAK TERHUBUNG"
+                                when (event) {
+                                    is RoomEvent.TrackSubscribed -> {
+                                        val video = event.track as? VideoTrack
+                                        if (video != null) {
+                                            runOnUiThread {
+                                                video.addRenderer(renderer)
+                                                status.text = "KAMERA ANAK TERHUBUNG"
+                                            }
                                         }
                                     }
+                                    is RoomEvent.Disconnected -> {
+                                        if (room === candidateRoom) {
+                                            room = null
+                                            runOnUiThread {
+                                                status.text = "Koneksi kamera terputus • menyambungkan kembali…"
+                                            }
+                                            scheduleCameraReconnect(candidateRoom)
+                                        }
+                                    }
+                                    else -> Unit
                                 }
                             }
                         }
@@ -141,7 +157,25 @@ class CameraViewerActivity : Activity() {
                 roomEventsJob?.cancel()
                 roomEventsJob = null
                 status.text = "Gagal menghubungkan kamera: ${error.localizedMessage ?: "periksa koneksi"}"
+                scheduleCameraReconnect(null)
+            } finally {
+                connecting = false
             }
+        }
+    }
+
+    private fun scheduleCameraReconnect(disconnectedRoom: Room?) {
+        if (reconnectJob?.isActive == true || isFinishing || isDestroyed) return
+        reconnectJob = scope.launch {
+            kotlinx.coroutines.delay(2_000)
+            if (isFinishing || isDestroyed) return@launch
+            val oldRoom = disconnectedRoom
+            if (oldRoom != null) {
+                roomEventsJob?.cancel()
+                roomEventsJob = null
+                try { oldRoom.release() } catch (_: Exception) { }
+            }
+            connectToCameraRoom()
         }
     }
 
@@ -209,6 +243,8 @@ class CameraViewerActivity : Activity() {
     }
 
     override fun onDestroy() {
+        reconnectJob?.cancel()
+        reconnectJob = null
         scope.cancel()
         roomEventsJob?.cancel()
         roomEventsJob = null
