@@ -181,14 +181,21 @@ class CameraViewerActivity : Activity() {
         if (reconnectJob?.isActive == true || isFinishing || isDestroyed) return
         reconnectJob = scope.launch {
             kotlinx.coroutines.delay(2_000)
+            // Do not drop the recovery attempt if the previous failover loop is
+            // still unwinding. Wait until it exits, then reconnect only if no room
+            // has become active in the meantime.
+            while (connecting && !isFinishing && !isDestroyed) {
+                kotlinx.coroutines.delay(500)
+            }
             if (isFinishing || isDestroyed) return@launch
             val oldRoom = disconnectedRoom
             if (oldRoom != null) {
                 roomEventsJob?.cancel()
                 roomEventsJob = null
+                try { oldRoom.disconnect() } catch (_: Exception) { }
                 try { oldRoom.release() } catch (_: Exception) { }
             }
-            connectToCameraRoom()
+            if (room == null) connectToCameraRoom()
         }
     }
 
