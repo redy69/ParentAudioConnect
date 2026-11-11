@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - feature/device-health-monitoring
     paths:
       - 'worker/**'
       - '.github/workflows/deploy-worker.yml'
