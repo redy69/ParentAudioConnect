@@ -49,10 +49,19 @@ object AppUpdateManager {
                     val manifest = fetchJson(DATA_MANIFEST_URL, github = false)
                     val requestedStatus = manifest.optString("installStatus", "")
                     installStatus = if (requestedStatus == "NORMAL") "NORMAL" else "DURONG ONO UPDATE"
-                    installStatusMessage = manifest.optString(
-                        "installStatusMessage",
-                        if (installStatus == "NORMAL") "APK dinyatakan layak dipasang." else "lagi di kembangno"
-                    ).take(240)
+                    installStatusMessage = if (installStatus == "NORMAL") {
+                        val changes = manifest.optJSONArray("changes")
+                        if (changes != null && changes.length() > 0) {
+                            (0 until changes.length())
+                                .mapNotNull { index -> changes.optString(index).takeIf { it.isNotBlank() } }
+                                .joinToString("\\n") { "• $it" }
+                                .take(240)
+                        } else {
+                            manifest.optString("installStatusMessage", "APK dinyatakan layak dipasang.").take(240)
+                        }
+                    } else {
+                        manifest.optString("installStatusMessage", "lagi di kembangno").take(240)
+                    }
                     val remoteDataVersion = manifest.optInt("dataVersion", 0)
                     val prefs = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                     val localDataVersion = prefs.getInt(KEY_DATA_VERSION, 0)
