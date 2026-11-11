@@ -96,18 +96,55 @@ class ChildAppBlockAccessibilityService : AccessibilityService() {
             } catch (_: Exception) {
                 packageName
             }
-            FirebaseFirestore.getInstance().collection("pairings").document(code)
-                .update(
+            val pairingRef = FirebaseFirestore.getInstance()
+                .collection("pairings").document(code)
+            pairingRef.firestore.runTransaction { transaction ->
+                val pairing = transaction.get(pairingRef)
+                if (!pairing.exists() || pairing.getBoolean("appActivityConsent") != true) {
+                    return@runTransaction false
+                }
+
+                val previousHistory = (pairing.get("appActivityHistory") as? List<*>)
+                    .orEmpty()
+                    .mapNotNull { raw ->
+                        val item = raw as? Map<*, *> ?: return@mapNotNull null
+                        val oldPackage = item["packageName"] as? String
+                            ?: return@mapNotNull null
+                        val oldName = item["appName"] as? String
+                            ?: oldPackage
+                        val oldTime = item["lastOpenedAt"]
+                        linkedMapOf<String, Any>(
+                            "packageName" to oldPackage,
+                            "appName" to oldName
+                        ).apply {
+                            if (oldTime is com.google.firebase.Timestamp) {
+                                put("lastOpenedAt", oldTime)
+                            }
+                        }
+                    }
+                    .filterNot { it["packageName"] == packageName }
+
+                val newestEntry = linkedMapOf<String, Any>(
+                    "packageName" to packageName,
+                    "appName" to appName,
+                    "lastOpenedAt" to com.google.firebase.Timestamp.now()
+                )
+                val updatedHistory = (listOf(newestEntry) + previousHistory).take(10)
+
+                transaction.update(
+                    pairingRef,
                     mapOf(
                         "appActivityConsent" to true,
                         "appActivityPackage" to packageName,
                         "appActivityName" to appName,
-                        "appActivityAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                        "appActivityAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                        "appActivityHistory" to updatedHistory
                     )
                 )
-                .addOnFailureListener {
-                    android.util.Log.w("ChildAppActivity", "Unable to publish foreground app", it)
-                }
+                true
+            }.addOnFailureListener {
+                android.util.Log.w("ChildAppActivity", "Unable to publish foreground app history", it)
+            }
         }
 
         // App blocking remains independently controlled by its own child consent.
