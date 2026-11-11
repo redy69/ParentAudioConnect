@@ -3380,29 +3380,29 @@ private var receivedMp3File: File? = null
                             throw kotlinx.coroutines.CancellationException("Pilihan perangkat berubah")
                         }
 
-                        val token = response.getString("token")
-                        val serverUrl = response.getString("serverUrl")
                         val role = response.getString("role")
-
                         if (role != currentRole) {
                             throw Exception("Peran perangkat tidak sesuai")
                         }
 
-                        val newRoom = if (role == "child") {
-                            LiveKit.create(
-                                appContext = applicationContext,
-                                overrides = LiveKitOverrides(
-                                    audioOptions = AudioOptions(
-                                        audioOutputType = AudioType.MediaAudioType()
+                        val newRoom = LiveKitFailover.connect(
+                            response = response,
+                            createRoom = {
+                                if (role == "child") {
+                                    LiveKit.create(
+                                        appContext = applicationContext,
+                                        overrides = LiveKitOverrides(
+                                            audioOptions = AudioOptions(
+                                                audioOutputType = AudioType.MediaAudioType()
+                                            )
+                                        )
                                     )
-                                )
-                            )
-                        } else {
-                            LiveKit.create(applicationContext)
-                        }
+                                } else {
+                                    LiveKit.create(applicationContext)
+                                }
+                            }
+                        )
                         createdRoom = newRoom
-
-                        newRoom.connect(url = serverUrl, token = token)
                         if (attemptGeneration != roomConnectionGeneration || selectedChildCode != code) {
                             throw kotlinx.coroutines.CancellationException("Pilihan perangkat berubah")
                         }
