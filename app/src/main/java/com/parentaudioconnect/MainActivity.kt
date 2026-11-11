@@ -2111,7 +2111,7 @@ private var receivedMp3File: File? = null
     private fun generateCode(): String {
         val random = SecureRandom()
 
-        return (1..8).map {
+        return (1..16).map {
             characters[random.nextInt(characters.length)]
         }.joinToString("")
     }
@@ -2134,7 +2134,7 @@ private var receivedMp3File: File? = null
             "parentUid" to uid,
             "childUid" to null,
             "createdAt" to Timestamp(Date(now)),
-            "expiresAt" to Timestamp(Date(now + 15 * 60 * 1000))
+            "expiresAt" to Timestamp(Date(now + 5 * 60 * 1000))
         )
 
         db.collection("pairings")
@@ -2398,7 +2398,7 @@ private var receivedMp3File: File? = null
 
     private fun showCodeDialog() {
         val input = EditText(this).apply {
-            hint = "Masukkan 8 karakter kode"
+            hint = "Masukkan 16 karakter kode"
             isSingleLine = true
         }
 
@@ -2413,8 +2413,8 @@ private var receivedMp3File: File? = null
                     .trim()
                     .uppercase()
 
-                if (code.length != 8) {
-                    statusText.text = "Kode harus 8 karakter"
+                if (code.length != 16) {
+                    statusText.text = "Kode harus 16 karakter"
                 } else {
                     joinPairing(code)
                 }

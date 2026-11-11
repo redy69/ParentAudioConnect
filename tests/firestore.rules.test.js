@@ -9,6 +9,7 @@ import {
   Timestamp,
   doc,
   getDoc,
+  setDoc,
   updateDoc
 } from "firebase/firestore";
 
@@ -124,4 +125,35 @@ test("unrelated signed-in user cannot update an already claimed pairing", async 
   }));
 });
 
-test.todo("Open unclaimed pairing codes can currently be read and claimed by any signed-in user; replace client-side claim with a rate-limited server-side claim flow before production hardening.");
+
+test("parent can create a 16-character pairing code with a maximum five-minute expiry", async () => {
+  const db = testEnv.authenticatedContext("new-parent").firestore();
+  await assertSucceeds(setDoc(doc(db, "pairings", "ABCDEFGHJKLMNPQR"), {
+    parentUid: "new-parent",
+    childUid: null,
+    createdAt: Timestamp.now(),
+    expiresAt: Timestamp.fromMillis(Date.now() + 4 * 60 * 1000)
+  }));
+});
+
+test("parent cannot create a legacy eight-character pairing code", async () => {
+  const db = testEnv.authenticatedContext("new-parent").firestore();
+  await assertFails(setDoc(doc(db, "pairings", "ABCDEFGH"), {
+    parentUid: "new-parent",
+    childUid: null,
+    createdAt: Timestamp.now(),
+    expiresAt: Timestamp.fromMillis(Date.now() + 4 * 60 * 1000)
+  }));
+});
+
+test("parent cannot create a pairing code that expires after five minutes", async () => {
+  const db = testEnv.authenticatedContext("new-parent").firestore();
+  await assertFails(setDoc(doc(db, "pairings", "ABCDEFGHJKLMNPQR"), {
+    parentUid: "new-parent",
+    childUid: null,
+    createdAt: Timestamp.now(),
+    expiresAt: Timestamp.fromMillis(Date.now() + 6 * 60 * 1000)
+  }));
+});
+
+test.todo("Open unclaimed pairing codes can still be read and claimed by any signed-in user; high-entropy codes reduce guessing risk but do not provide server-side rate limiting.");
