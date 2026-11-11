@@ -134,8 +134,8 @@ private var receivedMp3File: File? = null
             }
         }
     }
-    private var room: Room?
-    private var activeLiveKitServerId: String? = null = null
+    private var room: Room? = null
+    private var activeLiveKitServerId: String? = null
     private var isConnecting = false
     private var connectingRoomCode: String? = null
     private var roomConnectionGeneration = 0L
@@ -2549,58 +2549,8 @@ private var receivedMp3File: File? = null
             statusText.text = "Pilih HP anak terlebih dahulu"
             return
         }
-        val user = auth.currentUser
-        if (user == null) {
-            statusText.text = "Sesi Firebase orang tua belum tersedia"
-            return
-        }
-        statusText.text = "Mengirim permintaan kamera ke HP anak…"
-        user.getIdToken(false).addOnSuccessListener { result ->
-            val idToken = result.token
-            if (idToken.isNullOrBlank()) {
-                statusText.text = "Token autentikasi kosong"
-                return@addOnSuccessListener
-            }
-            activityScope.launch {
-                try {
-                    withContext(Dispatchers.IO) {
-                        val connection = URL(workerUrl.replace("/token", "/request-camera"))
-                            .openConnection() as HttpURLConnection
-                        try {
-                            connection.requestMethod = "POST"
-                            connection.connectTimeout = 15000
-                            connection.readTimeout = 15000
-                            connection.doOutput = true
-                            connection.setRequestProperty("Content-Type", "application/json")
-                            val body = JSONObject()
-                                .put("idToken", idToken)
-                                .put("code", code)
-                                .put("requestId", java.util.UUID.randomUUID().toString())
-                                .put("action", "start")
-                                .put("facing", "back")
-                            connection.outputStream.use {
-                                it.write(body.toString().toByteArray(Charsets.UTF_8))
-                            }
-                            val status = connection.responseCode
-                            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-                            val response = JSONObject(stream?.bufferedReader()?.use { it.readText() } ?: "{}")
-                            if (status !in 200..299) {
-                                throw Exception(response.optString("error", "Permintaan kamera ditolak"))
-                            }
-                        } finally {
-                            connection.disconnect()
-                        }
-                    }
-                    statusText.text = "Permintaan terkirim. Menunggu video HP anak…"
-                    startActivity(Intent(this@MainActivity, CameraViewerActivity::class.java)
-                        .putExtra(CameraViewerActivity.EXTRA_CODE, code))
-                } catch (error: Exception) {
-                    statusText.text = "Gagal meminta kamera: ${error.localizedMessage ?: "periksa koneksi dan pengaturan server"}"
-                }
-            }
-        }.addOnFailureListener {
-            statusText.text = "Tidak dapat mengambil token autentikasi"
-        }
+        startActivity(Intent(this, CameraViewerActivity::class.java)
+            .putExtra(CameraViewerActivity.EXTRA_CODE, code))
     }
 
     /**
