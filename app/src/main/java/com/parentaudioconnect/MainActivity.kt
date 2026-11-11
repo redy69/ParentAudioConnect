@@ -1288,7 +1288,6 @@ private var receivedMp3File: File? = null
         rootLayout.findViewWithTag<View>("santethp_maps_page")?.visibility = View.GONE
         childModePanel.visibility = View.GONE
         childLocationPanel.visibility = View.GONE
-        childPermissionAuditPanel.visibility = View.GONE
         childAppActivityPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.VISIBLE }
         updateButton.visibility = View.VISIBLE
