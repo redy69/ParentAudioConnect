@@ -171,7 +171,8 @@ class CameraViewerActivity : Activity() {
                     postJson("$WORKER_BASE/select-server", selection)
                 }
                 room = activeRoom
-                status.text = "Terhubung. Menunggu video dari HP anak…"
+                status.text = "Server disamakan • meminta kamera HP anak…"
+                sendCameraCommand("start", "back", closeAfter = false)
             } catch (error: Exception) {
                 // LiveKitFailover releases failed candidate rooms, but clear the
                 // activity reference too so the retry guard does not mistake a
