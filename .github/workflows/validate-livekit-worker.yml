@@ -30,3 +30,6 @@ jobs:
 
       - name: Check Worker JavaScript syntax
         run: node --check worker/parent-audio-token.js
+
+      - name: Validate Wrangler configuration and rate-limit binding
+        run: npx --yes wrangler@4.36.0 deploy --dry-run --config worker/wrangler.toml
