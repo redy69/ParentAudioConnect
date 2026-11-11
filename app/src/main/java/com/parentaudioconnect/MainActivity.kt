@@ -1007,13 +1007,26 @@ private var receivedMp3File: File? = null
             Toast.makeText(this, "Lokasi anak belum tersedia atau berbagi lokasi belum aktif.", Toast.LENGTH_LONG).show()
             return
         }
-        val choices = arrayOf("100 meter", "250 meter", "500 meter", "1.000 meter", "2.000 meter", "Nonaktifkan Geo-fence")
+
+        val choices = arrayOf(
+            "100 meter",
+            "250 meter",
+            "500 meter",
+            "1.000 meter",
+            "2.000 meter",
+            "Nonaktifkan Geo-fence"
+        )
+        var selectedChoice = 0
         AlertDialog.Builder(this)
             .setTitle("Atur area aman • ${childNames[code] ?: "Anak"}")
-            .setMessage("Pusat area akan menggunakan koordinat lokasi anak saat ini.")
-            .setItems(choices) { _, which ->
-                val enabled = which < 5
-                val radius = when (which) {
+            .setMessage("Pilih radius area aman. Titik pusat menggunakan koordinat lokasi anak saat ini.")
+            .setSingleChoiceItems(choices, selectedChoice) { _, which ->
+                selectedChoice = which
+            }
+            .setNegativeButton("Batal", null)
+            .setPositiveButton("Simpan") { _, _ ->
+                val enabled = selectedChoice < 5
+                val radius = when (selectedChoice) {
                     0 -> 100
                     1 -> 250
                     2 -> 500
@@ -1042,7 +1055,6 @@ private var receivedMp3File: File? = null
                         Toast.makeText(this, "Gagal menyimpan Geo-fence: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
                     }
             }
-            .setNegativeButton("Batal", null)
             .show()
     }
 
