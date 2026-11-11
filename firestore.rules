@@ -37,7 +37,8 @@ service cloud.firestore {
           'geofenceLatitude',
           'geofenceLongitude',
           'geofenceRadiusM',
-          'geofenceUpdatedAt'
+          'geofenceUpdatedAt',
+          'safeZones'
         ])
         && (!changed.hasAny(['usageScheduleEnabled'])
           || request.resource.data.usageScheduleEnabled is bool)
@@ -84,7 +85,10 @@ service cloud.firestore {
             && request.resource.data.geofenceRadiusM >= 50
             && request.resource.data.geofenceRadiusM <= 5000))
         && (!changed.hasAny(['geofenceUpdatedAt'])
-          || request.resource.data.geofenceUpdatedAt is timestamp);
+          || request.resource.data.geofenceUpdatedAt is timestamp)
+        && (!changed.hasAny(['safeZones'])
+          || (request.resource.data.safeZones is list
+            && request.resource.data.safeZones.size() <= 10));
     }
 
     function validChildStatusUpdate() {
