@@ -52,6 +52,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 import org.json.JSONObject
+import org.json.JSONArray
 
 import java.net.HttpURLConnection
 import java.net.URL
@@ -98,6 +99,7 @@ private lateinit var playMp3Button: Button
     private lateinit var childModePanel: TextView
     private lateinit var childLocationPanel: TextView
     private lateinit var childLocationMapView: ChildLocationMapView
+    private lateinit var safeZonesContainer: LinearLayout
     private lateinit var childPermissionAuditPanel: TextView
     private lateinit var parentPermissionAuditPanel: TextView
     private lateinit var childAppBlockPanel: TextView
@@ -806,8 +808,12 @@ private var receivedMp3File: File? = null
         mapsPage.addView(childLocationMapView, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
         ))
-        val geofenceButton = Button(this).apply {
-            text = "ATUR AREA AMAN (GEO-FENCE)"
+        childLocationMapView.onMapPointSelected = { latitude, longitude ->
+            childLocationMapView.setMapTapMode(false)
+            showSafeZoneEditor(selectedLatitude = latitude, selectedLongitude = longitude)
+        }
+        val addSafeZoneButton = Button(this).apply {
+            text = "＋ TAMBAH TITIK AMAN"
             isAllCaps = false
             textSize = 13f
             setTextColor(Color.WHITE)
@@ -815,16 +821,17 @@ private var receivedMp3File: File? = null
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(52)
             ).apply { setMargins(0, dp(12), 0, dp(8)) }
-            setOnClickListener { showGeofenceOptions() }
+            setOnClickListener { startSafeZoneMapSelection() }
         }
-        mapsPage.addView(geofenceButton)
-        val geofenceHint = TextView(this).apply {
-            text = "Tandai lokasi saat ini sebagai pusat area aman. Batas area akan ditampilkan pada peta."
+        mapsPage.addView(addSafeZoneButton)
+        mapsPage.addView(TextView(this).apply {
+            text = "Pilih lokasi langsung pada peta. Setiap titik dapat diberi nama dan radius 50–5.000 meter."
             textSize = 11f
             setTextColor(Color.rgb(104, 117, 140))
             setPadding(dp(4), dp(2), dp(4), dp(8))
-        }
-        mapsPage.addView(geofenceHint)
+        })
+        safeZonesContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        mapsPage.addView(safeZonesContainer)
         rootLayout.addView(mapsPage)
         mapsPage.tag = "santethp_maps_page"
 
@@ -996,66 +1003,246 @@ private var receivedMp3File: File? = null
         updateButton.visibility = View.GONE
     }
 
-    private fun showGeofenceOptions() {
-        val code = selectedChildCode
-        val snapshot = code?.let { childSnapshots[it] }
-        val latitude = snapshot?.getDouble("childLatitude")
-        val longitude = snapshot?.getDouble("childLongitude")
-        if (code == null || snapshot == null || latitude == null || longitude == null ||
-            snapshot.getBoolean("childLocationSharingEnabled") != true
-        ) {
-            Toast.makeText(this, "Lokasi anak belum tersedia atau berbagi lokasi belum aktif.", Toast.LENGTH_LONG).show()
+    private data class SafeZone(
+        val id: String,
+        val name: String,
+        val latitude: Double,
+        val longitude: Double,
+        val radiusM: Int
+    )
+
+    private fun readSafeZones(snapshot: DocumentSnapshot): MutableList<SafeZone> {
+        val result = mutableListOf<SafeZone>()
+        val raw = snapshot.get("safeZones") as? List<*>
+        if (raw != null) {
+            raw.forEachIndexed { index, value ->
+                val item = value as? Map<*, *> ?: return@forEachIndexed
+                val lat = (item["latitude"] as? Number)?.toDouble() ?: return@forEachIndexed
+                val lon = (item["longitude"] as? Number)?.toDouble() ?: return@forEachIndexed
+                val radius = (item["radiusM"] as? Number)?.toInt() ?: return@forEachIndexed
+                if (lat !in -90.0..90.0 || lon !in -180.0..180.0 || radius !in 50..5000) return@forEachIndexed
+                result.add(
+                    SafeZone(
+                        (item["id"] as? String) ?: "zone-" + index,
+                        (item["name"] as? String) ?: "Area aman " + (index + 1),
+                        lat, lon, radius
+                    )
+                )
+            }
+        } else if (snapshot.getBoolean("geofenceEnabled") == true) {
+            val lat = snapshot.getDouble("geofenceLatitude")
+            val lon = snapshot.getDouble("geofenceLongitude")
+            val radius = snapshot.getLong("geofenceRadiusM")?.toInt() ?: 0
+            if (lat != null && lon != null && radius in 50..5000) {
+                result.add(SafeZone("legacy-geofence", "Area aman lama", lat, lon, radius))
+            }
+        }
+        return result
+    }
+
+    private fun safeZonesJson(snapshot: DocumentSnapshot): String {
+        val array = JSONArray()
+        readSafeZones(snapshot).forEach { zone ->
+            array.put(
+                JSONObject().put("id", zone.id).put("name", zone.name)
+                    .put("latitude", zone.latitude).put("longitude", zone.longitude)
+                    .put("radiusM", zone.radiusM)
+            )
+        }
+        return array.toString()
+    }
+
+    private fun renderSafeZoneList(snapshot: DocumentSnapshot) {
+        if (!this::safeZonesContainer.isInitialized) return
+        safeZonesContainer.removeAllViews()
+        val zones = readSafeZones(snapshot)
+        safeZonesContainer.addView(TextView(this).apply {
+            text = "TITIK AMAN TERSIMPAN (" + zones.size + "/10)"
+            textSize = 12f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(39, 70, 122))
+            setPadding(dp(3), dp(10), dp(3), dp(7))
+        })
+        if (zones.isEmpty()) {
+            safeZonesContainer.addView(TextView(this).apply {
+                text = "Belum ada titik aman. Tekan tombol tambah, lalu pilih lokasi pada peta."
+                textSize = 12f
+                setTextColor(Color.rgb(104, 117, 140))
+            })
+            return
+        }
+        zones.forEach { zone ->
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(12), dp(10), dp(12), dp(10))
+                background = GradientDrawable().apply {
+                    setColor(Color.WHITE)
+                    cornerRadius = dp(14).toFloat()
+                    setStroke(dp(1), Color.rgb(218, 228, 242))
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, dp(4), 0, dp(4)) }
+            }
+            card.addView(TextView(this).apply {
+                text = zone.name + "  •  radius " + zone.radiusM + " m"
+                textSize = 13f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.rgb(36, 59, 96))
+            })
+            card.addView(TextView(this).apply {
+                text = String.format(java.util.Locale.US, "%.5f, %.5f", zone.latitude, zone.longitude)
+                textSize = 10.5f
+                setTextColor(Color.rgb(104, 117, 140))
+                setPadding(0, dp(3), 0, dp(5))
+            })
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            row.addView(Button(this).apply {
+                text = "Edit"
+                isAllCaps = false
+                setOnClickListener {
+                    childLocationMapView.focusLocation(zone.latitude, zone.longitude)
+                    showSafeZoneEditor(zone)
+                }
+            }, LinearLayout.LayoutParams(0, dp(42), 1f))
+            row.addView(Button(this).apply {
+                text = "Hapus"
+                isAllCaps = false
+                setOnClickListener {
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle("Hapus titik aman?")
+                        .setMessage("Area " + zone.name + " akan dihapus.")
+                        .setNegativeButton("Batal", null)
+                        .setPositiveButton("Hapus") { _, _ ->
+                            val latest = selectedChildCode?.let { childSnapshots[it] } ?: return@setPositiveButton
+                            saveSafeZones(readSafeZones(latest).filterNot { it.id == zone.id })
+                        }.show()
+                }
+            }, LinearLayout.LayoutParams(0, dp(42), 1f))
+            card.addView(row)
+            safeZonesContainer.addView(card)
+        }
+    }
+
+    private fun saveSafeZones(zones: List<SafeZone>) {
+        val code = selectedChildCode ?: return
+        if (zones.size > 10) {
+            Toast.makeText(this, "Maksimal 10 titik aman.", Toast.LENGTH_LONG).show()
+            return
+        }
+        val values = zones.map { zone ->
+            mapOf(
+                "id" to zone.id, "name" to zone.name,
+                "latitude" to zone.latitude, "longitude" to zone.longitude,
+                "radiusM" to zone.radiusM
+            )
+        }
+        db.collection("pairings").document(code).update(
+            mapOf(
+                "safeZones" to values,
+                "geofenceEnabled" to false,
+                "geofenceUpdatedAt" to Timestamp(Date())
+            )
+        ).addOnSuccessListener {
+            Toast.makeText(this, "Titik aman berhasil disimpan.", Toast.LENGTH_LONG).show()
+        }.addOnFailureListener { error ->
+            Toast.makeText(
+                this,
+                "Gagal menyimpan titik aman: " + (error.localizedMessage ?: "Periksa aturan Firestore."),
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun showSafeZoneEditor(
+        existing: SafeZone? = null,
+        selectedLatitude: Double? = null,
+        selectedLongitude: Double? = null
+    ) {
+        val code = selectedChildCode ?: return
+        val snapshot = childSnapshots[code]
+        if (snapshot?.getBoolean("childLocationSharingEnabled") != true) {
+            Toast.makeText(this, "Aktifkan berbagi lokasi di HP anak terlebih dahulu.", Toast.LENGTH_LONG).show()
+            return
+        }
+        val lat = selectedLatitude ?: existing?.latitude ?: snapshot.getDouble("childLatitude")
+        val lon = selectedLongitude ?: existing?.longitude ?: snapshot.getDouble("childLongitude")
+        if (lat == null || lon == null) {
+            Toast.makeText(this, "Lokasi belum tersedia. Pilih titik pada peta.", Toast.LENGTH_LONG).show()
             return
         }
 
-        val choices = arrayOf(
-            "100 meter",
-            "250 meter",
-            "500 meter",
-            "1.000 meter",
-            "2.000 meter",
-            "Nonaktifkan Geo-fence"
-        )
-        var selectedChoice = 0
-        AlertDialog.Builder(this)
-            .setTitle("Atur area aman • ${childNames[code] ?: "Anak"}")
-            .setMessage("Pilih radius area aman. Titik pusat menggunakan koordinat lokasi anak saat ini.")
-            .setSingleChoiceItems(choices, selectedChoice) { _, which ->
-                selectedChoice = which
-            }
-            .setNegativeButton("Batal", null)
-            .setPositiveButton("Simpan") { _, _ ->
-                val enabled = selectedChoice < 5
-                val radius = when (selectedChoice) {
-                    0 -> 100
-                    1 -> 250
-                    2 -> 500
-                    3 -> 1000
-                    4 -> 2000
-                    else -> 0
-                }
-                val update = hashMapOf<String, Any>(
-                    "geofenceEnabled" to enabled,
-                    "geofenceUpdatedAt" to Timestamp(Date())
-                )
-                if (enabled) {
-                    update["geofenceLatitude"] = latitude
-                    update["geofenceLongitude"] = longitude
-                    update["geofenceRadiusM"] = radius
-                }
-                db.collection("pairings").document(code).update(update)
-                    .addOnSuccessListener {
-                        Toast.makeText(
-                            this,
-                            if (enabled) "Area aman ${radius} m disimpan." else "Geo-fence dinonaktifkan.",
-                            Toast.LENGTH_LONG
-                        ).show()
+        val form = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(8), dp(22), dp(4))
+        }
+        val nameInput = EditText(this).apply {
+            hint = "Contoh: Rumah, Sekolah, Les"
+            setSingleLine(true)
+            setText(existing?.name ?: "")
+        }
+        val radiusInput = EditText(this).apply {
+            hint = "Radius 50–5000 meter"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setSingleLine(true)
+            setText((existing?.radiusM ?: 250).toString())
+        }
+        form.addView(TextView(this).apply { text = "Nama titik aman"; textSize = 12f })
+        form.addView(nameInput)
+        form.addView(TextView(this).apply {
+            text = "Radius dalam meter"
+            textSize = 12f
+            setPadding(0, dp(8), 0, 0)
+        })
+        form.addView(radiusInput)
+        form.addView(TextView(this).apply {
+            text = String.format(java.util.Locale.US, "Koordinat: %.6f, %.6f", lat, lon)
+            textSize = 10.5f
+            setTextColor(Color.rgb(104, 117, 140))
+            setPadding(0, dp(8), 0, 0)
+        })
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(if (existing == null) "Tambah titik aman" else "Edit titik aman")
+            .setView(form).setNegativeButton("Batal", null)
+            .setPositiveButton("Simpan", null).create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val name = nameInput.text.toString().trim()
+                val radius = radiusInput.text.toString().toIntOrNull()
+                if (name.isBlank()) {
+                    nameInput.error = "Isi nama lokasi"
+                } else if (radius == null || radius !in 50..5000) {
+                    radiusInput.error = "Masukkan 50 sampai 5000 meter"
+                } else {
+                    val latest = selectedChildCode?.let { childSnapshots[it] }
+                    val zones = latest?.let { readSafeZones(it) }?.toMutableList() ?: mutableListOf()
+                    if (existing == null && zones.size >= 10) {
+                        Toast.makeText(this, "Maksimal 10 titik aman.", Toast.LENGTH_LONG).show()
+                        return@setOnClickListener
                     }
-                    .addOnFailureListener { error ->
-                        Toast.makeText(this, "Gagal menyimpan Geo-fence: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
-                    }
+                    val zone = SafeZone(
+                        existing?.id ?: java.util.UUID.randomUUID().toString(),
+                        name, lat, lon, radius
+                    )
+                    val index = zones.indexOfFirst { it.id == zone.id }
+                    if (index >= 0) zones[index] = zone else zones.add(zone)
+                    dialog.dismiss()
+                    saveSafeZones(zones)
+                }
             }
-            .show()
+        }
+        dialog.show()
+    }
+
+    private fun startSafeZoneMapSelection() {
+        val snapshot = selectedChildCode?.let { childSnapshots[it] }
+        if (snapshot?.getBoolean("childLocationSharingEnabled") != true) {
+            Toast.makeText(this, "Berbagi lokasi harus aktif di HP anak.", Toast.LENGTH_LONG).show()
+            return
+        }
+        childLocationMapView.setMapTapMode(true)
+        Toast.makeText(this, "Geser peta lalu ketuk lokasi untuk membuat titik aman.", Toast.LENGTH_LONG).show()
     }
 
     private fun showMapsPage() {
@@ -1067,6 +1254,7 @@ private var receivedMp3File: File? = null
     }
 
     private fun showParentDashboard() {
+        childLocationMapView.setMapTapMode(false)
         roleIntroText.visibility = View.GONE
         rootLayout.findViewWithTag<View>("santethp_maps_page")?.visibility = View.GONE
         childModePanel.visibility = View.GONE
@@ -2744,13 +2932,12 @@ private var receivedMp3File: File? = null
         if (latitude != null && longitude != null) {
             childLocationMapView.showLocation(
                 latitude, longitude, accuracy, locationAt, sharingEnabled, locationFresh,
-                snapshot.getBoolean("geofenceEnabled") == true,
-                snapshot.getDouble("geofenceLatitude"),
-                snapshot.getDouble("geofenceLongitude"),
-                snapshot.getLong("geofenceRadiusM")?.toInt() ?: 0
+                safeZonesJson(snapshot)
             )
+            renderSafeZoneList(snapshot)
         } else {
             childLocationMapView.showUnavailable(sharingEnabled)
+            renderSafeZoneList(snapshot)
         }
     }
 
