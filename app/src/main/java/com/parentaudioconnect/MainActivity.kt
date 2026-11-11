@@ -2548,7 +2548,7 @@ private var receivedMp3File: File? = null
         val ageMs = updatedAt?.toDate()?.time?.let { System.currentTimeMillis() - it }
         val fresh = ageMs != null && ageMs in -60_000L..15 * 60 * 1000L
         val updateLabel = updatedAt?.let {
-            android.text.format.DateFormat.getTimeFormat(this).format(it.toDate())
+            android.text.format.DateFormat.getTimeFormat(this@MainActivity).format(it.toDate())
         } ?: "belum tersedia"
         val batteryLabel = if (battery in 0..100) "$battery%" else "Tidak tersedia"
         val chargeLabel = if (charging) " • Mengisi daya" else ""
@@ -2597,7 +2597,7 @@ private var receivedMp3File: File? = null
                 val activeName = snapshot.getString("appActivityName")
                 val activityAt = snapshot.getTimestamp("appActivityAt")
                 val activityTime = activityAt?.let {
-                    android.text.format.DateFormat.getTimeFormat(this).format(it.toDate())
+                    android.text.format.DateFormat.getTimeFormat(this@MainActivity).format(it.toDate())
                 }
                 if (activeName.isNullOrBlank()) {
                     append("\nMenunggu pergantian aplikasi pertama")
