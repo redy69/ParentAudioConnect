@@ -99,6 +99,8 @@ private lateinit var playMp3Button: Button
     private lateinit var childSchedulePanel: TextView
     private lateinit var childPermissionAuditPanel: TextView
     private lateinit var parentPermissionAuditPanel: TextView
+    private lateinit var childAppBlockPanel: TextView
+    private lateinit var parentAppBlockPanel: TextView
     private var pendingLocationStart = false
     private val parentOnlyViews = mutableListOf<View>()
     private var pendingPairingCode: String? = null
@@ -532,6 +534,26 @@ private var receivedMp3File: File? = null
             setOnClickListener { showChildPermissionAuditConsent() }
         }
         rootLayout.addView(childPermissionAuditPanel)
+        childAppBlockPanel = TextView(this).apply {
+            text = "🚫  BLOKIR APLIKASI\nNonaktif • Ketuk untuk membaca penjelasan dan mengaktifkan kontrol aplikasi"
+            textSize = 13f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(35, 53, 88))
+            gravity = Gravity.CENTER
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(dp(18), dp(18), dp(18), dp(18))
+            background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(255, 244, 237))).apply {
+                cornerRadius = dp(19).toFloat()
+                setStroke(dp(1), Color.rgb(245, 205, 180))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(3), 0, dp(12)) }
+            visibility = View.GONE
+            setOnClickListener { showChildAppBlockConsent() }
+        }
+        rootLayout.addView(childAppBlockPanel)
         val deviceSectionTitle = TextView(this).apply {
             text = "PERANGKAT ANAK"
             textSize = 11.5f
@@ -624,6 +646,24 @@ private var receivedMp3File: File? = null
         }
         rootLayout.addView(parentPermissionAuditPanel)
         parentOnlyViews.add(parentPermissionAuditPanel)
+        parentAppBlockPanel = TextView(this).apply {
+            text = "🚫  BLOKIR APLIKASI\nMenunggu persetujuan dan daftar aplikasi dari HP anak • Ketuk untuk mengatur"
+            textSize = 12.5f
+            setTextColor(Color.rgb(35, 53, 88))
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(dp(17), dp(16), dp(17), dp(16))
+            background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(255, 247, 241))).apply {
+                cornerRadius = dp(19).toFloat()
+                setStroke(dp(1), Color.rgb(245, 205, 180))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(4), 0, dp(8)) }
+            setOnClickListener { showParentAppBlockDialog() }
+        }
+        rootLayout.addView(parentAppBlockPanel)
+        parentOnlyViews.add(parentAppBlockPanel)
         rootLayout.addView(cancelPairingButton)
         val controlHeading = TextView(this).apply {
             text = "KONTROL UTAMA"
@@ -668,6 +708,7 @@ private var receivedMp3File: File? = null
         childModePanel.visibility = View.GONE
         childLocationPanel.visibility = View.GONE
         childPermissionAuditPanel.visibility = View.GONE
+        childAppBlockPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
         actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.VISIBLE
@@ -749,7 +790,9 @@ private var receivedMp3File: File? = null
         childModePanel.visibility = View.VISIBLE
         childLocationPanel.visibility = View.VISIBLE
         childPermissionAuditPanel.visibility = View.VISIBLE
+        childAppBlockPanel.visibility = View.VISIBLE
         updateChildLocationPanel()
+        updateChildAppBlockPanel()
         updateChildPermissionAuditPanel()
         updateButton.visibility = View.VISIBLE
         updateButton.text = "PERIKSA PEMBARUAN APLIKASI"
@@ -1622,6 +1665,112 @@ private var receivedMp3File: File? = null
             .show()
     }
 
+    private fun isAppBlockAccessibilityEnabled(): Boolean {
+        val expected = "$packageName/.ChildAppBlockAccessibilityService"
+        val enabled = android.provider.Settings.Secure.getString(
+            contentResolver, android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
+        return enabled.split(':').any { it.equals(expected, ignoreCase = true) }
+    }
+
+    private fun updateChildAppBlockPanel() {
+        if (!::childAppBlockPanel.isInitialized) return
+        val enabled = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            .getBoolean("child_app_block_consent", false)
+        val serviceEnabled = isAppBlockAccessibilityEnabled()
+        childAppBlockPanel.text = when {
+            !enabled -> "🚫  BLOKIR APLIKASI\\nNonaktif • Ketuk untuk membaca penjelasan dan memberi persetujuan"
+            !serviceEnabled -> "🚫  BLOKIR APLIKASI\\nPersetujuan diberikan, tetapi Aksesibilitas belum diaktifkan • Ketuk untuk pengaturan"
+            else -> "🚫  BLOKIR APLIKASI\\nAktif • HP anak dapat mencegah aplikasi pilihan orang tua dibuka • Ketuk untuk mengelola"
+        }
+    }
+
+    private fun showChildAppBlockConsent() {
+        if (currentRole != "child") return
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        val enabled = prefs.getBoolean("child_app_block_consent", false)
+        AlertDialog.Builder(this)
+            .setTitle("Kontrol blokir aplikasi")
+            .setMessage(
+                "Jika disetujui, HP anak mengirim daftar nama aplikasi yang tersedia agar orang tua dapat memilih aplikasi yang dibatasi. Saat aplikasi yang diblokir dibuka, SantetHP akan mengembalikan ke layar utama.\\n\\nUntuk menjalankannya Android meminta Accessibility Service diaktifkan secara manual. Layanan hanya memeriksa nama paket aplikasi yang sedang tampil; tidak membaca isi layar, pesan, foto, kata sandi, atau mengetik untuk pengguna. Anak dapat mencabut akses kapan saja dari Pengaturan Android."
+            )
+            .setNegativeButton("Tutup", null)
+            .setNeutralButton(if (enabled) "Matikan fitur" else "Setuju") { _, _ ->
+                prefs.edit().putBoolean("child_app_block_consent", !enabled).apply()
+                if (enabled) {
+                    com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                        .collection("pairings")
+                        .document(prefs.getString("pair_code", "") ?: "")
+                        .set(mapOf("appBlockConsent" to false, "blockedApps" to emptyList<String>()),
+                            com.google.firebase.firestore.SetOptions.merge())
+                }
+                ChildDeviceStatusWorker.schedule(this)
+                updateChildAppBlockPanel()
+            }
+            .setPositiveButton("Pengaturan Aksesibilitas") { _, _ ->
+                if (!enabled) prefs.edit().putBoolean("child_app_block_consent", true).apply()
+                try {
+                    startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                } catch (_: Exception) {
+                    Toast.makeText(this, "Pengaturan Aksesibilitas tidak tersedia", Toast.LENGTH_LONG).show()
+                }
+                updateChildAppBlockPanel()
+            }
+            .show()
+    }
+
+    private fun showParentAppBlockDialog() {
+        if (currentRole != "parent") return
+        val code = selectedChildCode
+        if (code.isNullOrBlank()) {
+            Toast.makeText(this, "Pilih perangkat anak terlebih dahulu.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        db.collection("pairings").document(code).get()
+            .addOnSuccessListener { snapshot ->
+                if (snapshot.getBoolean("appBlockConsent") != true) {
+                    AlertDialog.Builder(this)
+                        .setTitle("Blokir aplikasi")
+                        .setMessage("Fitur ini menunggu persetujuan dari HP anak dan aktivasi Accessibility Service secara manual.")
+                        .setPositiveButton("Mengerti", null).show()
+                    return@addOnSuccessListener
+                }
+                val apps = (snapshot.get("appBlockInstalledApps") as? List<*>)
+                    .orEmpty().mapNotNull { raw ->
+                        val item = raw as? Map<*, *> ?: return@mapNotNull null
+                        val pkg = item["packageName"] as? String ?: return@mapNotNull null
+                        val name = item["appName"] as? String ?: pkg
+                        pkg to name
+                    }.distinctBy { it.first }.sortedBy { it.second.lowercase() }
+                if (apps.isEmpty()) {
+                    Toast.makeText(this, "Daftar aplikasi belum tersedia. Pastikan HP anak online.", Toast.LENGTH_LONG).show()
+                    return@addOnSuccessListener
+                }
+                val existing = (snapshot.get("blockedApps") as? List<*>)?.filterIsInstance<String>()?.toSet().orEmpty()
+                val labels = apps.map { it.second }.toTypedArray()
+                val checked = BooleanArray(apps.size) { apps[it].first in existing }
+                AlertDialog.Builder(this)
+                    .setTitle("Pilih aplikasi yang diblokir")
+                    .setMultiChoiceItems(labels, checked) { _, which, isChecked -> checked[which] = isChecked }
+                    .setNegativeButton("Batal", null)
+                    .setPositiveButton("Simpan") { _, _ ->
+                        val selected = apps.filterIndexed { index, _ -> checked[index] }.map { it.first }
+                        db.collection("pairings").document(code)
+                            .update("blockedApps", selected,
+                                "appBlockUpdatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp())
+                            .addOnSuccessListener {
+                                Toast.makeText(this, "Daftar blokir diperbarui.", Toast.LENGTH_SHORT).show()
+                            }
+                            .addOnFailureListener {
+                                Toast.makeText(this, "Gagal menyimpan daftar blokir.", Toast.LENGTH_LONG).show()
+                            }
+                    }.show()
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Gagal mengambil daftar aplikasi anak.", Toast.LENGTH_LONG).show()
+            }
+    }
+
     private fun renderParentPermissionAudit(snapshot: DocumentSnapshot) {
         val enabled = snapshot.getBoolean("appPermissionAuditEnabled") == true
         val updated = snapshot.getTimestamp("appPermissionAuditAt")
@@ -2152,6 +2301,15 @@ private var receivedMp3File: File? = null
         }
 
         renderParentPermissionAudit(snapshot)
+
+        val blockConsent = snapshot.getBoolean("appBlockConsent") == true
+        val blocked = (snapshot.get("blockedApps") as? List<*>)?.filterIsInstance<String>().orEmpty()
+        val installedApps = (snapshot.get("appBlockInstalledApps") as? List<*>)?.size ?: 0
+        parentAppBlockPanel.text = if (!blockConsent) {
+            "🚫  BLOKIR APLIKASI\\nMenunggu persetujuan dari HP anak"
+        } else {
+            "🚫  BLOKIR APLIKASI\\nAplikasi tersedia: $installedApps\\nDiblokir: ${blocked.size}\\nKetuk untuk memilih aplikasi yang dibatasi"
+        }
 
         val latitude = snapshot.getDouble("childLatitude")
         val longitude = snapshot.getDouble("childLongitude")

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="child_app_block_accessibility_description">SantetHP memeriksa nama paket aplikasi yang sedang dibuka untuk menerapkan daftar blokir yang disetujui. Layanan tidak membaca isi layar.</string>
+</resources>

@@ -23,6 +23,7 @@ class ChildDeviceStatusWorker(
             AppUsageReporter.publish(applicationContext)
             ChildUsageScheduleReporter.syncAndNotify(applicationContext)
             AppPermissionAuditReporter.publish(applicationContext)
+            AppBlockReporter.publish(applicationContext)
             Result.success()
         } catch (error: Exception) {
             Result.retry()
