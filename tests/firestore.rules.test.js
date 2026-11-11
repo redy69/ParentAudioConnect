@@ -215,10 +215,15 @@ test("child can revoke app-block consent and clear the blocked-app list", async 
   }));
 });
 
-test("parent can select blocked apps only after child consent", async () => {
+test("parent can save a time-limited app block only after child consent", async () => {
   const db = testEnv.authenticatedContext("parent-user").firestore();
   await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
-    blockedApps: ["com.example.app"]
+    blockedApps: [{
+      packageName: "com.example.app",
+      appName: "Example",
+      blockedUntilMillis: Date.now() + 60 * 60 * 1000
+    }],
+    appBlockUpdatedAt: Timestamp.now()
   }));
 });
 
