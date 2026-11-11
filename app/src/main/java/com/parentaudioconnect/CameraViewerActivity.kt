@@ -145,10 +145,10 @@ class CameraViewerActivity : Activity() {
                                             runOnUiThread {
                                                 status.text = "Koneksi kamera terputus • menyambungkan kembali…"
                                             }
-                                            // While trying candidates, let the failover helper finish.
-                                            // The post-connect identity check below schedules recovery
-                                            // if the last candidate disconnected during its handshake.
-                                            if (!connecting) scheduleCameraReconnect(candidateRoom)
+                                            // Always queue recovery. The reconnect coroutine waits for
+                                            // the current candidate loop to finish before starting again,
+                                            // avoiding a lost disconnect event during the connect/finally race.
+                                            scheduleCameraReconnect(candidateRoom)
                                         }
                                     }
                                     else -> Unit
