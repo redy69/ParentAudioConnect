@@ -82,3 +82,5 @@ jobs:
         with:
           name: SantetHP-release
           path: app/build/outputs/apk/release/app-release.apk
+
+# Triggered by a commit on this branch to produce the LiveKit failover test APK.
