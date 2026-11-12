@@ -953,6 +953,10 @@ private var receivedMp3File: File? = null
 
     override fun onPause() {
         stopChildGalleryP2p()
+        if (currentRole == "parent" && parentGalleryDialog?.isShowing == true) {
+            parentGalleryStatus?.text = "Koneksi dihentikan saat aplikasi berada di latar belakang. Buka kembali Galeri Anak untuk menyambung."
+            stopParentGalleryP2p()
+        }
         super.onPause()
     }
 
@@ -1292,7 +1296,7 @@ private var receivedMp3File: File? = null
             val timestamp = event["occurredAt"] as? Timestamp
             val dateText = timestamp?.toDate()?.let { formatter.format(it) } ?: "Waktu tidak tersedia"
             safeZonesContainer.addView(TextView(this).apply {
-                text = (if (entering) "● MASUK  " else "○ KELUAR  ") + zoneName + "\\n" + dateText
+                text = (if (entering) "● MASUK  " else "○ KELUAR  ") + zoneName + "\n" + dateText
                 textSize = 11.5f
                 setLineSpacing(dp(2).toFloat(), 1f)
                 setTextColor(Color.rgb(48, 68, 105))
@@ -1839,7 +1843,7 @@ private var receivedMp3File: File? = null
         )
         val conditionTitle = "KONDISI HP ${name?.takeIf { it.isNotBlank() } ?: "ANAK"}"
         childDeviceStatusText.text = childDeviceStatusText.text.toString()
-            .replaceFirst(Regex("^KONDISI HP [^\\n]*"), conditionTitle)
+            .replaceFirst(Regex("^KONDISI HP [^\n]*"), conditionTitle)
     }
 
     private fun toggleChildrenPanel() {
@@ -3144,7 +3148,7 @@ private var receivedMp3File: File? = null
                             }
                             val info = TextView(this).apply {
                                 text = (if (item.kind == "VIDEO") "▶  " else "▣  ") +
-                                    item.name + "\\n" +
+                                    item.name + "\n" +
                                     android.text.format.Formatter.formatFileSize(this@MainActivity, item.sizeBytes)
                                 textSize = 12f
                                 setTextColor(Color.rgb(39, 53, 78))
@@ -3159,7 +3163,7 @@ private var receivedMp3File: File? = null
                                     .setTitle(item.name)
                                     .setMessage(
                                         "Ukuran asli: " + android.text.format.Formatter.formatFileSize(this, item.sizeBytes) +
-                                            "\\nFile asli hanya akan diminta setelah Anda memilih tombol unduh. Transfer dibatasi 200 MB dan diverifikasi dengan SHA-256."
+                                            "\nFile asli hanya akan diminta setelah Anda memilih tombol unduh. Transfer dibatasi 200 MB dan diverifikasi dengan SHA-256."
                                     )
                                     .setNegativeButton("Batal", null)
                                     .setPositiveButton("Unduh HD & simpan") { _, _ ->
@@ -3204,7 +3208,6 @@ private var receivedMp3File: File? = null
             onOriginalReady = { key, file, fileName, mime ->
                 runOnUiThread {
                     try {
-                        val media = parentGalleryMediaItems[key]
                         val uri = saveGalleryOriginalToDevice(file, fileName, mime)
                         if (uri != null) {
                             status.text = "File asli tersimpan di galeri HP orang tua."

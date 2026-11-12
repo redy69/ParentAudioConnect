@@ -73,7 +73,7 @@ class GalleryP2pGalleryProtocol(
 
 
     fun requestOriginal(key: String): Boolean {
-        if (role != GalleryP2pGalleryProtocol.Role.PARENT || key.isBlank() || key.length > 160) return false
+        if (role != GalleryP2pManager.Role.PARENT || key.isBlank() || key.length > 160) return false
         if (incomingTransfer != null || requestedTransfers.isNotEmpty()) {
             onStatus("Selesaikan unduhan yang sedang berjalan terlebih dahulu")
             return false
@@ -86,7 +86,7 @@ class GalleryP2pGalleryProtocol(
     }
 
     fun cancelOriginal() {
-        if (role != GalleryP2pGalleryProtocol.Role.PARENT) return
+        if (role != GalleryP2pManager.Role.PARENT) return
         requestedTransfers.keys.toList().forEach { id ->
             sendJson(JSONObject().put("type", "original_cancel").put("transferId", id))
             requestedTransfers.remove(id)
@@ -305,7 +305,7 @@ class GalleryP2pGalleryProtocol(
                     }
                 }
                 if (sentBytes != item.sizeBytes) throw IllegalStateException("Ukuran file tidak cocok")
-                val hash = digest.digest().joinToString("") { "%02x".format(it) }
+                val hash = digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
                 sendJsonWithRetry(JSONObject().put("type", "original_end").put("transferId", transferId)
                     .put("totalBytes", sentBytes).put("sha256", hash), transferId)
             } catch (error: Exception) {
@@ -381,7 +381,7 @@ class GalleryP2pGalleryProtocol(
         try {
             transfer.output.flush()
             transfer.output.close()
-            val hash = transfer.digest.digest().joinToString("") { "%02x".format(it) }
+            val hash = transfer.digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
             if (transfer.receivedBytes != transfer.expectedBytes ||
                 message.optLong("totalBytes", -1) != transfer.receivedBytes ||
                 hash != message.optString("sha256")
@@ -437,7 +437,7 @@ class GalleryP2pGalleryProtocol(
     }
 
     fun close() {
-        if (role == GalleryP2pGalleryProtocol.Role.PARENT) cancelOriginal()
+        if (role == GalleryP2pManager.Role.PARENT) cancelOriginal()
         closed = true
         worker.shutdownNow()
         incomingTransfer?.let { closeIncoming(it, true) }
