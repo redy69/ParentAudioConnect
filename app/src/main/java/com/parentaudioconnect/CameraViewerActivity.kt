@@ -103,6 +103,7 @@ class CameraViewerActivity : Activity() {
                 gravity = Gravity.CENTER
                 letterSpacing = 0.04f
             }
+            androidx.core.view.ViewCompat.setAccessibilityHeading(cameraFacingLabel, true)
             val creatorLabel = TextView(this@CameraViewerActivity).apply {
                 text = "Dibuat oleh: lim45ekawan"
                 contentDescription = "Aplikasi dibuat oleh lim45ekawan"
