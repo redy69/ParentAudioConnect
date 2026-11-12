@@ -868,10 +868,10 @@ private var receivedMp3File: File? = null
                 intArrayOf(Color.WHITE, Color.rgb(246, 249, 255))
             ).apply {
                 cornerRadius = dp(16).toFloat()
-                setStroke(dp(1), Color.argb(88, accent))
+                setStroke(dp(1), Color.argb(88, Color.red(accent), Color.green(accent), Color.blue(accent)))
             }
             elevation = dp(2).toFloat()
-            minHeight = dp(72)
+            minimumHeight = dp(72)
             isClickable = true
             isFocusable = true
             contentDescription = label
@@ -1065,7 +1065,7 @@ private var receivedMp3File: File? = null
             val empty = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                minHeight = dp(112)
+                minimumHeight = dp(112)
                 setPadding(dp(14), dp(14), dp(14), dp(14))
                 background = GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
