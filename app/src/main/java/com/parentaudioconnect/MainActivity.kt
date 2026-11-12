@@ -262,13 +262,13 @@ private var receivedMp3File: File? = null
 
         childAudioActivityText = TextView(this).apply {
             text = "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
-            textSize = 13f
+            textSize = 13.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.01f
+            letterSpacing = 0.015f
             setTextColor(Color.rgb(32, 55, 92))
             gravity = Gravity.CENTER_VERTICAL
-            setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(17), dp(16), dp(17), dp(16))
+            setLineSpacing(dp(4).toFloat(), 1f)
+            setPadding(dp(16), dp(14), dp(16), dp(14))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(237, 245, 255))
