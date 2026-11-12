@@ -205,6 +205,7 @@ private var receivedMp3File: File? = null
         }
 
         statusText = TextView(this).apply {
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             text = "Memeriksa koneksi..."
             textSize = 13f
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -266,6 +267,7 @@ private var receivedMp3File: File? = null
         }
 
         childAudioActivityText = TextView(this).apply {
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             text = "STATUS AUDIO HP ANAK\nTidak sedang memutar audio"
             textSize = 13f
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -289,6 +291,7 @@ private var receivedMp3File: File? = null
         }
 
         codeText = TextView(this).apply {
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             textSize = 26f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.14f
