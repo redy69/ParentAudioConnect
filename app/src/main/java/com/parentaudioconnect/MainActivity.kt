@@ -1110,9 +1110,9 @@ private var receivedMp3File: File? = null
                 text = "Lepaskan"
                 textSize = 10.5f
                 isAllCaps = false
-                minHeight = dp(36)
-                minWidth = dp(66)
-                setPadding(dp(8), 0, dp(8), 0)
+                minHeight = dp(44)
+                minWidth = dp(72)
+                setPadding(dp(9), dp(4), dp(9), dp(4))
                 setTextColor(Color.rgb(169, 62, 72))
                 background = GradientDrawable().apply {
                     setColor(Color.rgb(255, 247, 247))
@@ -1120,7 +1120,7 @@ private var receivedMp3File: File? = null
                     setStroke(dp(1), Color.rgb(245, 220, 222))
                 }
                 layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)
+                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)
                 ).apply { leftMargin = dp(7) }
                 setOnClickListener { promptRemoveChild(code) }
             }
