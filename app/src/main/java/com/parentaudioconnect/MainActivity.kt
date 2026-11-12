@@ -501,6 +501,8 @@ private var receivedMp3File: File? = null
             visibility = View.GONE
         }
         androidx.core.view.ViewCompat.setAccessibilityHeading(childModePanel, true)
+        childModePanel.contentDescription =
+            "HP anak siap. Perangkat berhasil terhubung. Menunggu perintah dari HP orang tua."
         rootLayout.addView(roleIntroText)
         rootLayout.addView(childModePanel)
         val deviceSectionTitle = TextView(this).apply {
