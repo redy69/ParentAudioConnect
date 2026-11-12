@@ -1240,6 +1240,9 @@ private var receivedMp3File: File? = null
             hint = "Nama anak"
             contentDescription = "Kolom untuk memasukkan nama perangkat anak"
             isSingleLine = true
+            minHeight = dp(56)
+            textSize = 16f
+            setPadding(dp(14), dp(10), dp(14), dp(10))
         }
         AlertDialog.Builder(this)
             .setTitle("Beri nama anak")
