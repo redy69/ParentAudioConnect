@@ -284,45 +284,45 @@ private var receivedMp3File: File? = null
         }
 
         codeText = TextView(this).apply {
-            textSize = 28f
+            textSize = 26f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.12f
+            letterSpacing = 0.14f
             setTextColor(Color.rgb(39, 78, 180))
             gravity = Gravity.CENTER
-            setPadding(dp(16), dp(17), dp(16), dp(17))
+            setPadding(dp(14), dp(14), dp(14), dp(14))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(232, 240, 255))
             ).apply {
-                cornerRadius = dp(19).toFloat()
-                setStroke(dp(1), Color.rgb(198, 216, 246))
+                cornerRadius = dp(17).toFloat()
+                setStroke(dp(1), Color.rgb(190, 211, 242))
             }
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(5), 0, dp(7)) }
+            ).apply { setMargins(0, dp(4), 0, dp(6)) }
         }
 
         pairingInstructionText = TextView(this).apply {
             text = "HUBUNGKAN HP ANAK\nMasukkan kode ini pada aplikasi SantetHP di perangkat anak. Kode berlaku selama 15 menit."
-            textSize = 14f
+            textSize = 13.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.005f
+            letterSpacing = 0.008f
             setTextColor(Color.rgb(38, 59, 99))
             gravity = Gravity.CENTER
-            setLineSpacing(dp(4).toFloat(), 1f)
-            setPadding(dp(19), dp(18), dp(19), dp(18))
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(dp(15), dp(14), dp(15), dp(14))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(239, 245, 255))
             ).apply {
-                cornerRadius = dp(19).toFloat()
-                setStroke(dp(1), Color.rgb(202, 219, 247))
+                cornerRadius = dp(17).toFloat()
+                setStroke(dp(1), Color.rgb(195, 215, 243))
             }
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(10), 0, dp(4)) }
+            ).apply { setMargins(0, dp(7), 0, dp(4)) }
             visibility = View.GONE
         }
 
@@ -981,7 +981,7 @@ private var receivedMp3File: File? = null
         if (!::childrenContainer.isInitialized) return
         childrenContainer.removeAllViews()
         childrenContainer.orientation = LinearLayout.VERTICAL
-        childrenContainer.setPadding(dp(7), dp(7), dp(7), dp(7))
+        childrenContainer.setPadding(dp(8), dp(8), dp(8), dp(8))
         childrenContainer.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
             intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
@@ -995,7 +995,7 @@ private var receivedMp3File: File? = null
             val empty = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(dp(12), dp(12), dp(12), dp(12))
+                setPadding(dp(10), dp(10), dp(10), dp(10))
                 background = GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
                     intArrayOf(Color.WHITE, Color.rgb(247, 250, 255))
@@ -1006,9 +1006,9 @@ private var receivedMp3File: File? = null
             }
             empty.addView(TextView(this).apply {
                 text = "📱"
-                textSize = 30f
+                textSize = 28f
                 gravity = Gravity.CENTER
-                setPadding(0, 0, 0, dp(7))
+                setPadding(0, 0, 0, dp(5))
                 contentDescription = "Ilustrasi perangkat anak"
             })
             empty.addView(TextView(this).apply {
@@ -1136,12 +1136,12 @@ private var receivedMp3File: File? = null
 
         val addRow = TextView(this).apply {
             text = "＋    Tambahkan perangkat anak"
-            textSize = 12f
+            textSize = 11.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.005f
+            letterSpacing = 0.008f
             setTextColor(Color.rgb(42, 82, 174))
             gravity = Gravity.CENTER
-            setPadding(dp(12), dp(9), dp(12), dp(9))
+            setPadding(dp(12), dp(10), dp(12), dp(10))
             background = GradientDrawable(
                 GradientDrawable.Orientation.LEFT_RIGHT,
                 intArrayOf(Color.rgb(239, 245, 255), Color.rgb(229, 238, 255))
