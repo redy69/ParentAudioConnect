@@ -204,20 +204,20 @@ private var receivedMp3File: File? = null
             text = "Memeriksa koneksi..."
             textSize = 13f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.01f
+            letterSpacing = 0.012f
             setTextColor(Color.rgb(34, 57, 96))
             gravity = Gravity.CENTER_VERTICAL
-            setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(12), dp(8), dp(12), dp(8))
+            setLineSpacing(dp(2).toFloat(), 1f)
+            setPadding(dp(13), dp(9), dp(13), dp(9))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
             ).apply {
-                cornerRadius = dp(18).toFloat()
-                setStroke(dp(1), Color.rgb(195, 215, 245))
+                cornerRadius = dp(16).toFloat()
+                setStroke(dp(1), Color.rgb(190, 211, 242))
             }
             elevation = dp(2).toFloat()
-            minHeight = dp(44)
+            minHeight = dp(46)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { setMargins(0, dp(2), 0, dp(4)) }
@@ -225,11 +225,12 @@ private var receivedMp3File: File? = null
 
         connectionStatusText = TextView(this).apply {
             text = "○ OFFLINE"
-            textSize = 11f
+            textSize = 10.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
+            letterSpacing = 0.025f
             setTextColor(Color.rgb(105, 116, 137))
             gravity = Gravity.CENTER
-            setPadding(dp(8), dp(7), dp(8), dp(7))
+            setPadding(dp(9), dp(6), dp(9), dp(6))
             background = GradientDrawable().apply {
                 setColor(Color.rgb(239, 243, 249))
                 cornerRadius = dp(14).toFloat()
@@ -238,7 +239,7 @@ private var receivedMp3File: File? = null
             minWidth = dp(76)
             maxLines = 1
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(38)
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)
             ).apply { setMargins(dp(4), 0, dp(4), 0) }
         }
 
@@ -262,19 +263,19 @@ private var receivedMp3File: File? = null
 
         childAudioActivityText = TextView(this).apply {
             text = "STATUS AUDIO HP ANAK\nTidak sedang memutar audio"
-            textSize = 13.5f
+            textSize = 13f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.015f
+            letterSpacing = 0.012f
             setTextColor(Color.rgb(32, 55, 92))
             gravity = Gravity.CENTER_VERTICAL
-            setLineSpacing(dp(4).toFloat(), 1f)
-            setPadding(dp(13), dp(8), dp(13), dp(8))
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(dp(12), dp(8), dp(12), dp(8))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(237, 245, 255))
             ).apply {
-                cornerRadius = dp(20).toFloat()
-                setStroke(dp(1), Color.rgb(194, 215, 246))
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), Color.rgb(190, 211, 242))
             }
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
@@ -813,13 +814,13 @@ private var receivedMp3File: File? = null
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(7), dp(6), dp(6), dp(7))
+            setPadding(dp(8), dp(7), dp(7), dp(8))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(246, 249, 255))
             ).apply {
-                cornerRadius = dp(17).toFloat()
-                setStroke(dp(1), Color.argb(72, accent))
+                cornerRadius = dp(16).toFloat()
+                setStroke(dp(1), Color.argb(88, accent))
             }
             elevation = dp(2).toFloat()
             isClickable = true
@@ -828,7 +829,7 @@ private var receivedMp3File: File? = null
         }
         val iconView = TextView(this).apply {
             text = icon
-            textSize = 23.5f
+            textSize = 22.5f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
             background = GradientDrawable(
@@ -839,8 +840,8 @@ private var receivedMp3File: File? = null
                 setStroke(dp(1), Color.argb(48, 255, 255, 255))
             }
             elevation = dp(1).toFloat()
-            layoutParams = LinearLayout.LayoutParams(dp(38), dp(38)).apply {
-                rightMargin = dp(7)
+            layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply {
+                rightMargin = dp(6)
             }
         }
         val helper = when (label) {
@@ -858,7 +859,7 @@ private var receivedMp3File: File? = null
         }
         val labelView = TextView(this).apply {
             text = label
-            textSize = 11.5f
+            textSize = 11.25f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.012f
             setTextColor(Color.rgb(27, 43, 73))
@@ -867,9 +868,9 @@ private var receivedMp3File: File? = null
         }
         val helperView = TextView(this).apply {
             text = helper
-            textSize = 9.5f
+            textSize = 9.25f
             setTextColor(Color.rgb(88, 105, 134))
-            setPadding(0, dp(4), 0, 0)
+            setPadding(0, dp(3), 0, 0)
             maxLines = 2
             setLineSpacing(dp(1).toFloat(), 1f)
         }
