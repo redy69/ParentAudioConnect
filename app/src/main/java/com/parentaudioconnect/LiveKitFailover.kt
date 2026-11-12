@@ -11,9 +11,9 @@ data class LiveKitConnection(
 )
 
 /**
- * Connects using the server order returned by the Worker. When a paired server is
- * explicitly supplied, only that server is attempted so the two devices cannot
- * silently land in different LiveKit projects.
+ * Tries the preferred paired server first, followed by every configured fallback
+ * in the order returned by the Worker. The Worker keeps this order identical for
+ * both paired devices; a saved preference must not suppress fallback candidates.
  */
 object LiveKitFailover {
     suspend fun connect(
@@ -39,7 +39,6 @@ object LiveKitFailover {
         for (index in 0 until candidates.length()) {
             val candidate = candidates.optJSONObject(index) ?: continue
             val id = candidate.optString("id")
-            if (preferred.isNotBlank() && id != preferred) continue
             val token = candidate.optString("token")
             val serverUrl = candidate.optString("serverUrl")
             if (token.isBlank() || serverUrl.isBlank()) continue
@@ -57,19 +56,12 @@ object LiveKitFailover {
                 }
                 try { candidateRoom.disconnect() } catch (_: Exception) { }
                 try { candidateRoom.release() } catch (_: Exception) { }
-                if (preferred.isNotBlank()) {
-                    throw IllegalStateException(
-                        "Server pasangan $preferred gagal dihubungi; menunggu pilihan server baru.",
-                        error
-                    )
-                }
                 lastError = error
             }
         }
 
         throw IllegalStateException(
-            if (preferred.isNotBlank()) "Server pasangan $preferred tidak tersedia."
-            else "Semua server LiveKit gagal dihubungi (${candidates.length()} server)",
+            "Semua server LiveKit gagal dihubungi (${candidates.length()} server)",
             if (preferred.isNotBlank()) null else lastError
         )
     }
