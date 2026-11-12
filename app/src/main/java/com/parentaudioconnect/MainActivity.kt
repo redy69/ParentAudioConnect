@@ -500,6 +500,7 @@ private var receivedMp3File: File? = null
             ).apply { setMargins(0, dp(8), 0, dp(10)) }
             visibility = View.GONE
         }
+        androidx.core.view.ViewCompat.setAccessibilityHeading(childModePanel, true)
         rootLayout.addView(roleIntroText)
         rootLayout.addView(childModePanel)
         val deviceSectionTitle = TextView(this).apply {
