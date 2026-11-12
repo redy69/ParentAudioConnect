@@ -539,6 +539,7 @@ private var receivedMp3File: File? = null
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { setMargins(0, dp(2), 0, 0) }
         }
+        androidx.core.view.ViewCompat.setAccessibilityHeading(statusHeading, true)
         rootLayout.addView(statusHeading)
         parentOnlyViews.add(statusHeading)
         rootLayout.addView(statusText)
@@ -555,6 +556,7 @@ private var receivedMp3File: File? = null
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { setMargins(0, dp(2), 0, 0) }
         }
+        androidx.core.view.ViewCompat.setAccessibilityHeading(activityHeading, true)
         rootLayout.addView(activityHeading)
         parentOnlyViews.add(activityHeading)
         rootLayout.addView(childAudioActivityText)
@@ -570,6 +572,7 @@ private var receivedMp3File: File? = null
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { setMargins(0, dp(2), 0, 0) }
         }
+        androidx.core.view.ViewCompat.setAccessibilityHeading(controlHeading, true)
         rootLayout.addView(controlHeading)
         parentOnlyViews.add(controlHeading)
         rootLayout.addView(actionButtonsRow)
