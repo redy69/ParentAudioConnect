@@ -199,8 +199,8 @@ private var receivedMp3File: File? = null
                 textSize = 12.5f
                 setTextColor(Color.rgb(224, 234, 255))
                 letterSpacing = 0.015f
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
+                maxLines = 2
+                setLineSpacing(dp(1).toFloat(), 1f)
             })
         }
 
@@ -244,7 +244,8 @@ private var receivedMp3File: File? = null
             }
             minWidth = dp(76)
             minHeight = dp(40)
-            maxLines = 1
+            maxLines = 2
+            setLineSpacing(dp(1).toFloat(), 1f)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { setMargins(dp(4), 0, dp(4), 0) }
