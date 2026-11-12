@@ -298,7 +298,6 @@ class GalleryP2pGalleryProtocol(
                 sendJson(JSONObject().put("type", "original_error").put("transferId", transferId).put("message", "Ukuran file melebihi batas transfer 200 MB"))
                 return@execute
             }
-            cancelledTransfers.remove(transferId)
             try {
                 val digest = MessageDigest.getInstance("SHA-256")
                 val start = JSONObject().put("type", "original_start").put("transferId", transferId)
