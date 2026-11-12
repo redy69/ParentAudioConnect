@@ -261,7 +261,7 @@ private var receivedMp3File: File? = null
         }
 
         childAudioActivityText = TextView(this).apply {
-            text = "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
+            text = "STATUS AUDIO HP ANAK\nTidak sedang memutar audio"
             textSize = 13.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.015f
@@ -1680,13 +1680,13 @@ private var receivedMp3File: File? = null
 
         childAudioActivityText.text = when {
             liveAudioActive && mp3AudioActive ->
-                "AKTIVITAS HP ANAK\nMP3 dan audio live sedang aktif"
+                "STATUS AUDIO HP ANAK\nMP3 dan audio live sedang aktif"
             liveAudioActive ->
-                "AKTIVITAS HP ANAK\nAudio langsung sedang diputar"
+                "STATUS AUDIO HP ANAK\nAudio langsung sedang diputar"
             mp3AudioActive ->
-                "AKTIVITAS HP ANAK\nMP3 sedang diputar"
+                "STATUS AUDIO HP ANAK\nMP3 sedang diputar"
             else ->
-                "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
+                "STATUS AUDIO HP ANAK\nTidak sedang memutar audio"
         }
         val audioIsActive = liveAudioActive || mp3AudioActive
         childAudioActivityText.setTextColor(
