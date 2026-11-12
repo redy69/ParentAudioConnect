@@ -145,7 +145,7 @@ private var receivedMp3File: File? = null
         val title = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(23), dp(20), dp(23), dp(21))
+            setPadding(dp(21), dp(18), dp(21), dp(18))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.rgb(15, 29, 64), Color.rgb(35, 69, 139), Color.rgb(67, 104, 183))
@@ -170,7 +170,7 @@ private var receivedMp3File: File? = null
             }
             brandRow.addView(TextView(this@MainActivity).apply {
                 text = "SantetHP"
-                textSize = 30f
+                textSize = 28f
                 letterSpacing = 0.005f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE)
@@ -194,7 +194,7 @@ private var receivedMp3File: File? = null
 
             addView(TextView(this@MainActivity).apply {
                 text = "Ruang kendali orang tua"
-                textSize = 13.5f
+                textSize = 13f
                 setTextColor(Color.rgb(224, 234, 255))
                 letterSpacing = 0.015f
             })
@@ -361,7 +361,7 @@ private var receivedMp3File: File? = null
         ).apply { cornerRadius = dp(18).toFloat() }
         childButton.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
-            intArrayOf(Color.rgb(20, 135, 163), Color.rgb(34, 105, 190))
+            intArrayOf(Color.rgb(35, 73, 174), Color.rgb(55, 105, 220))
         ).apply { cornerRadius = dp(18).toFloat() }
         startButton = createActionButton("🎙", "BICARA LIVE", Color.rgb(55, 80, 220))
         stopButton = createActionButton("🎙", "HENTIKAN LIVE", Color.rgb(220, 75, 75))
