@@ -1095,7 +1095,7 @@ private var receivedMp3File: File? = null
             })
             details.addView(TextView(this).apply {
                 text = if (connected) "● ONLINE  •  Terhubung" else "○ OFFLINE  •  Menunggu koneksi"
-                textSize = 9.5f
+                textSize = 10f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 letterSpacing = 0.005f
                 setPadding(dp(8), dp(4), dp(8), dp(4))
