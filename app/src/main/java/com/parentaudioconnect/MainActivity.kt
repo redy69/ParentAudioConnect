@@ -985,6 +985,16 @@ private var receivedMp3File: File? = null
         selectedChildButton.text = if (name.isNullOrBlank()) "▣  Pilih perangkat anak  $arrow" else "▣  $name  $arrow"
         val connected = selectedChildCode?.let { childConnected[it] == true } == true
         connectionStatusText.text = if (connected) "● ONLINE" else "○ OFFLINE"
+        selectedChildButton.contentDescription = if (name.isNullOrBlank()) {
+            "Pilih perangkat anak. Ketuk untuk membuka daftar perangkat."
+        } else {
+            "Perangkat anak $name, status " + (if (connected) "online" else "offline") + ". Ketuk untuk memilih perangkat lain."
+        }
+        connectionStatusText.contentDescription = if (connected) {
+            "Status koneksi: online"
+        } else {
+            "Status koneksi: offline"
+        }
         connectionStatusText.setTextColor(
             if (connected) Color.rgb(24, 128, 82) else Color.rgb(105, 116, 137)
         )
