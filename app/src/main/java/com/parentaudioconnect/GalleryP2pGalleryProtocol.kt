@@ -1,9 +1,13 @@
 package com.santethp
 
 import android.content.Context
+import android.database.ContentObserver
 import android.content.pm.PackageManager
 import android.util.Base64
 import android.util.Log
+import android.os.Handler
+import android.os.Looper
+import android.provider.MediaStore
 import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
@@ -52,6 +56,34 @@ class GalleryP2pGalleryProtocol(
     private val requestedTransfers = ConcurrentHashMap<String, String>()
     private val cancelledTransfers = ConcurrentHashMap.newKeySet<String>()
     @Volatile private var incomingTransfer: IncomingTransfer? = null
+    private val observerHandler = Handler(Looper.getMainLooper())
+    private val mediaRefreshRunnable = Runnable {
+        if (!closed && role == GalleryP2pManager.Role.CHILD && sharingAllowed()) sendIndex(0)
+    }
+    private var mediaObserver: ContentObserver? = null
+
+    init {
+        if (role == GalleryP2pManager.Role.CHILD) {
+            val observer = object : ContentObserver(observerHandler) {
+                override fun onChange(selfChange: Boolean) = scheduleMediaRefresh()
+                override fun onChange(selfChange: Boolean, uri: android.net.Uri?) = scheduleMediaRefresh()
+            }
+            try {
+                appContext.contentResolver.registerContentObserver(
+                    MediaStore.Files.getContentUri("external"), true, observer
+                )
+                mediaObserver = observer
+            } catch (error: Exception) {
+                Log.w(TAG, "Tidak dapat memasang pemantau perubahan galeri", error)
+            }
+        }
+    }
+
+    private fun scheduleMediaRefresh() {
+        if (closed || !sharingAllowed()) return
+        observerHandler.removeCallbacks(mediaRefreshRunnable)
+        observerHandler.postDelayed(mediaRefreshRunnable, 2000)
+    }
 
     private data class IncomingTransfer(
         val transferId: String, val key: String, val name: String, val mime: String,
@@ -479,6 +511,11 @@ class GalleryP2pGalleryProtocol(
     fun close() {
         if (role == GalleryP2pManager.Role.PARENT) cancelOriginal()
         closed = true
+        observerHandler.removeCallbacks(mediaRefreshRunnable)
+        mediaObserver?.let {
+            try { appContext.contentResolver.unregisterContentObserver(it) } catch (_: Exception) { }
+        }
+        mediaObserver = null
         worker.shutdownNow()
         incomingTransfer?.let { closeIncoming(it, true) }
         incomingTransfer = null
