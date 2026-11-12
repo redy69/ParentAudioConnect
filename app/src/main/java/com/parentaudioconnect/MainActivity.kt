@@ -3094,9 +3094,9 @@ private var receivedMp3File: File? = null
                 parentGalleryRows.clear()
                 parentGalleryThumbQueue.clear()
                 parentGalleryThumbInFlight = null
-                parentGalleryIndexRequested = false
-                parentGalleryProtocol?.requestIndex()
-                status.text = "Meminta daftar foto dan video terbaru…"
+                parentGalleryIndexRequested = parentGalleryProtocol?.requestIndex() == true
+                status.text = if (parentGalleryIndexRequested) "Meminta daftar foto dan video terbaru…"
+                    else "P2P belum siap. Tunggu koneksi langsung, lalu muat ulang."
             }
         }
         dialog.setOnDismissListener {
@@ -3241,8 +3241,7 @@ private var receivedMp3File: File? = null
                 runOnUiThread {
                     if (parentGalleryDialog?.isShowing == true) status.text = message
                     if (message.contains("P2P TERHUBUNG") && !parentGalleryIndexRequested) {
-                        parentGalleryIndexRequested = true
-                        protocol.requestIndex()
+                        parentGalleryIndexRequested = protocol.requestIndex()
                     }
                 }
             },
