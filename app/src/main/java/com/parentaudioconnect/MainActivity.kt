@@ -1055,7 +1055,7 @@ private var receivedMp3File: File? = null
                 textSize = 28f
                 gravity = Gravity.CENTER
                 setPadding(0, 0, 0, dp(5))
-                contentDescription = "Ilustrasi perangkat anak"
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             })
             empty.addView(TextView(this).apply {
                 text = "Belum ada perangkat anak"
@@ -1109,7 +1109,7 @@ private var receivedMp3File: File? = null
                 layoutParams = LinearLayout.LayoutParams(dp(44), dp(44)).apply {
                     rightMargin = dp(9)
                 }
-                contentDescription = "Ilustrasi profil perangkat anak"
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }
             row.addView(phoneIcon)
             val details = LinearLayout(this).apply {
@@ -1143,7 +1143,7 @@ private var receivedMp3File: File? = null
             row.addView(details)
             if (selectedChildCode == code) row.addView(TextView(this).apply {
                 text = "✓"
-                contentDescription = "Perangkat $name sedang dipilih"
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
                 textSize = 16f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 gravity = Gravity.CENTER
