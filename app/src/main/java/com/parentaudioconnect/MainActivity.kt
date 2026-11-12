@@ -1196,7 +1196,7 @@ private var receivedMp3File: File? = null
                     setStroke(dp(1), Color.rgb(245, 220, 222))
                 }
                 layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
                 ).apply { leftMargin = dp(7) }
                 setOnClickListener { promptRemoveChild(code) }
             }
