@@ -180,7 +180,7 @@ private var receivedMp3File: File? = null
             })
             brandRow.addView(TextView(this@MainActivity).apply {
                 text = "ORTU"
-                textSize = 10f
+                textSize = 9.5f
                 letterSpacing = 0.08f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE)
@@ -236,7 +236,7 @@ private var receivedMp3File: File? = null
             letterSpacing = 0.025f
             setTextColor(Color.rgb(105, 116, 137))
             gravity = Gravity.CENTER
-            setPadding(dp(8), dp(4), dp(8), dp(4))
+            setPadding(dp(7), dp(3), dp(7), dp(3))
             background = GradientDrawable().apply {
                 setColor(Color.rgb(239, 243, 249))
                 cornerRadius = dp(14).toFloat()
@@ -306,7 +306,7 @@ private var receivedMp3File: File? = null
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(232, 240, 255))
             ).apply {
-                cornerRadius = dp(17).toFloat()
+                cornerRadius = dp(14).toFloat()
                 setStroke(dp(1), Color.rgb(190, 211, 242))
             }
             elevation = dp(2).toFloat()
@@ -938,7 +938,7 @@ private var receivedMp3File: File? = null
     private fun createButton(label: String): Button {
         return Button(this).apply {
             text = label
-            textSize = 14f
+            textSize = 13.5f
             isAllCaps = false
             setTextColor(Color.WHITE)
             background = GradientDrawable(
@@ -1105,7 +1105,7 @@ private var receivedMp3File: File? = null
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(9), dp(7), dp(7), dp(7))
+                setPadding(dp(7), dp(5), dp(5), dp(5))
                 background = GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
                     if (selectedChildCode == code)
@@ -1128,11 +1128,11 @@ private var receivedMp3File: File? = null
                     "Ketuk untuk memilih, tekan lama untuk mengubah nama."
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply { setMargins(0, dp(2), 0, dp(2)) }
+                ).apply { setMargins(0, dp(1), 0, dp(1)) }
             }
             val phoneIcon = ChildAvatarView().apply {
-                layoutParams = LinearLayout.LayoutParams(dp(44), dp(44)).apply {
-                    rightMargin = dp(9)
+                layoutParams = LinearLayout.LayoutParams(dp(38), dp(38)).apply {
+                    rightMargin = dp(7)
                 }
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }
@@ -1188,9 +1188,9 @@ private var receivedMp3File: File? = null
                 isAllCaps = false
                 maxLines = 2
                 setLineSpacing(dp(1).toFloat(), 1f)
-                minHeight = dp(48)
-                minWidth = dp(72)
-                setPadding(dp(9), dp(6), dp(9), dp(6))
+                minHeight = dp(44)
+                minWidth = dp(68)
+                setPadding(dp(7), dp(4), dp(7), dp(4))
                 setTextColor(Color.rgb(169, 62, 72))
                 background = GradientDrawable().apply {
                     setColor(Color.rgb(255, 247, 247))
@@ -1216,8 +1216,8 @@ private var receivedMp3File: File? = null
             letterSpacing = 0.008f
             setTextColor(Color.rgb(42, 82, 174))
             gravity = Gravity.CENTER
-            minHeight = dp(48)
-            setPadding(dp(12), dp(10), dp(12), dp(10))
+            minHeight = dp(42)
+            setPadding(dp(10), dp(7), dp(10), dp(7))
             background = GradientDrawable(
                 GradientDrawable.Orientation.LEFT_RIGHT,
                 intArrayOf(Color.rgb(239, 245, 255), Color.rgb(229, 238, 255))
@@ -1227,7 +1227,7 @@ private var receivedMp3File: File? = null
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(dp(2), dp(8), dp(2), dp(2)) }
+            ).apply { setMargins(dp(2), dp(5), dp(2), dp(1)) }
             isClickable = true
             isFocusable = true
         }
