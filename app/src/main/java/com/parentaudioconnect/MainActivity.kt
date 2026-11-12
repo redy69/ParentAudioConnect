@@ -385,14 +385,14 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
-        val actionParams = LinearLayout.LayoutParams(0, dp(112), 1f).apply {
-            setMargins(dp(5), dp(6), dp(5), dp(6))
+        val actionParams = LinearLayout.LayoutParams(0, dp(104), 1f).apply {
+            setMargins(dp(4), dp(5), dp(4), dp(5))
         }
         microphoneSlot.addView(startButton, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(112)
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(104)
         ))
         microphoneSlot.addView(stopButton, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(112)
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(104)
         ))
         firstActionRow.addView(microphoneSlot, LinearLayout.LayoutParams(actionParams))
         firstActionRow.addView(sendMp3Button, LinearLayout.LayoutParams(actionParams))
@@ -813,12 +813,12 @@ private var receivedMp3File: File? = null
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(9), dp(9), dp(8), dp(9))
+            setPadding(dp(8), dp(8), dp(7), dp(8))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(246, 249, 255))
             ).apply {
-                cornerRadius = dp(19).toFloat()
+                cornerRadius = dp(17).toFloat()
                 setStroke(dp(1), Color.rgb(215, 226, 245))
             }
             elevation = dp(2).toFloat()
@@ -839,8 +839,8 @@ private var receivedMp3File: File? = null
                 setStroke(dp(1), Color.argb(48, 255, 255, 255))
             }
             elevation = dp(1).toFloat()
-            layoutParams = LinearLayout.LayoutParams(dp(44), dp(44)).apply {
-                rightMargin = dp(8)
+            layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
+                rightMargin = dp(7)
             }
         }
         val helper = when (label) {
@@ -858,7 +858,7 @@ private var receivedMp3File: File? = null
         }
         val labelView = TextView(this).apply {
             text = label
-            textSize = 11.7f
+            textSize = 11.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.012f
             setTextColor(Color.rgb(27, 43, 73))
@@ -867,7 +867,7 @@ private var receivedMp3File: File? = null
         }
         val helperView = TextView(this).apply {
             text = helper
-            textSize = 10f
+            textSize = 9.5f
             setTextColor(Color.rgb(88, 105, 134))
             setPadding(0, dp(4), 0, 0)
             maxLines = 2
@@ -897,7 +897,7 @@ private var receivedMp3File: File? = null
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply {
-                setMargins(0, dp(7), 0, dp(7))
+                setMargins(0, dp(6), 0, dp(6))
             }
         }
     }
