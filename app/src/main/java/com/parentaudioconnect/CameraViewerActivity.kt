@@ -57,14 +57,21 @@ class CameraViewerActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.BLACK)
-            setPadding(12, 12, 12, 12)
+            setPadding(dp(12), dp(12), dp(12), dp(12))
         }
         status = TextView(this).apply {
             text = "Menghubungkan kamera anak…"
             setTextColor(Color.WHITE)
-            textSize = 16f
+            textSize = 14f
             gravity = Gravity.CENTER
-            setPadding(8, 12, 8, 12)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            minHeight = dp(48)
+            setLineSpacing(dp(2).toFloat(), 1f)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(Color.rgb(25, 35, 54))
+                cornerRadius = dp(14).toFloat()
+                setStroke(dp(1), Color.rgb(66, 83, 112))
+            }
         }
         renderer = SurfaceViewRenderer(this)
         val videoFrame = FrameLayout(this).apply {
@@ -79,26 +86,55 @@ class CameraViewerActivity : Activity() {
         }
         val switch = Button(this).apply {
             text = "GANTI KAMERA"
+            styleCameraControl(Color.rgb(49, 88, 178))
             setOnClickListener { switchCamera() }
         }
         val stop = Button(this).apply {
             text = "HENTIKAN"
+            styleCameraControl(Color.rgb(171, 57, 66))
             setOnClickListener { stopCameraAndClose() }
         }
-        controls.addView(switch, LinearLayout.LayoutParams(0, 54, 1f))
-        controls.addView(stop, LinearLayout.LayoutParams(0, 54, 1f))
+        controls.addView(switch, LinearLayout.LayoutParams(0, dp(52), 1f).apply {
+            rightMargin = dp(5)
+        })
+        controls.addView(stop, LinearLayout.LayoutParams(0, dp(52), 1f).apply {
+            leftMargin = dp(5)
+        })
         root.addView(status, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
         ))
         root.addView(videoFrame, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
         ))
-        root.addView(controls)
+        root.addView(controls, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { topMargin = dp(10) })
         setContentView(root)
 
         room = LiveKit.create(applicationContext)
         room?.initVideoRenderer(renderer)
         connectToCameraRoom()
+    }
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
+
+    private fun styleCameraControl(accent: Int) {
+        setTextColor(Color.WHITE)
+        textSize = 12f
+        isAllCaps = false
+        minHeight = dp(48)
+        setPadding(dp(12), dp(8), dp(12), dp(8))
+        stateListAnimator = null
+        background = android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+            intArrayOf(accent, Color.rgb(
+                (Color.red(accent) * 0.82f).toInt(),
+                (Color.green(accent) * 0.82f).toInt(),
+                (Color.blue(accent) * 0.82f).toInt()
+            ))
+        ).apply { cornerRadius = dp(14).toFloat() }
+        elevation = dp(2).toFloat()
     }
 
     private fun connectToCameraRoom() {
