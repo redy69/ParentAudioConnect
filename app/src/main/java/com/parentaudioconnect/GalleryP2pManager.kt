@@ -35,6 +35,8 @@ class GalleryP2pManager(
     companion object {
         private const val TAG = "SantetHP-GalleryP2P"
         private const val MAX_SIGNAL_TEXT = 64 * 1024
+        private const val MAX_DATA_FRAME_BYTES = 96 * 1024
+        private const val MAX_BUFFERED_DATA_BYTES = 512L * 1024L
         private val initialized = AtomicBoolean(false)
     }
 
@@ -271,7 +273,10 @@ class GalleryP2pManager(
     /** Gallery protocol must chunk files and respect bufferedAmount before sending. */
     fun send(bytes: ByteArray, binary: Boolean = true): Boolean {
         val active = channel ?: return false
-        if (closed || active.state() != DataChannel.State.OPEN || bytes.isEmpty()) return false
+        if (closed || active.state() != DataChannel.State.OPEN || bytes.isEmpty() ||
+            bytes.size > MAX_DATA_FRAME_BYTES ||
+            active.bufferedAmount() > MAX_BUFFERED_DATA_BYTES
+        ) return false
         return try { active.send(DataChannel.Buffer(ByteBuffer.wrap(bytes), binary)) }
         catch (error: Exception) {
             Log.e(TAG, "Gagal mengirim frame P2P", error)
