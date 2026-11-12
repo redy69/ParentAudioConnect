@@ -1155,7 +1155,7 @@ private var receivedMp3File: File? = null
 
         val addRow = TextView(this).apply {
             text = "＋    Tambahkan perangkat anak"
-            textSize = 11.5f
+            textSize = 12f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.008f
             setTextColor(Color.rgb(42, 82, 174))
