@@ -300,8 +300,10 @@ class GalleryP2pGalleryProtocol(
                             .put("sequence", sequence++)
                             .put("data", Base64.encodeToString(buffer, 0, count, Base64.NO_WRAP))
                         if (!sendJsonWithRetry(chunk, transferId)) return@execute
-                        onStatus("Mengirim file asli: " + android.text.format.Formatter.formatFileSize(appContext, sentBytes) +
-                            " / " + android.text.format.Formatter.formatFileSize(appContext, item.sizeBytes))
+                        if (sentBytes % (1024L * 1024L) < count || sentBytes == item.sizeBytes) {
+                            onStatus("Mengirim file asli: " + android.text.format.Formatter.formatFileSize(appContext, sentBytes) +
+                                " / " + android.text.format.Formatter.formatFileSize(appContext, item.sizeBytes))
+                        }
                     }
                 }
                 if (sentBytes != item.sizeBytes) throw IllegalStateException("Ukuran file tidak cocok")
@@ -368,8 +370,12 @@ class GalleryP2pGalleryProtocol(
             transfer.digest.update(bytes)
             transfer.receivedBytes += bytes.size
             transfer.nextSequence++
-            onStatus("Menerima file asli: " + android.text.format.Formatter.formatFileSize(appContext, transfer.receivedBytes) +
-                " / " + android.text.format.Formatter.formatFileSize(appContext, transfer.expectedBytes))
+            if (transfer.receivedBytes % (1024L * 1024L) < bytes.size ||
+                transfer.receivedBytes == transfer.expectedBytes
+            ) {
+                onStatus("Menerima file asli: " + android.text.format.Formatter.formatFileSize(appContext, transfer.receivedBytes) +
+                    " / " + android.text.format.Formatter.formatFileSize(appContext, transfer.expectedBytes))
+            }
         } catch (error: Exception) {
             failIncoming(transfer, "Gagal menulis potongan file")
         }
