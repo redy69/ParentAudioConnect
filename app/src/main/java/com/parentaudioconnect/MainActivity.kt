@@ -703,6 +703,8 @@ private var receivedMp3File: File? = null
         parentOnlyViews.add(activityHeading)
         rootLayout.addView(childAudioActivityText)
         parentOnlyViews.add(childAudioActivityText)
+        // Keep the four primary parent actions directly below the child's activity card.
+        rootLayout.addView(actionButtonsRow)
         rootLayout.addView(childDeviceStatusText)
         parentOnlyViews.add(childDeviceStatusText)
         parentAppBlockPanel = TextView(this).apply {
@@ -776,9 +778,9 @@ private var receivedMp3File: File? = null
             letterSpacing = 0.105f
             setPadding(dp(4), dp(11), dp(4), dp(7))
         }
+        controlHeading.text = "KONTROL TAMBAHAN"
         rootLayout.addView(controlHeading)
         parentOnlyViews.add(controlHeading)
-        rootLayout.addView(actionButtonsRow)
         rootLayout.addView(liveKitTestButton)
         parentOnlyViews.add(liveKitTestButton)
         rootLayout.addView(playMp3Button)
