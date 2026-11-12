@@ -1114,6 +1114,7 @@ private var receivedMp3File: File? = null
             })
             details.addView(TextView(this).apply {
                 text = if (connected) "● ONLINE  •  Terhubung" else "○ OFFLINE  •  Menunggu koneksi"
+                contentDescription = if (connected) "Perangkat $name sedang online dan terhubung" else "Perangkat $name sedang offline dan menunggu koneksi"
                 textSize = 10f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 letterSpacing = 0.005f
@@ -1129,6 +1130,7 @@ private var receivedMp3File: File? = null
             row.addView(details)
             if (selectedChildCode == code) row.addView(TextView(this).apply {
                 text = "✓"
+                contentDescription = "Perangkat $name sedang dipilih"
                 textSize = 16f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 gravity = Gravity.CENTER
