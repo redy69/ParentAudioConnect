@@ -229,6 +229,7 @@ private var receivedMp3File: File? = null
         }
 
         connectionStatusText = TextView(this).apply {
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             text = "○ OFFLINE"
             textSize = 11f
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -249,6 +250,7 @@ private var receivedMp3File: File? = null
         }
 
         updateInfoText = TextView(this).apply {
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             text = "Belum ada pemeriksaan pembaruan."
             textSize = 11.5f
             setTextColor(Color.rgb(91, 108, 137))
@@ -357,6 +359,8 @@ private var receivedMp3File: File? = null
         }
         parentButton = createButton("👨‍👩‍👧  ORANG TUA\nKelola perangkat anak")
         childButton = createButton("📱  PERANGKAT ANAK\nHubungkan ke orang tua")
+        parentButton.contentDescription = "Pilih mode orang tua untuk mengelola dan menghubungkan perangkat anak"
+        childButton.contentDescription = "Pilih mode perangkat anak untuk menghubungkan HP ini ke orang tua"
         listOf(parentButton, childButton).forEach { button ->
             button.textSize = 13.5f
             button.gravity = Gravity.CENTER
@@ -383,6 +387,7 @@ private var receivedMp3File: File? = null
         stopButton = createActionButton("🎙", "HENTIKAN LIVE", Color.rgb(220, 75, 75))
         sendMp3Button = createActionButton("♫", "PUTAR MP3", Color.rgb(55, 80, 220))
         playMp3Button = createButton("PUTAR MP3 DITERIMA")
+        playMp3Button.contentDescription = "Putar file MP3 yang sudah diterima dari perangkat orang tua"
         adminWhatsAppButton = createActionButton("☎", "CHAT ADMIN", Color.rgb(37, 211, 102))
         cameraLiveButton = createActionButton("📷", "KAMERA LIVE", Color.rgb(45, 91, 210))
         actionButtonsRow = LinearLayout(this).apply {
@@ -446,6 +451,7 @@ private var receivedMp3File: File? = null
         addChildButton.elevation = dp(3).toFloat()
         cancelPairingButton = createButton("BATALKAN KODE")
         updateButton = createButton("PERIKSA PEMBARUAN")
+        updateButton.contentDescription = "Periksa apakah tersedia pembaruan aplikasi SantetHP"
         cameraStandbyButton = createButton("AKTIFKAN SIAGA KAMERA")
         childrenContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
