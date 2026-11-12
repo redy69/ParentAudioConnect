@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -120,6 +121,7 @@ class ChildAudioConnectionService : Service() {
         var attempt = 0
         try {
             while (true) {
+                var connectionStage = "Persiapan"
                 try {
                     val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
                     val code = prefs.getString("pair_code", null)
@@ -130,21 +132,28 @@ class ChildAudioConnectionService : Service() {
                         return
                     }
 
+                    connectionStage = "Autentikasi Firebase"
                     val auth = FirebaseAuth.getInstance()
                     val user = auth.currentUser ?: auth.signInAnonymously().await().user
                         ?: throw IllegalStateException("Autentikasi Firebase gagal")
+
+                    connectionStage = "Mengambil token Firebase"
                     val idToken = user.getIdToken(false).await().token
                         ?: throw IllegalStateException("Token Firebase kosong")
 
+                    connectionStage = "Meminta token server"
                     updateNotification("Menghubungkan ke ruang audio…")
                     val response = withContext(Dispatchers.IO) {
                         requestToken(idToken, code, preferredServerId)
                     }
+
+                    connectionStage = "Memvalidasi akses server"
                     val returnedRole = response.optString("role")
                     if (returnedRole != "child") {
                         throw IllegalStateException("Server tidak mengembalikan akses anak")
                     }
 
+                    connectionStage = "Menghubungkan LiveKit"
                     val newRoom = LiveKitFailover.connect(
                         response = response,
                         createRoom = {
@@ -251,6 +260,7 @@ class ChildAudioConnectionService : Service() {
                         try { newRoom.release() } catch (_: Exception) { }
                         throw IllegalStateException("Koneksi audio terputus saat proses penyambungan")
                     }
+                    connectionStage = "Menyiapkan audio"
                     newRoom.localParticipant.setMicrophoneEnabled(false)
                     // LiveKit MediaAudioType uses Android's normal media route and STREAM_MUSIC.
                     maximizeMediaVolume()
@@ -291,7 +301,21 @@ class ChildAudioConnectionService : Service() {
                     stopLiveAudioHeartbeat()
                     ChildAudioActivityReporter.setLiveAudioActive(applicationContext, false)
                     attempt++
-                    updateNotification("Koneksi gagal. Mencoba kembali ($attempt)…")
+                    val errorDetails = generateSequence(error as Throwable?) { it.cause }
+                        .take(4)
+                        .map { cause ->
+                            cause.localizedMessage?.takeIf { it.isNotBlank() }
+                                ?: cause.javaClass.simpleName
+                        }
+                        .joinToString(" <- ")
+                        .take(150)
+                    val diagnostic = "Gagal $connectionStage: ${error.javaClass.simpleName}: $errorDetails"
+                    Log.e("SantetHP-Audio", diagnostic, error)
+                    getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                        .putString("child_audio_last_connection_error", diagnostic)
+                        .putLong("child_audio_last_connection_error_at", System.currentTimeMillis())
+                        .apply()
+                    updateNotification("$diagnostic • mencoba lagi")
                     // Retry quickly after boot/network startup, then keep a short steady backoff.
                     val retryDelayMs = when {
                         attempt == 1 -> 1_000L
