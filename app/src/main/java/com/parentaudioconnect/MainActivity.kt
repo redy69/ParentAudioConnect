@@ -423,7 +423,7 @@ private var receivedMp3File: File? = null
         actionButtonsRow.addView(secondActionRow)
         addChildButton = createButton("＋")
         addChildButton.textSize = 25f
-        addChildButton.contentDescription = "Tambah anak"
+        addChildButton.contentDescription = "Tambahkan perangkat anak baru dan buat kode pairing untuk menghubungkannya"
         addChildButton.layoutParams = LinearLayout.LayoutParams(dp(48), dp(48)).apply { setMargins(dp(6), dp(3), 0, dp(3)) }
         selectedChildButton = createButton("Pilih anak  ▾")
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
