@@ -378,17 +378,18 @@ export default {
       }
       if (preferredServerId) {
         const exact = liveKitProjects.filter(project => project.id === preferredServerId);
-        if (exact.length === 0) {
-          return jsonResponse({ error: "Selected LiveKit server is not configured; parent must choose an available server" }, 409);
-        }
         if (isParent) {
-          // The parent tests the preferred project first, then backups. It saves
+          // The parent tests the preferred project first, then every configured
+          // backup—even if the saved preference is no longer configured. It saves
           // the server that actually connected before asking the child to join.
           liveKitProjects.sort((a, b) =>
             Number(b.id === preferredServerId) - Number(a.id === preferredServerId)
           );
         } else {
           // The child must join the exact server selected by the parent.
+          if (exact.length === 0) {
+            return jsonResponse({ error: "Selected LiveKit server is not configured; parent must choose an available server" }, 409);
+          }
           liveKitProjects.splice(0, liveKitProjects.length, ...exact);
         }
       }
