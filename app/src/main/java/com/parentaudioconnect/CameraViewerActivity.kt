@@ -103,6 +103,7 @@ class CameraViewerActivity : Activity() {
                 setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
                 gravity = Gravity.CENTER
                 maxLines = 2
+                maxWidth = dp(190)
                 letterSpacing = 0.04f
             }
             androidx.core.view.ViewCompat.setAccessibilityHeading(cameraFacingLabel, true)
@@ -112,6 +113,8 @@ class CameraViewerActivity : Activity() {
                 setTextColor(Color.rgb(218, 229, 248))
                 textSize = 10.5f
                 gravity = Gravity.CENTER
+                maxLines = 2
+                maxWidth = dp(190)
                 setPadding(0, dp(3), 0, 0)
                 letterSpacing = 0.01f
             }
