@@ -4,6 +4,7 @@ import android.app.Activity
 import android.os.Bundle
 import android.graphics.Color
 import android.view.Gravity
+import android.view.ViewGroup
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
@@ -140,10 +141,10 @@ class CameraViewerActivity : Activity() {
             styleCameraControl(Color.rgb(171, 57, 66))
             setOnClickListener { stopCameraAndClose() }
         }
-        controls.addView(switch, LinearLayout.LayoutParams(0, dp(52), 1f).apply {
+        controls.addView(switch, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
             rightMargin = dp(5)
         })
-        controls.addView(stop, LinearLayout.LayoutParams(0, dp(52), 1f).apply {
+        controls.addView(stop, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
             leftMargin = dp(5)
         })
         root.addView(status, LinearLayout.LayoutParams(
@@ -169,7 +170,7 @@ class CameraViewerActivity : Activity() {
         setTextColor(Color.WHITE)
         textSize = 12f
         isAllCaps = false
-        minHeight = dp(48)
+        minHeight = dp(52)
         setPadding(dp(12), dp(8), dp(12), dp(8))
         stateListAnimator = null
         background = android.graphics.drawable.GradientDrawable(
