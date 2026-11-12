@@ -119,7 +119,7 @@ class CameraViewerActivity : Activity() {
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
 
-    private fun styleCameraControl(accent: Int) {
+    private fun Button.styleCameraControl(accent: Int) {
         setTextColor(Color.WHITE)
         textSize = 12f
         isAllCaps = false
