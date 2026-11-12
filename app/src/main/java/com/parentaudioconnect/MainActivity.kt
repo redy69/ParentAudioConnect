@@ -922,7 +922,7 @@ private var receivedMp3File: File? = null
         val helperView = TextView(this).apply {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             text = helper
-            textSize = 9.5f
+            textSize = 9f
             setTextColor(Color.rgb(88, 105, 134))
             setPadding(0, dp(2), 0, 0)
             maxLines = 2
