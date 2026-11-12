@@ -955,8 +955,7 @@ private var receivedMp3File: File? = null
     override fun onPause() {
         stopChildGalleryP2p()
         if (currentRole == "parent" && parentGalleryDialog?.isShowing == true) {
-            parentGalleryStatus?.text = "Koneksi dihentikan saat aplikasi berada di latar belakang. Buka kembali Galeri Anak untuk menyambung."
-            stopParentGalleryP2p()
+            parentGalleryDialog?.dismiss()
         }
         super.onPause()
     }
@@ -3092,6 +3091,7 @@ private var receivedMp3File: File? = null
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
                 list.removeAllViews()
                 parentGalleryRows.clear()
+                parentGalleryMediaItems.clear()
                 parentGalleryThumbQueue.clear()
                 parentGalleryThumbInFlight = null
                 parentGalleryIndexRequested = parentGalleryProtocol?.requestIndex() == true
@@ -3242,6 +3242,9 @@ private var receivedMp3File: File? = null
                     if (parentGalleryDialog?.isShowing == true) status.text = message
                     if (message.contains("P2P TERHUBUNG") && !parentGalleryIndexRequested) {
                         parentGalleryIndexRequested = protocol.requestIndex()
+                    }
+                    if (message.contains("terputus") || message.contains("ditutup") || message.contains("gagal")) {
+                        protocol.cancelOriginal()
                     }
                 }
             },

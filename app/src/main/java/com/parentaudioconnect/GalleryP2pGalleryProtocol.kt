@@ -122,7 +122,12 @@ class GalleryP2pGalleryProtocol(
             "original_chunk" -> if (role == GalleryP2pManager.Role.PARENT) receiveOriginalChunk(message)
             "original_end" -> if (role == GalleryP2pManager.Role.PARENT) receiveOriginalEnd(message)
             "original_error" -> if (role == GalleryP2pManager.Role.PARENT) {
-                requestedTransfers.remove(message.optString("transferId"))
+                val id = message.optString("transferId")
+                requestedTransfers.remove(id)
+                incomingTransfer?.takeIf { it.transferId == id }?.let {
+                    closeIncoming(it, true)
+                    incomingTransfer = null
+                }
                 onStatus(message.optString("message", "File asli tidak dapat dikirim"))
             }
         }
@@ -353,7 +358,13 @@ class GalleryP2pGalleryProtocol(
         val id = message.optString("transferId")
         val key = message.optString("key")
         val expected = message.optLong("size", -1)
-        if (requestedTransfers[id] != key || expected <= 0 || expected > MAX_ORIGINAL_BYTES) return
+        if (requestedTransfers[id] != key) return
+        if (expected <= 0 || expected > MAX_ORIGINAL_BYTES) {
+            requestedTransfers.remove(id)
+            sendJson(JSONObject().put("type", "original_cancel").put("transferId", id))
+            onStatus("Ukuran file tidak valid atau melebihi batas 200 MB")
+            return
+        }
         try {
             incomingTransfer?.let { closeIncoming(it, true) }
             val file = File.createTempFile("santethp-gallery-", ".part", appContext.cacheDir)
