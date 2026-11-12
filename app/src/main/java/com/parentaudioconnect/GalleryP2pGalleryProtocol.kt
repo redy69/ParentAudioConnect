@@ -229,6 +229,7 @@ class GalleryP2pGalleryProtocol(
                         .put("nextOffset", nextOffset)
                         .put("hasMore", hasMore)
                         .put("total", allItems.size)
+                        .put("truncated", allItems.size >= MAX_INDEX_ITEMS)
                         .put("items", array)
                 )
                 if (!sent) {
@@ -280,7 +281,13 @@ class GalleryP2pGalleryProtocol(
                 return
             }
             onMediaIndex(receivedIndex.values.toList())
-            onStatus("Daftar galeri diterima • ${receivedIndex.size} item")
+            onStatus(
+                if (message.optBoolean("truncated", false)) {
+                    "Daftar menampilkan 1.000 media terbaru. Jika media lebih banyak, sebagian belum dimuat."
+                } else {
+                    "Daftar galeri diterima • ${receivedIndex.size} item"
+                }
+            )
         }
     }
 
