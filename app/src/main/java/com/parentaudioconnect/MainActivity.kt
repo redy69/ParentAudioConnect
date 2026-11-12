@@ -64,6 +64,7 @@ import org.json.JSONArray
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.SecureRandom
+import java.security.MessageDigest
 import java.util.Date
 
 class MainActivity : Activity(), LifecycleOwner {
@@ -3184,7 +3185,14 @@ private var receivedMp3File: File? = null
                             }
                             list.addView(row)
                             parentGalleryRows[item.key] = row
-                            parentGalleryThumbQueue.addLast(item.key)
+                            val cachedThumb = galleryThumbnailCacheFile(item.key)
+                            if (cachedThumb.isFile && cachedThumb.length() > 0) {
+                                val cachedBitmap = BitmapFactory.decodeFile(cachedThumb.absolutePath)
+                                if (cachedBitmap != null) image.setImageBitmap(cachedBitmap)
+                                else parentGalleryThumbQueue.addLast(item.key)
+                            } else {
+                                parentGalleryThumbQueue.addLast(item.key)
+                            }
                         }
                         requestNextParentGalleryThumbnail()
                     }
@@ -3196,6 +3204,9 @@ private var receivedMp3File: File? = null
                 runOnUiThread {
                     if (parentGalleryDialog?.isShowing != true) return@runOnUiThread
                     if (bytes.isNotEmpty()) {
+                        val cachedThumb = galleryThumbnailCacheFile(key)
+                        cachedThumb.parentFile?.mkdirs()
+                        cachedThumb.writeBytes(bytes)
                         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                         val row = parentGalleryRows[key]
                         val image = row?.getChildAt(0) as? ImageView
@@ -3265,6 +3276,15 @@ private var receivedMp3File: File? = null
             parentGalleryThumbQueue.addFirst(next)
             parentGalleryStatus?.text = "Koneksi belum siap mengirim thumbnail. Ketuk Muat ulang setelah P2P tersambung."
         }
+    }
+
+    private fun galleryThumbnailCacheFile(key: String): File {
+        val digest = MessageDigest.getInstance("SHA-256")
+            .digest(key.toByteArray(Charsets.UTF_8))
+        val fileKey = digest.joinToString("") { "%02x".format(it.toInt() and 0xff) }
+        val directory = File(cacheDir, "gallery-thumbnails")
+        if (!directory.exists()) directory.mkdirs()
+        return File(directory, fileKey + ".jpg")
     }
 
     private fun saveGalleryOriginalToDevice(file: File, name: String, mime: String): Uri? {
