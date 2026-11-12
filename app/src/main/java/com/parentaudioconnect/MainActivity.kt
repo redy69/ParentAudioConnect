@@ -405,7 +405,7 @@ private var receivedMp3File: File? = null
         addChildButton = createButton("＋")
         addChildButton.textSize = 25f
         addChildButton.contentDescription = "Tambah anak"
-        addChildButton.layoutParams = LinearLayout.LayoutParams(dp(44), dp(44)).apply { setMargins(dp(6), dp(3), 0, dp(3)) }
+        addChildButton.layoutParams = LinearLayout.LayoutParams(dp(48), dp(48)).apply { setMargins(dp(6), dp(3), 0, dp(3)) }
         selectedChildButton = createButton("Pilih anak  ▾")
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
         selectedChildButton.setOnClickListener { toggleChildrenPanel() }
@@ -494,7 +494,7 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        childHeaderRow.addView(selectedChildButton, LinearLayout.LayoutParams(0, dp(44), 1f))
+        childHeaderRow.addView(selectedChildButton, LinearLayout.LayoutParams(0, dp(48), 1f))
         childHeaderRow.addView(connectionStatusText)
         childHeaderRow.addView(addChildButton)
         rootLayout.addView(childHeaderRow)
