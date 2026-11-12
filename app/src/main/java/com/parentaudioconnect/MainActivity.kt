@@ -161,6 +161,8 @@ private var receivedMp3File: File? = null
                 letterSpacing = 0.13f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.rgb(190, 211, 255))
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
             })
 
             val brandRow = LinearLayout(this@MainActivity).apply {
