@@ -876,6 +876,8 @@ private var receivedMp3File: File? = null
             "CHAT ADMIN" -> "Bantuan dan dukungan"
             else -> "Kontrol perangkat"
         }
+        card.contentDescription = "$label. $helper"
+
         val textStack = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
