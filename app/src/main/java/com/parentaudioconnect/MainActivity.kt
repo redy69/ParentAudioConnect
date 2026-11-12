@@ -408,14 +408,16 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
-        val actionParams = LinearLayout.LayoutParams(0, dp(72), 1f).apply {
+        val actionParams = LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+        ).apply {
             setMargins(dp(3), dp(3), dp(3), dp(3))
         }
         microphoneSlot.addView(startButton, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(72)
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
         ))
         microphoneSlot.addView(stopButton, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(72)
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
         ))
         firstActionRow.addView(microphoneSlot, LinearLayout.LayoutParams(actionParams))
         firstActionRow.addView(sendMp3Button, LinearLayout.LayoutParams(actionParams))
@@ -865,6 +867,7 @@ private var receivedMp3File: File? = null
                 setStroke(dp(1), Color.argb(88, accent))
             }
             elevation = dp(2).toFloat()
+            minHeight = dp(72)
             isClickable = true
             isFocusable = true
             contentDescription = label
