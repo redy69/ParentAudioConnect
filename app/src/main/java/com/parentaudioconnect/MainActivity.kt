@@ -529,7 +529,6 @@ private var receivedMp3File: File? = null
         parentOnlyViews.add(activityHeading)
         rootLayout.addView(childAudioActivityText)
         parentOnlyViews.add(childAudioActivityText)
-        rootLayout.addView(cancelPairingButton)
         val controlHeading = TextView(this).apply {
             text = "KONTROL UTAMA"
             textSize = 11.5f
@@ -541,6 +540,7 @@ private var receivedMp3File: File? = null
         rootLayout.addView(controlHeading)
         parentOnlyViews.add(controlHeading)
         rootLayout.addView(actionButtonsRow)
+        rootLayout.addView(cancelPairingButton)
         rootLayout.addView(playMp3Button)
         rootLayout.addView(cameraStandbyButton)
 
