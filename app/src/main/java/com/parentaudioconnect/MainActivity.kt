@@ -861,6 +861,7 @@ private var receivedMp3File: File? = null
             contentDescription = label
         }
         val iconView = TextView(this).apply {
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             text = icon
             textSize = 22.5f
             gravity = Gravity.CENTER
@@ -893,6 +894,7 @@ private var receivedMp3File: File? = null
             setPadding(0, dp(1), 0, dp(1))
         }
         val labelView = TextView(this).apply {
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             text = label
             textSize = 11.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -902,6 +904,7 @@ private var receivedMp3File: File? = null
             setLineSpacing(dp(1).toFloat(), 1f)
         }
         val helperView = TextView(this).apply {
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             text = helper
             textSize = 9.5f
             setTextColor(Color.rgb(88, 105, 134))
