@@ -3085,7 +3085,7 @@ private var receivedMp3File: File? = null
             .setTitle("Galeri • " + name)
             .setView(content)
             .setNegativeButton("Tutup", null)
-            .setNeutralButton("Muat ulang", null)
+            .setNeutralButton("Muat ulang / sambung", null)
             .create()
         parentGalleryDialog = dialog
         dialog.setOnShowListener {
@@ -3096,8 +3096,13 @@ private var receivedMp3File: File? = null
                 parentGalleryThumbQueue.clear()
                 parentGalleryThumbInFlight = null
                 parentGalleryIndexRequested = parentGalleryProtocol?.requestIndex() == true
-                status.text = if (parentGalleryIndexRequested) "Meminta daftar foto dan video terbaru…"
-                    else "P2P belum siap. Tunggu koneksi langsung, lalu muat ulang."
+                if (parentGalleryIndexRequested) {
+                    status.text = "Meminta daftar foto dan video terbaru…"
+                } else {
+                    status.text = "Sesi P2P tidak aktif. Membuka ulang koneksi galeri…"
+                    dialog.dismiss()
+                    rootLayout.post { showParentGalleryStatus() }
+                }
             }
         }
         dialog.setOnDismissListener {
