@@ -357,6 +357,7 @@ private var receivedMp3File: File? = null
             ).apply { setMargins(0, dp(10), 0, dp(5)) }
             visibility = View.GONE
         }
+        androidx.core.view.ViewCompat.setAccessibilityHeading(roleIntroText, true)
         parentButton = createButton("👨‍👩‍👧  ORANG TUA\nKelola perangkat anak")
         childButton = createButton("📱  PERANGKAT ANAK\nHubungkan ke orang tua")
         parentButton.contentDescription = "Pilih mode orang tua untuk mengelola dan menghubungkan perangkat anak"
