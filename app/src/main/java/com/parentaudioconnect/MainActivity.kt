@@ -1834,6 +1834,7 @@ private var receivedMp3File: File? = null
             hint = "Masukkan 8 karakter kode"
             contentDescription = "Kolom kode pairing 8 karakter dari HP orang tua"
             isSingleLine = true
+            minHeight = dp(56)
             textSize = 18f
             letterSpacing = 0.08f
             gravity = Gravity.CENTER
