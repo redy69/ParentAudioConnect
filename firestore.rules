@@ -276,6 +276,60 @@ service cloud.firestore {
 
       allow delete: if isParent();
 
+      // WebRTC signaling: only the already-paired parent and child may exchange SDP/ICE.
+      // No photo/video bytes are permitted in this collection.
+      function galleryParent(code) {
+        return signedIn()
+          && get(/databases/$(database)/documents/pairings/$(code)).data.parentUid == request.auth.uid
+          && get(/databases/$(database)/documents/pairings/$(code)).data.childUid != null;
+      }
+      function galleryChild(code) {
+        return signedIn()
+          && get(/databases/$(database)/documents/pairings/$(code)).data.childUid == request.auth.uid;
+      }
+
+      match /gallerySignals/{signalId} {
+        allow read: if galleryParent(code) || galleryChild(code);
+
+        allow create: if (
+            (galleryParent(code)
+              && request.resource.data.senderUid == request.auth.uid
+              && request.resource.data.kind in ['offer', 'parent-ice'])
+            ||
+            (galleryChild(code)
+              && request.resource.data.senderUid == request.auth.uid
+              && request.resource.data.kind in ['answer', 'child-ice'])
+          )
+          && request.resource.data.keys().hasOnly([
+            'kind', 'senderUid', 'sdp', 'candidate', 'sdpMid',
+            'sdpMLineIndex', 'createdAt'
+          ])
+          && request.resource.data.createdAt is timestamp
+          && (
+            (request.resource.data.kind in ['offer', 'answer']
+              && request.resource.data.sdp is string
+              && request.resource.data.sdp.size() > 0
+              && request.resource.data.sdp.size() <= 65536
+              && !request.resource.data.keys().hasAny([
+                'candidate', 'sdpMid', 'sdpMLineIndex'
+              ]))
+            ||
+            (request.resource.data.kind in ['parent-ice', 'child-ice']
+              && request.resource.data.candidate is string
+              && request.resource.data.candidate.size() > 0
+              && request.resource.data.candidate.size() <= 4096
+              && request.resource.data.sdpMid is string
+              && request.resource.data.sdpMid.size() <= 256
+              && request.resource.data.sdpMLineIndex is int
+              && request.resource.data.sdpMLineIndex >= 0
+              && request.resource.data.sdpMLineIndex <= 65535
+              && !request.resource.data.keys().hasAny(['sdp']))
+          );
+
+        allow update: if false;
+        allow delete: if galleryParent(code) || galleryChild(code);
+      }
+
       // Child uploads only after explicit local opt-in and Android Notification Access.
       // The paired parent alone may read notification content.
       match /notifications/{notificationId} {
