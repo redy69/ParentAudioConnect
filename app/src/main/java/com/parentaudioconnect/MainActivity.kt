@@ -3172,6 +3172,8 @@ private var receivedMp3File: File? = null
                                     .setPositiveButton("Unduh HD & simpan") { _, _ ->
                                         if (Build.VERSION.SDK_INT < 29) {
                                             Toast.makeText(this, "Simpan langsung ke galeri memerlukan Android 10 atau lebih baru.", Toast.LENGTH_LONG).show()
+                                        } else if (item.sizeBytes <= 0 || item.sizeBytes > 200L * 1024L * 1024L) {
+                                            Toast.makeText(this, "File kosong atau lebih besar dari batas transfer 200 MB.", Toast.LENGTH_LONG).show()
                                         } else if (parentGalleryProtocol?.requestOriginal(item.key) != true) {
                                             Toast.makeText(this, "Permintaan unduh belum terkirim. Periksa koneksi P2P.", Toast.LENGTH_LONG).show()
                                         } else {

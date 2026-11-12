@@ -108,6 +108,9 @@ class GalleryP2pGalleryProtocol(
                 sendIndex(message.optInt("offset", 0).coerceIn(0, MAX_INDEX_ITEMS))
             }
             "index_response" -> if (role == GalleryP2pManager.Role.PARENT) receiveIndex(message)
+            "index_error" -> if (role == GalleryP2pManager.Role.PARENT) {
+                onStatus(message.optString("message", "Daftar galeri tidak dapat dibaca di HP anak"))
+            }
             "thumbnail_request" -> if (role == GalleryP2pManager.Role.CHILD) {
                 sendThumbnail(message.optString("key"))
             }
@@ -203,6 +206,8 @@ class GalleryP2pGalleryProtocol(
                 }
             } catch (error: Exception) {
                 Log.e(TAG, "Gagal membaca indeks media", error)
+                sendJson(JSONObject().put("type", "index_error")
+                    .put("message", "Tidak dapat membaca daftar media. Periksa izin foto dan video di HP anak."))
                 onStatus("Tidak dapat membaca daftar media: " + (error.localizedMessage ?: "kesalahan"))
             }
         }
