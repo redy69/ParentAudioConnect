@@ -3207,6 +3207,7 @@ private var receivedMp3File: File? = null
                         val cachedThumb = galleryThumbnailCacheFile(key)
                         cachedThumb.parentFile?.mkdirs()
                         cachedThumb.writeBytes(bytes)
+                        trimGalleryThumbnailCache()
                         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                         val row = parentGalleryRows[key]
                         val image = row?.getChildAt(0) as? ImageView
@@ -3275,6 +3276,17 @@ private var receivedMp3File: File? = null
             parentGalleryThumbInFlight = null
             parentGalleryThumbQueue.addFirst(next)
             parentGalleryStatus?.text = "Koneksi belum siap mengirim thumbnail. Ketuk Muat ulang setelah P2P tersambung."
+        }
+    }
+
+    private fun trimGalleryThumbnailCache(maxBytes: Long = 40L * 1024L * 1024L) {
+        val directory = File(cacheDir, "gallery-thumbnails")
+        val files = directory.listFiles()?.filter { it.isFile }?.sortedBy { it.lastModified() } ?: return
+        var total = files.sumOf { it.length() }
+        for (file in files) {
+            if (total <= maxBytes) break
+            val size = file.length()
+            if (file.delete()) total -= size
         }
     }
 
