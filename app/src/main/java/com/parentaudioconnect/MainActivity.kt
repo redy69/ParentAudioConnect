@@ -517,7 +517,7 @@ private var receivedMp3File: File? = null
         rootLayout.addView(pairingInstructionText)
         rootLayout.addView(codeText)
         val activityHeading = TextView(this).apply {
-            text = "AKTIVITAS PERANGKAT"
+            text = "STATUS PEMUTARAN AUDIO"
             textSize = 11.5f
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
