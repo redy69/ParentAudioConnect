@@ -61,6 +61,7 @@ class CameraViewerActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(12))
         }
         status = TextView(this).apply {
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             text = "Menghubungkan kamera anak…"
             setTextColor(Color.WHITE)
             textSize = 14f
@@ -127,11 +128,13 @@ class CameraViewerActivity : Activity() {
         }
         val switch = Button(this).apply {
             text = "GANTI KAMERA"
+            contentDescription = "Ganti kamera anak antara kamera depan dan belakang"
             styleCameraControl(Color.rgb(49, 88, 178))
             setOnClickListener { switchCamera() }
         }
         val stop = Button(this).apply {
             text = "HENTIKAN"
+            contentDescription = "Hentikan tayangan kamera dan tutup layar"
             styleCameraControl(Color.rgb(171, 57, 66))
             setOnClickListener { stopCameraAndClose() }
         }
