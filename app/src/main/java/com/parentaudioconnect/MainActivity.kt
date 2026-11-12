@@ -3226,9 +3226,13 @@ private var receivedMp3File: File? = null
                     if (parentGalleryDialog?.isShowing != true) return@runOnUiThread
                     if (bytes.isNotEmpty()) {
                         val cachedThumb = galleryThumbnailCacheFile(key)
-                        cachedThumb.parentFile?.mkdirs()
-                        cachedThumb.writeBytes(bytes)
-                        trimGalleryThumbnailCache()
+                        try {
+                            cachedThumb.parentFile?.mkdirs()
+                            cachedThumb.writeBytes(bytes)
+                            trimGalleryThumbnailCache()
+                        } catch (_: Exception) {
+                            // Keep the in-memory preview even if the local cache is full.
+                        }
                         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                         val row = parentGalleryRows[key]
                         val image = row?.getChildAt(0) as? ImageView
@@ -3357,9 +3361,10 @@ private var receivedMp3File: File? = null
             val output = contentResolver.openOutputStream(uri)
                 ?: throw IllegalStateException("Tidak dapat membuka tujuan penyimpanan")
             output.use { stream -> file.inputStream().use { input -> input.copyTo(stream) } }
-            contentResolver.update(uri, ContentValues().apply {
+            val finalized = contentResolver.update(uri, ContentValues().apply {
                 put(MediaStore.MediaColumns.IS_PENDING, 0)
             }, null, null)
+            if (finalized <= 0) throw IllegalStateException("File belum dapat dipublikasikan ke galeri")
             file.delete()
             return uri
         } catch (error: Exception) {
