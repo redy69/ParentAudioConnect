@@ -94,6 +94,7 @@ class CameraViewerActivity : Activity() {
             }
             cameraFacingLabel = TextView(this@CameraViewerActivity).apply {
                 text = "KAMERA BELAKANG"
+                contentDescription = "Kamera belakang sedang digunakan"
                 setTextColor(Color.WHITE)
                 textSize = 13f
                 setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
@@ -102,6 +103,7 @@ class CameraViewerActivity : Activity() {
             }
             val creatorLabel = TextView(this@CameraViewerActivity).apply {
                 text = "Dibuat oleh: lim45ekawan"
+                contentDescription = "Aplikasi dibuat oleh lim45ekawan"
                 setTextColor(Color.rgb(218, 229, 248))
                 textSize = 10.5f
                 gravity = Gravity.CENTER
@@ -215,6 +217,11 @@ class CameraViewerActivity : Activity() {
     private fun switchCamera() {
         facing = if (facing == "back") "front" else "back"
         cameraFacingLabel.text = if (facing == "front") "KAMERA DEPAN" else "KAMERA BELAKANG"
+        cameraFacingLabel.contentDescription = if (facing == "front") {
+            "Kamera depan sedang digunakan"
+        } else {
+            "Kamera belakang sedang digunakan"
+        }
         sendCameraCommand("switch", facing, closeAfter = false)
     }
 
