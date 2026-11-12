@@ -421,7 +421,7 @@ private var receivedMp3File: File? = null
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
         selectedChildButton.setOnClickListener { toggleChildrenPanel() }
         selectedChildButton.setTextColor(Color.rgb(35, 57, 96))
-        selectedChildButton.textSize = 12.5f
+        selectedChildButton.textSize = 13f
         selectedChildButton.maxLines = 1
         selectedChildButton.ellipsize = android.text.TextUtils.TruncateAt.END
         selectedChildButton.setPadding(dp(12), 0, dp(8), 0)
@@ -1093,7 +1093,7 @@ private var receivedMp3File: File? = null
             }
             details.addView(TextView(this).apply {
                 text = name
-                textSize = 13.5f
+                textSize = 14f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 letterSpacing = 0.005f
                 setTextColor(Color.rgb(27, 43, 73))
