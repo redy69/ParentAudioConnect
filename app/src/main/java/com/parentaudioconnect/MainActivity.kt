@@ -243,9 +243,10 @@ private var receivedMp3File: File? = null
                 setStroke(dp(1), Color.rgb(215, 223, 235))
             }
             minWidth = dp(76)
+            minHeight = dp(40)
             maxLines = 1
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { setMargins(dp(4), 0, dp(4), 0) }
         }
 
@@ -525,7 +526,9 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        childHeaderRow.addView(selectedChildButton, LinearLayout.LayoutParams(0, dp(48), 1f))
+        childHeaderRow.addView(selectedChildButton, LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+        ))
         childHeaderRow.addView(connectionStatusText)
         childHeaderRow.addView(addChildButton)
         rootLayout.addView(childHeaderRow)
