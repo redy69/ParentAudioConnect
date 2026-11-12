@@ -145,19 +145,19 @@ private var receivedMp3File: File? = null
         val title = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(11), dp(16), dp(11))
+            setPadding(dp(15), dp(9), dp(15), dp(9))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.rgb(15, 29, 64), Color.rgb(35, 69, 139), Color.rgb(67, 104, 183))
             ).apply {
-                cornerRadius = dp(25).toFloat()
+                cornerRadius = dp(22).toFloat()
                 setStroke(dp(1), Color.argb(68, 255, 255, 255))
             }
             elevation = dp(5).toFloat()
 
             addView(TextView(this@MainActivity).apply {
                 text = "PARENTAL CARE  •  FAMILY CONNECT"
-                textSize = 10f
+                textSize = 9.5f
                 letterSpacing = 0.13f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.rgb(190, 211, 255))
@@ -170,7 +170,7 @@ private var receivedMp3File: File? = null
             }
             brandRow.addView(TextView(this@MainActivity).apply {
                 text = "SantetHP"
-                textSize = 28f
+                textSize = 26f
                 letterSpacing = 0.005f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE)
@@ -194,7 +194,7 @@ private var receivedMp3File: File? = null
 
             addView(TextView(this@MainActivity).apply {
                 text = "Ruang kendali orang tua"
-                textSize = 13f
+                textSize = 12.5f
                 setTextColor(Color.rgb(224, 234, 255))
                 letterSpacing = 0.015f
             })
