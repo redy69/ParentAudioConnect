@@ -1354,6 +1354,7 @@ private var receivedMp3File: File? = null
         selectedChildButton.visibility = View.VISIBLE
         connectionStatusText.visibility = View.VISIBLE
         updateInfoText.visibility = View.VISIBLE
+        statusText.visibility = View.VISIBLE
         pairingInstructionText.visibility = View.GONE
         codeText.visibility = View.GONE
         childAudioActivityText.visibility = View.VISIBLE
