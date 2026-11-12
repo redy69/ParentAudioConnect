@@ -1688,10 +1688,25 @@ private var receivedMp3File: File? = null
             else ->
                 "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
         }
+        val audioIsActive = liveAudioActive || mp3AudioActive
         childAudioActivityText.setTextColor(
-            if (liveAudioActive || mp3AudioActive) Color.rgb(23, 107, 67)
+            if (audioIsActive) Color.rgb(23, 107, 67)
             else Color.rgb(82, 98, 122)
         )
+        (childAudioActivityText.background as? GradientDrawable)?.apply {
+            setColors(
+                if (audioIsActive) {
+                    intArrayOf(Color.rgb(249, 255, 251), Color.rgb(231, 247, 237))
+                } else {
+                    intArrayOf(Color.WHITE, Color.rgb(237, 245, 255))
+                }
+            )
+            setStroke(
+                dp(1),
+                if (audioIsActive) Color.rgb(194, 230, 207)
+                else Color.rgb(194, 215, 246)
+            )
+        }
     }
 
     private fun listenForChild(code: String) {
