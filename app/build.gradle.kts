@@ -68,6 +68,8 @@ android {
 }
 
 dependencies {
+    // Standalone org.webrtc namespace; LiveKit v2 uses livekit.org.webrtc internally.
+    implementation("io.github.webrtc-sdk:android:150.7871.04")
     implementation("io.livekit:livekit-android:2.30.0")
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
