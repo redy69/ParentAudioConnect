@@ -1554,6 +1554,8 @@ private var receivedMp3File: File? = null
         val armed = getSharedPreferences("parent_audio", MODE_PRIVATE)
             .getBoolean("remote_camera_armed", false)
         cameraStandbyButton.text = "AKTIFKAN SIAGA KAMERA"
+        cameraStandbyButton.contentDescription =
+            "Aktifkan siaga kamera agar perangkat orang tua dapat meminta tampilan kamera HP ini"
         // Once standby is active, restore the original child screen without the camera menu.
         cameraStandbyButton.visibility = if (armed) View.GONE else View.VISIBLE
     }
