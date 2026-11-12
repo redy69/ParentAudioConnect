@@ -269,7 +269,8 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(32, 55, 92))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(12), dp(8), dp(12), dp(8))
+            setPadding(dp(12), dp(9), dp(12), dp(9))
+            minHeight = dp(58)
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(237, 245, 255))
