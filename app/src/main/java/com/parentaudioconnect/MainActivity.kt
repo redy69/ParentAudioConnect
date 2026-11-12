@@ -225,7 +225,7 @@ private var receivedMp3File: File? = null
 
         connectionStatusText = TextView(this).apply {
             text = "○ OFFLINE"
-            textSize = 10.5f
+            textSize = 11f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.025f
             setTextColor(Color.rgb(105, 116, 137))
