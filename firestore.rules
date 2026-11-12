@@ -40,7 +40,8 @@ service cloud.firestore {
           'geofenceUpdatedAt',
           'safeZones',
           'audioLiveKitServerId',
-          'cameraLiveKitServerId'
+          'cameraLiveKitServerId',
+          'galleryP2pSessionId'
         ])
         && (!changed.hasAny(['usageScheduleEnabled'])
           || request.resource.data.usageScheduleEnabled is bool)
@@ -96,7 +97,11 @@ service cloud.firestore {
             && request.resource.data.audioLiveKitServerId in ['main', 'backup-2', 'backup-3', 'backup-4', 'backup-5']))
         && (!changed.hasAny(['cameraLiveKitServerId'])
           || (request.resource.data.cameraLiveKitServerId is string
-            && request.resource.data.cameraLiveKitServerId in ['main', 'backup-2', 'backup-3', 'backup-4', 'backup-5']));
+            && request.resource.data.cameraLiveKitServerId in ['main', 'backup-2', 'backup-3', 'backup-4', 'backup-5']))
+        && (!changed.hasAny(['galleryP2pSessionId'])
+          || !request.resource.data.keys().hasAny(['galleryP2pSessionId'])
+          || (request.resource.data.galleryP2pSessionId is string
+            && request.resource.data.galleryP2pSessionId.size() <= 64));
     }
 
     function validChildStatusUpdate() {
@@ -307,9 +312,13 @@ service cloud.firestore {
               && request.resource.data.kind in ['answer', 'child-ice'])
           )
           && request.resource.data.keys().hasOnly([
-            'kind', 'senderUid', 'sdp', 'candidate', 'sdpMid',
+            'kind', 'senderUid', 'sessionId', 'sdp', 'candidate', 'sdpMid',
             'sdpMLineIndex', 'createdAt'
           ])
+          && request.resource.data.sessionId is string
+          && request.resource.data.sessionId.size() > 0
+          && request.resource.data.sessionId.size() <= 64
+          && request.resource.data.sessionId == get(/databases/$(database)/documents/pairings/$(code)).data.galleryP2pSessionId
           && request.resource.data.createdAt is timestamp
           && (
             (request.resource.data.kind in ['offer', 'answer']

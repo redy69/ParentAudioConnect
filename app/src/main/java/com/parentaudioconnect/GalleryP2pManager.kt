@@ -39,8 +39,9 @@ class GalleryP2pManager(
     }
 
     private val appContext = context.applicationContext
-    private val signals = FirebaseFirestore.getInstance()
-        .collection("pairings").document(pairingCode).collection("gallerySignals")
+    private val pairingDocument = FirebaseFirestore.getInstance()
+        .collection("pairings").document(pairingCode)
+    private val signals = pairingDocument.collection("gallerySignals")
     private val localUid = com.google.firebase.auth.FirebaseAuth.getInstance()
         .currentUser?.uid
 
@@ -48,6 +49,8 @@ class GalleryP2pManager(
     private var peer: PeerConnection? = null
     private var channel: DataChannel? = null
     private var signalListener: ListenerRegistration? = null
+    private var pairingListener: ListenerRegistration? = null
+    @Volatile private var activeSessionId: String? = null
     private var remoteDescriptionSet = false
     private val pendingRemoteCandidates = mutableListOf<IceCandidate>()
     @Volatile private var closed = false
@@ -58,54 +61,98 @@ class GalleryP2pManager(
             onState("Autentikasi Firebase belum siap")
             return
         }
-        try {
-            if (initialized.compareAndSet(false, true)) {
-                val options = PeerConnectionFactory.InitializationOptions
-                    .builder(appContext).createInitializationOptions()
-                PeerConnectionFactory.initialize(options)
-            }
-            factory = PeerConnectionFactory.builder().createPeerConnectionFactory()
-            val servers = listOf(
-                PeerConnection.IceServer.builder("stun:stun.l.google.com:19302")
-                    .createIceServer()
-            )
-            peer = factory?.createPeerConnection(RTCConfiguration(servers), peerObserver)
-            if (peer == null) {
-                fail("Mesin P2P tidak dapat dibuat")
+        if (localRole == Role.PARENT) {
+            val sessionId = UUID.randomUUID().toString()
+            activeSessionId = sessionId
+            onState("Membuka sesi galeri P2P yang baru…")
+            pairingDocument.update("galleryP2pSessionId", sessionId)
+                .addOnSuccessListener {
+                    if (closed) return@addOnSuccessListener
+                    try {
+                        initializePeer()
+                        listenForSignals()
+                        onState("Menyiapkan koneksi P2P langsung…")
+                        createOffer()
+                    } catch (error: Exception) {
+                        Log.e(TAG, "Gagal memulai P2P", error)
+                        fail("Gagal memulai P2P: ${error.localizedMessage ?: error.javaClass.simpleName}")
+                        close()
+                    }
+                }
+                .addOnFailureListener { error ->
+                    fail("Tidak dapat membuka sesi P2P: ${error.localizedMessage ?: "periksa koneksi"}")
+                    close()
+                }
+        } else {
+            try {
+                initializePeer()
+                listenForPairingSession()
+                onState("Menunggu permintaan galeri dari HP orang tua…")
+            } catch (error: Exception) {
+                Log.e(TAG, "Gagal memulai P2P", error)
+                fail("Gagal memulai P2P: ${error.localizedMessage ?: error.javaClass.simpleName}")
                 close()
-                return
             }
+        }
+    }
+
+    private fun initializePeer() {
+        if (initialized.compareAndSet(false, true)) {
+            val options = PeerConnectionFactory.InitializationOptions
+                .builder(appContext).createInitializationOptions()
+            PeerConnectionFactory.initialize(options)
+        }
+        factory = PeerConnectionFactory.builder().createPeerConnectionFactory()
+        val servers = listOf(
+            PeerConnection.IceServer.builder("stun:stun.l.google.com:19302")
+                .createIceServer()
+        )
+        peer = factory?.createPeerConnection(RTCConfiguration(servers), peerObserver)
+        if (peer == null) throw IllegalStateException("Mesin P2P tidak dapat dibuat")
+    }
+
+    private fun listenForPairingSession() {
+        pairingListener?.remove()
+        pairingListener = pairingDocument.addSnapshotListener { snapshot, error ->
+            if (closed) return@addSnapshotListener
+            if (error != null) {
+                fail("Status sesi galeri tidak dapat dibaca")
+                return@addSnapshotListener
+            }
+            val sessionId = snapshot?.getString("galleryP2pSessionId")
+            if (sessionId.isNullOrBlank() || sessionId == activeSessionId) return@addSnapshotListener
+            activeSessionId = sessionId
+            remoteDescriptionSet = false
+            pendingRemoteCandidates.clear()
+            signalListener?.remove()
             listenForSignals()
-            onState("Menyiapkan koneksi P2P langsung…")
-            if (localRole == Role.PARENT) createOffer()
-        } catch (error: Exception) {
-            Log.e(TAG, "Gagal memulai P2P", error)
-            fail("Gagal memulai P2P: ${error.localizedMessage ?: error.javaClass.simpleName}")
-            close()
+            onState("Permintaan sesi galeri diterima • menunggu offer P2P…")
         }
     }
 
     private fun listenForSignals() {
+        val sessionId = activeSessionId ?: return
         signalListener?.remove()
-        signalListener = signals.addSnapshotListener { snapshot, error ->
-            if (closed) return@addSnapshotListener
-            if (error != null) {
-                Log.e(TAG, "Signal listener error", error)
-                fail("Sinyal koneksi gagal dibaca")
-                return@addSnapshotListener
-            }
-            snapshot?.documentChanges?.forEach { change ->
-                if (change.type == DocumentChange.Type.REMOVED) return@forEach
-                val data = change.document.data
-                if (data["senderUid"] == localUid) return@forEach
-                when (data["kind"] as? String) {
-                    "offer" -> if (localRole == Role.CHILD) receiveOffer(data["sdp"] as? String)
-                    "answer" -> if (localRole == Role.PARENT) receiveAnswer(data["sdp"] as? String)
-                    "parent-ice" -> if (localRole == Role.CHILD) receiveCandidate(data)
-                    "child-ice" -> if (localRole == Role.PARENT) receiveCandidate(data)
+        signalListener = signals.whereEqualTo("sessionId", sessionId)
+            .addSnapshotListener { snapshot, error ->
+                if (closed) return@addSnapshotListener
+                if (error != null) {
+                    Log.e(TAG, "Signal listener error", error)
+                    fail("Sinyal koneksi gagal dibaca")
+                    return@addSnapshotListener
+                }
+                snapshot?.documentChanges?.forEach { change ->
+                    if (change.type == DocumentChange.Type.REMOVED) return@forEach
+                    val data = change.document.data
+                    if (data["senderUid"] == localUid || data["sessionId"] != activeSessionId) return@forEach
+                    when (data["kind"] as? String) {
+                        "offer" -> if (localRole == Role.CHILD) receiveOffer(data["sdp"] as? String)
+                        "answer" -> if (localRole == Role.PARENT) receiveAnswer(data["sdp"] as? String)
+                        "parent-ice" -> if (localRole == Role.CHILD) receiveCandidate(data)
+                        "child-ice" -> if (localRole == Role.PARENT) receiveCandidate(data)
+                    }
                 }
             }
-        }
     }
 
     private fun createOffer() {
@@ -187,8 +234,8 @@ class GalleryP2pManager(
     private fun publishSignal(kind: String, sdp: String) {
         if (closed || sdp.length > MAX_SIGNAL_TEXT) return
         signals.document(UUID.randomUUID().toString()).set(
-            mapOf("kind" to kind, "senderUid" to localUid, "sdp" to sdp,
-                "createdAt" to FieldValue.serverTimestamp())
+            mapOf("kind" to kind, "senderUid" to localUid, "sessionId" to activeSessionId,
+                "sdp" to sdp, "createdAt" to FieldValue.serverTimestamp())
         ).addOnFailureListener { fail("Gagal mengirim sinyal $kind") }
     }
 
@@ -196,7 +243,7 @@ class GalleryP2pManager(
         if (closed) return
         val kind = if (localRole == Role.PARENT) "parent-ice" else "child-ice"
         signals.document(UUID.randomUUID().toString()).set(
-            mapOf("kind" to kind, "senderUid" to localUid,
+            mapOf("kind" to kind, "senderUid" to localUid, "sessionId" to activeSessionId,
                 "candidate" to candidate.sdp, "sdpMid" to (candidate.sdpMid ?: ""),
                 "sdpMLineIndex" to candidate.sdpMLineIndex,
                 "createdAt" to FieldValue.serverTimestamp())
@@ -278,6 +325,12 @@ class GalleryP2pManager(
         closed = true
         signalListener?.remove()
         signalListener = null
+        pairingListener?.remove()
+        pairingListener = null
+        if (localRole == Role.PARENT && !activeSessionId.isNullOrBlank()) {
+            pairingDocument.update("galleryP2pSessionId", FieldValue.delete())
+        }
+        activeSessionId = null
         channel?.unregisterObserver()
         channel?.close()
         channel?.dispose()
