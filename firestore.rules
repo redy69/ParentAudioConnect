@@ -139,7 +139,9 @@ service cloud.firestore {
           'audioActivityAt',
           'liveAudioActivityAt',
           'mp3AudioActivityAt',
-          'safeZoneEvents'
+          'safeZoneEvents',
+          'gallerySharingEnabled',
+          'gallerySharingUpdatedAt'
         ])
         && (!changed.hasAny(['deviceBatteryPercent'])
           || (request.resource.data.deviceBatteryPercent is int
@@ -237,7 +239,11 @@ service cloud.firestore {
           || request.resource.data.mp3AudioActivityAt is timestamp)
         && (!changed.hasAny(['safeZoneEvents'])
           || (request.resource.data.safeZoneEvents is list
-            && request.resource.data.safeZoneEvents.size() <= 30));
+            && request.resource.data.safeZoneEvents.size() <= 30))
+        && (!changed.hasAny(['gallerySharingEnabled'])
+          || request.resource.data.gallerySharingEnabled is bool)
+        && (!changed.hasAny(['gallerySharingUpdatedAt'])
+          || request.resource.data.gallerySharingUpdatedAt is timestamp);
     }
 
     match /pairings/{code} {

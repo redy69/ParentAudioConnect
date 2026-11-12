@@ -106,6 +106,7 @@ private lateinit var playMp3Button: Button
     private lateinit var childAppBlockPanel: TextView
     private lateinit var childAppActivityPanel: TextView
     private lateinit var childNotificationPanel: TextView
+    private lateinit var childGalleryPanel: TextView
     private var notificationHistoryListener: ListenerRegistration? = null
     private lateinit var parentAppBlockPanel: TextView
     private var pendingLocationStart = false
@@ -159,6 +160,7 @@ private var receivedMp3File: File? = null
     private const val SCHEDULE_NOTIFICATION_PERMISSION = 1006
     private const val OPERATOR_PERMISSION = 1007
     private const val SAFE_ZONE_NOTIFICATION_PERMISSION = 1008
+    private const val GALLERY_MEDIA_PERMISSION = 1009
 }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -653,6 +655,28 @@ private var receivedMp3File: File? = null
             setOnClickListener { showChildNotificationConsent() }
         }
         rootLayout.addView(childNotificationPanel)
+        childGalleryPanel = TextView(this).apply {
+            text = "🖼️  BERBAGI GALERI HP INI\nNonaktif • Ketuk untuk membaca penjelasan dan memilih media yang boleh dibagikan"
+            textSize = 13f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(35, 53, 88))
+            gravity = Gravity.CENTER
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(dp(18), dp(18), dp(18), dp(18))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(239, 246, 255))
+            ).apply {
+                cornerRadius = dp(19).toFloat()
+                setStroke(dp(1), Color.rgb(190, 218, 245))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(3), 0, dp(12)) }
+            visibility = View.GONE
+            setOnClickListener { showChildGalleryConsent() }
+        }
+        rootLayout.addView(childGalleryPanel)
         val deviceSectionTitle = TextView(this).apply {
             text = "PERANGKAT ANAK"
             textSize = 11.5f
@@ -750,6 +774,28 @@ private var receivedMp3File: File? = null
         }
         rootLayout.addView(parentNotificationsButton)
         parentOnlyViews.add(parentNotificationsButton)
+        val parentGalleryButton = TextView(this).apply {
+            text = "🖼️  GALERI ANAK\nLihat foto dan video yang dibagikan dari HP anak"
+            textSize = 13.5f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(35, 65, 125))
+            gravity = Gravity.CENTER_VERTICAL
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(dp(18), dp(17), dp(18), dp(17))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(235, 243, 255))
+            ).apply {
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), Color.rgb(190, 211, 244))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(5), 0, dp(8)) }
+            setOnClickListener { showParentGalleryStatus() }
+        }
+        rootLayout.addView(parentGalleryButton)
+        parentOnlyViews.add(parentGalleryButton)
         val mapsButton = TextView(this).apply {
             text = "🗺️  MAPS & GEO-FENCE\nBuka peta lokasi perangkat anak"
             textSize = 14f
@@ -879,6 +925,7 @@ private var receivedMp3File: File? = null
             updateChildAppBlockPanel()
             updateChildAppActivityPanel()
             updateChildNotificationPanel()
+            updateChildGalleryPanel()
             // Device battery/network reporting is independent of Usage Access.
             // Always re-enqueue the lightweight status worker when the child app resumes.
             ChildDeviceStatusWorker.schedule(this)
@@ -971,6 +1018,7 @@ private var receivedMp3File: File? = null
         childAppBlockPanel.visibility = View.GONE
         childAppActivityPanel.visibility = View.GONE
         childNotificationPanel.visibility = View.GONE
+        childGalleryPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
         actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.VISIBLE
@@ -1000,6 +1048,7 @@ private var receivedMp3File: File? = null
         childLocationPanel.visibility = View.GONE
         childAppActivityPanel.visibility = View.GONE
         childNotificationPanel.visibility = View.GONE
+        childGalleryPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
         actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.GONE
@@ -1348,6 +1397,7 @@ private var receivedMp3File: File? = null
         rootLayout.findViewWithTag<View>("santethp_maps_page")?.visibility = View.GONE
         childModePanel.visibility = View.GONE
         childLocationPanel.visibility = View.GONE
+        childGalleryPanel.visibility = View.GONE
         childAppActivityPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.VISIBLE }
         updateButton.visibility = View.VISIBLE
@@ -1383,6 +1433,8 @@ private var receivedMp3File: File? = null
         childAppBlockPanel.visibility = View.VISIBLE
         childAppActivityPanel.visibility = View.VISIBLE
         childNotificationPanel.visibility = View.VISIBLE
+        childGalleryPanel.visibility = View.VISIBLE
+        updateChildGalleryPanel()
         updateChildLocationPanel()
         updateChildAppBlockPanel()
         updateChildAppActivityPanel()
@@ -2836,6 +2888,92 @@ private var receivedMp3File: File? = null
             .show()
     }
 
+    private fun galleryMediaPermissions(): Array<String> = when {
+        android.os.Build.VERSION.SDK_INT >= 34 -> arrayOf(
+            Manifest.permission.READ_MEDIA_IMAGES,
+            Manifest.permission.READ_MEDIA_VIDEO,
+            Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
+        )
+        android.os.Build.VERSION.SDK_INT >= 33 -> arrayOf(
+            Manifest.permission.READ_MEDIA_IMAGES,
+            Manifest.permission.READ_MEDIA_VIDEO
+        )
+        else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+    }
+
+    private fun hasGalleryMediaAccess(): Boolean =
+        galleryMediaPermissions().any { permission ->
+            ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+        }
+
+    private fun updateChildGalleryPanel() {
+        if (!this::childGalleryPanel.isInitialized || currentRole != "child") return
+        val enabled = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            .getBoolean("child_gallery_sharing_enabled", false)
+        childGalleryPanel.text = when {
+            !enabled -> "🖼️  BERBAGI GALERI HP INI\nNonaktif • Ketuk untuk membaca penjelasan dan memilih media yang boleh dibagikan"
+            hasGalleryMediaAccess() -> "🖼️  BERBAGI GALERI AKTIF\nIzin media Android tersedia. File asli tidak dikirim otomatis. Ketuk untuk menghentikan."
+            else -> "🖼️  BERBAGI GALERI BELUM SIAP\nPersetujuan tersimpan, tetapi izin foto/video Android belum tersedia. Ketuk untuk mengatur."
+        }
+        childGalleryPanel.setTextColor(
+            if (enabled && hasGalleryMediaAccess()) Color.rgb(28, 132, 86) else Color.rgb(35, 53, 88)
+        )
+    }
+
+    private fun updateGalleryConsentOnServer(enabled: Boolean) {
+        val code = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            .getString("pair_code", null) ?: return
+        db.collection("pairings").document(code).update(
+            mapOf("gallerySharingEnabled" to enabled, "gallerySharingUpdatedAt" to Timestamp.now())
+        ).addOnFailureListener { error ->
+            Toast.makeText(this,
+                "Status berbagi galeri belum tersimpan: ${error.localizedMessage ?: "periksa koneksi"}",
+                Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun showChildGalleryConsent() {
+        if (currentRole != "child") return
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        val enabled = prefs.getBoolean("child_gallery_sharing_enabled", false)
+        val message = "Jika diaktifkan, daftar foto dan video dari HP ini dapat dilihat oleh HP orang tua yang sudah dipasangkan. Pada rancangan ini, thumbnail ditampilkan lebih dulu; file asli/HD tidak dikirim otomatis dan baru diminta saat orang tua memilih item. Android akan meminta izin media. Anda dapat menghentikan berbagi kapan saja."
+        AlertDialog.Builder(this)
+            .setTitle(if (enabled) "Berbagi galeri sedang aktif" else "Persetujuan berbagi galeri")
+            .setMessage(message)
+            .setNegativeButton("Tutup", null)
+            .setPositiveButton(if (enabled) "Hentikan berbagi" else "Saya setuju • Lanjutkan") { _, _ ->
+                if (enabled) {
+                    prefs.edit().putBoolean("child_gallery_sharing_enabled", false).apply()
+                    updateGalleryConsentOnServer(false)
+                    updateChildGalleryPanel()
+                } else {
+                    prefs.edit().putBoolean("child_gallery_sharing_enabled", true).apply()
+                    requestPermissions(galleryMediaPermissions(), GALLERY_MEDIA_PERMISSION)
+                }
+            }
+            .show()
+    }
+
+    private fun showParentGalleryStatus() {
+        if (currentRole != "parent") return
+        val code = selectedChildCode
+        if (code.isNullOrBlank()) {
+            Toast.makeText(this, "Pilih HP anak terlebih dahulu.", Toast.LENGTH_LONG).show()
+            return
+        }
+        val enabled = childSnapshots[code]?.getBoolean("gallerySharingEnabled") == true
+        val name = childNames[code] ?: "HP Anak"
+        AlertDialog.Builder(this)
+            .setTitle("Galeri • $name")
+            .setMessage(if (enabled) {
+                "Persetujuan berbagi galeri sudah aktif. Tampilan thumbnail dan transfer file P2P masih dalam pengerjaan; belum ada foto atau video yang dikirim."
+            } else {
+                "Berbagi galeri belum diaktifkan dari HP anak. Minta anak membuka panel BERBAGI GALERI HP INI, membaca penjelasan, lalu menyetujui izin media Android."
+            })
+            .setPositiveButton("Mengerti", null)
+            .show()
+    }
+
     private fun showChildNotificationsDialog() {
         if (currentRole != "parent") return
         val code = selectedChildCode
@@ -3896,6 +4034,20 @@ private fun playReceivedMp3() {
             permissions,
             grantResults
         )
+
+        if (requestCode == GALLERY_MEDIA_PERMISSION) {
+            val granted = hasGalleryMediaAccess()
+            if (granted) {
+                updateGalleryConsentOnServer(true)
+                Toast.makeText(this, "Izin media galeri aktif.", Toast.LENGTH_LONG).show()
+            } else {
+                getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                    .putBoolean("child_gallery_sharing_enabled", false).apply()
+                updateGalleryConsentOnServer(false)
+                Toast.makeText(this, "Izin foto/video tidak diberikan. Berbagi galeri tetap nonaktif.", Toast.LENGTH_LONG).show()
+            }
+            updateChildGalleryPanel()
+        }
 
         if (requestCode == CAMERA_PERMISSION) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
