@@ -1243,6 +1243,9 @@ private var receivedMp3File: File? = null
             hint = "Nama anak"
             contentDescription = "Kolom untuk memasukkan nama perangkat anak"
             isSingleLine = true
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE
             minHeight = dp(56)
             textSize = 16f
             setPadding(dp(14), dp(10), dp(14), dp(10))
@@ -1848,6 +1851,7 @@ private var receivedMp3File: File? = null
             setPadding(dp(14), dp(12), dp(14), dp(12))
             inputType = android.text.InputType.TYPE_CLASS_TEXT or
                 android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE
             filters = arrayOf(
                 android.text.InputFilter.LengthFilter(8),
                 android.text.InputFilter.AllCaps()
