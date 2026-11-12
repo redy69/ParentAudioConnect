@@ -1186,6 +1186,8 @@ private var receivedMp3File: File? = null
                 contentDescription = "Lepaskan perangkat anak $name"
                 textSize = 10.5f
                 isAllCaps = false
+                maxLines = 2
+                setLineSpacing(dp(1).toFloat(), 1f)
                 minHeight = dp(48)
                 minWidth = dp(72)
                 setPadding(dp(9), dp(6), dp(9), dp(6))
