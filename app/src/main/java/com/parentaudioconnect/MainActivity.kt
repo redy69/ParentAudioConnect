@@ -1214,6 +1214,7 @@ private var receivedMp3File: File? = null
             setText(childNames[code] ?: "Anak")
             setSelection(text.length)
             hint = "Nama anak"
+            contentDescription = "Kolom untuk memasukkan nama perangkat anak"
             isSingleLine = true
         }
         AlertDialog.Builder(this)
@@ -1805,6 +1806,7 @@ private var receivedMp3File: File? = null
     private fun showCodeDialog() {
         val input = EditText(this).apply {
             hint = "Masukkan 8 karakter kode"
+            contentDescription = "Kolom kode pairing 8 karakter dari HP orang tua"
             isSingleLine = true
             textSize = 18f
             letterSpacing = 0.08f
