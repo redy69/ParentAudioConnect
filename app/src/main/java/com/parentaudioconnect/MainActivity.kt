@@ -1088,6 +1088,10 @@ private var receivedMp3File: File? = null
                 }
                 isClickable = true
                 isFocusable = true
+                contentDescription = "Perangkat anak $name. " +
+                    (if (connected) "Status online. " else "Status offline. ") +
+                    (if (selectedChildCode == code) "Sedang dipilih. " else "") +
+                    "Ketuk untuk memilih, tekan lama untuk mengubah nama."
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
                 ).apply { setMargins(0, dp(2), 0, dp(2)) }
@@ -1145,6 +1149,7 @@ private var receivedMp3File: File? = null
             })
             val removeButton = Button(this).apply {
                 text = "Lepaskan"
+                contentDescription = "Lepaskan perangkat anak $name"
                 textSize = 10.5f
                 isAllCaps = false
                 minHeight = dp(44)
@@ -1169,6 +1174,7 @@ private var receivedMp3File: File? = null
 
         val addRow = TextView(this).apply {
             text = "＋    Tambahkan perangkat anak"
+            contentDescription = "Tambahkan perangkat anak baru"
             textSize = 12f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.008f
