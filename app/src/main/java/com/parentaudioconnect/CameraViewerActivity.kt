@@ -113,9 +113,10 @@ class CameraViewerActivity : Activity() {
             addView(cameraInfo, FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                Gravity.TOP or Gravity.END
             ).apply {
                 topMargin = dp(12)
+                marginEnd = dp(12)
             })
         }
         val controls = LinearLayout(this).apply {
