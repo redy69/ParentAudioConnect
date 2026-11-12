@@ -1141,7 +1141,7 @@ private var receivedMp3File: File? = null
                 letterSpacing = 0.005f
                 setTextColor(Color.rgb(27, 43, 73))
                 maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
+                ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
             })
             details.addView(TextView(this).apply {
                 text = if (connected) "● ONLINE  •  Terhubung" else "○ OFFLINE  •  Menunggu koneksi"
