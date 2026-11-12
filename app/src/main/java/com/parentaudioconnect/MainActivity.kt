@@ -239,7 +239,7 @@ private var receivedMp3File: File? = null
             minWidth = dp(76)
             maxLines = 1
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)
             ).apply { setMargins(dp(4), 0, dp(4), 0) }
         }
 
