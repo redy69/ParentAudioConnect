@@ -157,7 +157,7 @@ private var receivedMp3File: File? = null
 
             addView(TextView(this@MainActivity).apply {
                 text = "PARENTAL CARE  •  FAMILY CONNECT"
-                textSize = 9f
+                textSize = 9.5f
                 letterSpacing = 0.13f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.rgb(190, 211, 255))
@@ -180,7 +180,7 @@ private var receivedMp3File: File? = null
             })
             brandRow.addView(TextView(this@MainActivity).apply {
                 text = "ORTU"
-                textSize = 9.5f
+                textSize = 10f
                 letterSpacing = 0.08f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE)
@@ -236,7 +236,7 @@ private var receivedMp3File: File? = null
             letterSpacing = 0.025f
             setTextColor(Color.rgb(105, 116, 137))
             gravity = Gravity.CENTER
-            setPadding(dp(7), dp(3), dp(7), dp(3))
+            setPadding(dp(8), dp(4), dp(8), dp(4))
             background = GradientDrawable().apply {
                 setColor(Color.rgb(239, 243, 249))
                 cornerRadius = dp(14).toFloat()
@@ -254,7 +254,7 @@ private var receivedMp3File: File? = null
         updateInfoText = TextView(this).apply {
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             text = "Belum ada pemeriksaan pembaruan."
-            textSize = 11f
+            textSize = 11.5f
             setTextColor(Color.rgb(91, 108, 137))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(2).toFloat(), 1f)
@@ -306,7 +306,7 @@ private var receivedMp3File: File? = null
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(232, 240, 255))
             ).apply {
-                cornerRadius = dp(14).toFloat()
+                cornerRadius = dp(17).toFloat()
                 setStroke(dp(1), Color.rgb(190, 211, 242))
             }
             elevation = dp(2).toFloat()
@@ -938,7 +938,7 @@ private var receivedMp3File: File? = null
     private fun createButton(label: String): Button {
         return Button(this).apply {
             text = label
-            textSize = 13.5f
+            textSize = 14f
             isAllCaps = false
             setTextColor(Color.WHITE)
             background = GradientDrawable(
