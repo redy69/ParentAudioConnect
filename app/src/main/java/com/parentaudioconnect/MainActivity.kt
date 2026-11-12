@@ -12,6 +12,7 @@ import android.app.TimePickerDialog
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.graphics.Color
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
@@ -24,6 +25,7 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.ScrollView
 import android.widget.Toast
@@ -109,6 +111,14 @@ private lateinit var playMp3Button: Button
     private lateinit var childGalleryPanel: TextView
     private var childGalleryP2pManager: GalleryP2pManager? = null
     private var childGalleryProtocol: GalleryP2pGalleryProtocol? = null
+    private var parentGalleryP2pManager: GalleryP2pManager? = null
+    private var parentGalleryProtocol: GalleryP2pGalleryProtocol? = null
+    private var parentGalleryDialog: AlertDialog? = null
+    private var parentGalleryStatus: TextView? = null
+    private var parentGalleryList: LinearLayout? = null
+    private val parentGalleryRows = linkedMapOf<String, LinearLayout>()
+    private val parentGalleryThumbQueue = ArrayDeque<String>()
+    private var parentGalleryThumbInFlight: String? = null
     private var notificationHistoryListener: ListenerRegistration? = null
     private lateinit var parentAppBlockPanel: TextView
     private var pendingLocationStart = false
@@ -3017,15 +3027,197 @@ private var receivedMp3File: File? = null
         }
         val enabled = childSnapshots[code]?.getBoolean("gallerySharingEnabled") == true
         val name = childNames[code] ?: "HP Anak"
-        AlertDialog.Builder(this)
-            .setTitle("Galeri • $name")
-            .setMessage(if (enabled) {
-                "Persetujuan berbagi galeri sudah aktif. Tampilan thumbnail dan transfer file P2P masih dalam pengerjaan; belum ada foto atau video yang dikirim."
-            } else {
-                "Berbagi galeri belum diaktifkan dari HP anak. Minta anak membuka panel BERBAGI GALERI HP INI, membaca penjelasan, lalu menyetujui izin media Android."
-            })
-            .setPositiveButton("Mengerti", null)
-            .show()
+        if (!enabled) {
+            AlertDialog.Builder(this)
+                .setTitle("Galeri • " + name)
+                .setMessage("Berbagi galeri belum diaktifkan dari HP anak. Minta anak membuka panel BERBAGI GALERI HP INI, membaca penjelasan, lalu menyetujui izin media Android.")
+                .setPositiveButton("Mengerti", null)
+                .show()
+            return
+        }
+
+        stopParentGalleryP2p()
+        val status = TextView(this).apply {
+            text = "Menyiapkan koneksi P2P langsung…"
+            textSize = 13f
+            setTextColor(Color.rgb(65, 82, 110))
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+        }
+        val list = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(10), dp(8), dp(10), dp(12))
+        }
+        val scroll = ScrollView(this).apply {
+            addView(list)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(440)
+            )
+        }
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(status)
+            addView(scroll)
+        }
+        parentGalleryStatus = status
+        parentGalleryList = list
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Galeri • " + name)
+            .setView(content)
+            .setNegativeButton("Tutup", null)
+            .setNeutralButton("Muat ulang", null)
+            .create()
+        parentGalleryDialog = dialog
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                list.removeAllViews()
+                parentGalleryRows.clear()
+                parentGalleryThumbQueue.clear()
+                parentGalleryThumbInFlight = null
+                parentGalleryProtocol?.requestIndex()
+                status.text = "Meminta daftar foto dan video terbaru…"
+            }
+        }
+        dialog.setOnDismissListener {
+            stopParentGalleryP2p()
+            parentGalleryDialog = null
+            parentGalleryStatus = null
+            parentGalleryList = null
+        }
+        dialog.show()
+
+        lateinit var manager: GalleryP2pManager
+        lateinit var protocol: GalleryP2pGalleryProtocol
+        protocol = GalleryP2pGalleryProtocol(
+            context = this,
+            role = GalleryP2pManager.Role.PARENT,
+            sendFrame = { bytes, binary -> parentGalleryP2pManager?.send(bytes, binary) ?: false },
+            onMediaIndex = { items ->
+                runOnUiThread {
+                    if (parentGalleryDialog?.isShowing != true) return@runOnUiThread
+                    list.removeAllViews()
+                    parentGalleryRows.clear()
+                    parentGalleryThumbQueue.clear()
+                    parentGalleryThumbInFlight = null
+                    if (items.isEmpty()) {
+                        list.addView(TextView(this).apply {
+                            text = "Belum ada foto atau video yang dapat dibagikan."
+                            textSize = 13f
+                            setPadding(dp(12), dp(24), dp(12), dp(24))
+                        })
+                    } else {
+                        items.forEach { item ->
+                            val row = LinearLayout(this).apply {
+                                orientation = LinearLayout.HORIZONTAL
+                                gravity = Gravity.CENTER_VERTICAL
+                                setPadding(dp(7), dp(7), dp(7), dp(7))
+                                background = GradientDrawable().apply {
+                                    setColor(Color.WHITE)
+                                    cornerRadius = dp(12).toFloat()
+                                    setStroke(dp(1), Color.rgb(226, 233, 243))
+                                }
+                                layoutParams = LinearLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT, dp(82)
+                                ).apply { setMargins(0, 0, 0, dp(7)) }
+                            }
+                            val image = ImageView(this).apply {
+                                scaleType = ImageView.ScaleType.CENTER_CROP
+                                setBackgroundColor(Color.rgb(235, 240, 247))
+                                layoutParams = LinearLayout.LayoutParams(dp(66), dp(66))
+                            }
+                            val info = TextView(this).apply {
+                                text = (if (item.kind == "VIDEO") "▶  " else "▣  ") +
+                                    item.name + "\\n" +
+                                    android.text.format.Formatter.formatFileSize(this@MainActivity, item.sizeBytes)
+                                textSize = 12f
+                                setTextColor(Color.rgb(39, 53, 78))
+                                setPadding(dp(10), 0, dp(4), 0)
+                                maxLines = 2
+                                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                            }
+                            row.addView(image)
+                            row.addView(info)
+                            row.setOnClickListener {
+                                val thumb = image.drawable
+                                if (thumb != null) {
+                                    val large = ImageView(this).apply {
+                                        setImageDrawable(thumb)
+                                        adjustViewBounds = true
+                                        scaleType = ImageView.ScaleType.FIT_CENTER
+                                    }
+                                    AlertDialog.Builder(this)
+                                        .setTitle(item.name)
+                                        .setView(large)
+                                        .setPositiveButton("Tutup", null)
+                                        .show()
+                                } else {
+                                    Toast.makeText(this, "Thumbnail sedang dimuat.", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            list.addView(row)
+                            parentGalleryRows[item.key] = row
+                            parentGalleryThumbQueue.addLast(item.key)
+                        }
+                        requestNextParentGalleryThumbnail()
+                    }
+                    status.text = "Daftar diterima: " + items.size +
+                        " media • mengambil thumbnail satu per satu"
+                }
+            },
+            onThumbnail = { key, bytes ->
+                runOnUiThread {
+                    if (parentGalleryDialog?.isShowing != true) return@runOnUiThread
+                    if (bytes.isNotEmpty()) {
+                        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        val row = parentGalleryRows[key]
+                        val image = row?.getChildAt(0) as? ImageView
+                        if (bitmap != null) image?.setImageBitmap(bitmap)
+                    }
+                    if (parentGalleryThumbInFlight == key) parentGalleryThumbInFlight = null
+                    requestNextParentGalleryThumbnail()
+                }
+            },
+            onStatus = { message ->
+                runOnUiThread {
+                    if (parentGalleryDialog?.isShowing == true) status.text = message
+                }
+            }
+        )
+        parentGalleryProtocol = protocol
+        manager = GalleryP2pManager(
+            context = this,
+            pairingCode = code,
+            localRole = GalleryP2pManager.Role.PARENT,
+            onState = { message ->
+                runOnUiThread {
+                    if (parentGalleryDialog?.isShowing == true) status.text = message
+                    if (message.contains("P2P TERHUBUNG")) protocol.requestIndex()
+                }
+            },
+            onData = { bytes, binary -> protocol.onFrame(bytes, binary) }
+        )
+        parentGalleryP2pManager = manager
+        manager.start()
+    }
+
+    private fun requestNextParentGalleryThumbnail() {
+        if (parentGalleryThumbInFlight != null || parentGalleryDialog?.isShowing != true) return
+        val next = parentGalleryThumbQueue.removeFirstOrNull() ?: return
+        parentGalleryThumbInFlight = next
+        if (parentGalleryProtocol?.requestThumbnail(next) != true) {
+            parentGalleryThumbInFlight = null
+            parentGalleryStatus?.text = "Permintaan thumbnail tertunda • mencoba item berikutnya"
+            parentGalleryList?.post { requestNextParentGalleryThumbnail() }
+        }
+    }
+
+    private fun stopParentGalleryP2p() {
+        parentGalleryProtocol?.close()
+        parentGalleryProtocol = null
+        parentGalleryP2pManager?.close()
+        parentGalleryP2pManager = null
+        parentGalleryThumbQueue.clear()
+        parentGalleryThumbInFlight = null
+        parentGalleryRows.clear()
     }
 
     private fun showChildNotificationsDialog() {

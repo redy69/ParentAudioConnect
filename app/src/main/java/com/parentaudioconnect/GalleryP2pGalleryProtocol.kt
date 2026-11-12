@@ -193,6 +193,7 @@ class GalleryP2pGalleryProtocol(
                 return@execute
             }
             val item = childItems[key] ?: run {
+                sendJson(JSONObject().put("type", "thumbnail_response").put("key", key).put("error", true))
                 onStatus("Media sudah berubah; minta daftar galeri terbaru")
                 return@execute
             }
@@ -218,9 +219,12 @@ class GalleryP2pGalleryProtocol(
     private fun receiveThumbnail(message: JSONObject) {
         val key = message.optString("key")
         val encoded = message.optString("data")
-        if (key.isBlank() || key.length > 160 || encoded.isBlank() ||
-            encoded.length > MAX_THUMB_BYTES * 2
-        ) return
+        if (key.isBlank() || key.length > 160) return
+        if (message.optBoolean("error", false)) {
+            onThumbnail(key, ByteArray(0))
+            return
+        }
+        if (encoded.isBlank() || encoded.length > MAX_THUMB_BYTES * 2) return
         try {
             val decoded = Base64.decode(encoded, Base64.DEFAULT)
             if (decoded.isNotEmpty() && decoded.size <= MAX_THUMB_BYTES) {
