@@ -202,22 +202,22 @@ private var receivedMp3File: File? = null
 
         statusText = TextView(this).apply {
             text = "Memeriksa koneksi..."
-            textSize = 13.5f
+            textSize = 13f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.01f
             setTextColor(Color.rgb(34, 57, 96))
             gravity = Gravity.CENTER_VERTICAL
-            setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(17), dp(15), dp(17), dp(15))
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(dp(15), dp(13), dp(15), dp(13))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
             ).apply {
-                cornerRadius = dp(20).toFloat()
+                cornerRadius = dp(18).toFloat()
                 setStroke(dp(1), Color.rgb(195, 215, 245))
             }
             elevation = dp(2).toFloat()
-            minHeight = dp(56)
+            minHeight = dp(52)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { setMargins(0, dp(4), 0, dp(6)) }
