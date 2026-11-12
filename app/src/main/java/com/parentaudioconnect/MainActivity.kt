@@ -1022,7 +1022,7 @@ private var receivedMp3File: File? = null
             })
             empty.addView(TextView(this).apply {
                 text = "Tekan tombol + untuk mulai menghubungkan HP anak."
-                textSize = 11f
+                textSize = 11.5f
                 setLineSpacing(dp(2).toFloat(), 1f)
                 setTextColor(Color.rgb(105, 120, 146))
                 setPadding(0, dp(5), 0, 0)
