@@ -1,9 +1,12 @@
 
 package com.santethp
 import android.content.Intent
+import android.content.ContentValues
 import android.content.ComponentName
 import android.provider.Settings
+import android.provider.MediaStore
 import android.net.Uri
+import android.os.Build
 import java.io.File
 import android.Manifest
 import android.app.Activity
@@ -117,6 +120,7 @@ private lateinit var playMp3Button: Button
     private var parentGalleryStatus: TextView? = null
     private var parentGalleryList: LinearLayout? = null
     private val parentGalleryRows = linkedMapOf<String, LinearLayout>()
+    private val parentGalleryMediaItems = linkedMapOf<String, GalleryP2pGalleryProtocol.RemoteMedia>()
     private val parentGalleryThumbQueue = ArrayDeque<String>()
     private var parentGalleryThumbInFlight: String? = null
     private var notificationHistoryListener: ListenerRegistration? = null
@@ -3108,8 +3112,10 @@ private var receivedMp3File: File? = null
                     if (parentGalleryDialog?.isShowing != true) return@runOnUiThread
                     list.removeAllViews()
                     parentGalleryRows.clear()
+                    parentGalleryMediaItems.clear()
                     parentGalleryThumbQueue.clear()
                     parentGalleryThumbInFlight = null
+                    items.forEach { parentGalleryMediaItems[it.key] = it }
                     if (items.isEmpty()) {
                         list.addView(TextView(this).apply {
                             text = "Belum ada foto atau video yang dapat dibagikan."
@@ -3149,21 +3155,23 @@ private var receivedMp3File: File? = null
                             row.addView(image)
                             row.addView(info)
                             row.setOnClickListener {
-                                val thumb = image.drawable
-                                if (thumb != null) {
-                                    val large = ImageView(this).apply {
-                                        setImageDrawable(thumb)
-                                        adjustViewBounds = true
-                                        scaleType = ImageView.ScaleType.FIT_CENTER
+                                AlertDialog.Builder(this)
+                                    .setTitle(item.name)
+                                    .setMessage(
+                                        "Ukuran asli: " + android.text.format.Formatter.formatFileSize(this, item.sizeBytes) +
+                                            "\\nFile asli hanya akan diminta setelah Anda memilih tombol unduh. Transfer dibatasi 200 MB dan diverifikasi dengan SHA-256."
+                                    )
+                                    .setNegativeButton("Batal", null)
+                                    .setPositiveButton("Unduh HD & simpan") { _, _ ->
+                                        if (Build.VERSION.SDK_INT < 29) {
+                                            Toast.makeText(this, "Simpan langsung ke galeri memerlukan Android 10 atau lebih baru.", Toast.LENGTH_LONG).show()
+                                        } else if (parentGalleryProtocol?.requestOriginal(item.key) != true) {
+                                            Toast.makeText(this, "Permintaan unduh belum terkirim. Periksa koneksi P2P.", Toast.LENGTH_LONG).show()
+                                        } else {
+                                            status.text = "Meminta file asli: " + item.name
+                                        }
                                     }
-                                    AlertDialog.Builder(this)
-                                        .setTitle(item.name)
-                                        .setView(large)
-                                        .setPositiveButton("Tutup", null)
-                                        .show()
-                                } else {
-                                    Toast.makeText(this, "Thumbnail sedang dimuat.", Toast.LENGTH_SHORT).show()
-                                }
+                                    .show()
                             }
                             list.addView(row)
                             parentGalleryRows[item.key] = row
@@ -3192,6 +3200,30 @@ private var receivedMp3File: File? = null
                 runOnUiThread {
                     if (parentGalleryDialog?.isShowing == true) status.text = message
                 }
+            },
+            onOriginalReady = { key, file, fileName, mime ->
+                runOnUiThread {
+                    try {
+                        val media = parentGalleryMediaItems[key]
+                        val uri = saveGalleryOriginalToDevice(file, fileName, mime)
+                        if (uri != null) {
+                            status.text = "File asli tersimpan di galeri HP orang tua."
+                            val openIntent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(uri, mime)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            try {
+                                startActivity(Intent.createChooser(openIntent, "Buka media"))
+                            } catch (_: Exception) {
+                                Toast.makeText(this, "File tersimpan. Tidak ada aplikasi untuk membukanya.", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    } catch (error: Exception) {
+                        file.delete()
+                        status.text = "Gagal menyimpan file: " + (error.localizedMessage ?: "kesalahan")
+                        Toast.makeText(this, status.text, Toast.LENGTH_LONG).show()
+                    }
+                }
             }
         )
         parentGalleryProtocol = protocol
@@ -3219,6 +3251,39 @@ private var receivedMp3File: File? = null
             parentGalleryThumbInFlight = null
             parentGalleryStatus?.text = "Permintaan thumbnail tertunda • mencoba item berikutnya"
             parentGalleryList?.post { requestNextParentGalleryThumbnail() }
+        }
+    }
+
+    private fun saveGalleryOriginalToDevice(file: File, name: String, mime: String): Uri? {
+        if (Build.VERSION.SDK_INT < 29) {
+            file.delete()
+            throw IllegalStateException("Simpan ke galeri memerlukan Android 10 atau lebih baru")
+        }
+        val safeName = name.substringAfterLast('/').replace(Regex("[\\\\/:*?\\\"<>|]"), "_")
+            .ifBlank { "SantetHP-media" }
+        val isVideo = mime.startsWith("video/")
+        val collection = if (isVideo) MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, safeName)
+            put(MediaStore.MediaColumns.MIME_TYPE, mime)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, if (isVideo) "Movies/SantetHP" else "Pictures/SantetHP")
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
+        }
+        val uri = contentResolver.insert(collection, values)
+            ?: throw IllegalStateException("MediaStore tidak dapat membuat file galeri")
+        try {
+            val output = contentResolver.openOutputStream(uri)
+                ?: throw IllegalStateException("Tidak dapat membuka tujuan penyimpanan")
+            output.use { stream -> file.inputStream().use { input -> input.copyTo(stream) } }
+            contentResolver.update(uri, ContentValues().apply {
+                put(MediaStore.MediaColumns.IS_PENDING, 0)
+            }, null, null)
+            file.delete()
+            return uri
+        } catch (error: Exception) {
+            contentResolver.delete(uri, null, null)
+            throw error
         }
     }
 
