@@ -8,6 +8,11 @@ import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.Executors
+import java.io.File
+import java.io.FileOutputStream
+import java.security.MessageDigest
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 /** Consent-gated gallery metadata and on-demand thumbnail protocol over WebRTC DataChannel. */
 class GalleryP2pGalleryProtocol(
@@ -16,7 +21,8 @@ class GalleryP2pGalleryProtocol(
     private val sendFrame: (ByteArray, Boolean) -> Boolean,
     private val onMediaIndex: (List<RemoteMedia>) -> Unit,
     private val onThumbnail: (String, ByteArray) -> Unit,
-    private val onStatus: (String) -> Unit
+    private val onStatus: (String) -> Unit,
+    private val onOriginalReady: (String, File, String, String) -> Unit = { _, _, _, _ -> }
 ) {
     data class RemoteMedia(
         val key: String,
@@ -33,6 +39,8 @@ class GalleryP2pGalleryProtocol(
         private const val MAX_INDEX_ITEMS = 1000
         private const val INDEX_PAGE_SIZE = 40
         private const val MAX_THUMB_BYTES = 64 * 1024
+        private const val MAX_ORIGINAL_BYTES = 200L * 1024L * 1024L
+        private const val ORIGINAL_CHUNK_BYTES = 16 * 1024
     }
 
     private val appContext = context.applicationContext
@@ -41,6 +49,15 @@ class GalleryP2pGalleryProtocol(
     @Volatile private var closed = false
     @Volatile private var childItems = emptyMap<String, GalleryMediaRepository.MediaItem>()
     private val receivedIndex = linkedMapOf<String, RemoteMedia>()
+    private val requestedTransfers = ConcurrentHashMap<String, String>()
+    private val cancelledTransfers = ConcurrentHashMap.newKeySet<String>()
+    @Volatile private var incomingTransfer: IncomingTransfer? = null
+
+    private data class IncomingTransfer(
+        val transferId: String, val key: String, val name: String, val mime: String,
+        val expectedBytes: Long, val file: File, val output: FileOutputStream,
+        val digest: MessageDigest, var nextSequence: Int = 0, var receivedBytes: Long = 0
+    )
 
     fun requestIndex(): Boolean {
         if (role != GalleryP2pManager.Role.PARENT) return false
