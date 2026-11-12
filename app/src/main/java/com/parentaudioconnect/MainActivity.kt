@@ -345,7 +345,7 @@ private var receivedMp3File: File? = null
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(12), 0, dp(9)) }
+            ).apply { setMargins(0, dp(10), 0, dp(5)) }
             visibility = View.GONE
         }
         parentButton = createButton("👨‍👩‍👧  ORANG TUA\nKelola perangkat anak")
@@ -356,6 +356,10 @@ private var receivedMp3File: File? = null
             button.setLineSpacing(dp(2).toFloat(), 1f)
             button.minHeight = dp(76)
             button.setPadding(dp(12), dp(9), dp(12), dp(9))
+            button.layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(4), 0, dp(4)) }
         }
         parentButton.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
