@@ -376,12 +376,13 @@ export default {
       if (storedServerId && requestedServerId && storedServerId !== requestedServerId) {
         return jsonResponse({ error: "Requested server does not match the paired device selection" }, 409);
       }
+      // Keep the paired selection first, but retain every other configured
+      // project as an ordered fallback. A saved preference must never disable
+      // failover when that LiveKit project is unreachable.
       if (preferredServerId) {
-        const exact = liveKitProjects.filter(project => project.id === preferredServerId);
-        if (exact.length === 0) {
-          return jsonResponse({ error: "Selected LiveKit server is not configured; parent must choose an available server" }, 409);
-        }
-        liveKitProjects.splice(0, liveKitProjects.length, ...exact);
+        liveKitProjects.sort((a, b) =>
+          Number(b.id === preferredServerId) - Number(a.id === preferredServerId)
+        );
       }
 
       if (url.pathname === "/camera-token") {
@@ -392,7 +393,7 @@ export default {
         const primary = servers[0];
         return jsonResponse({
           token: primary.token, serverUrl: primary.serverUrl, serverId: primary.id,
-          preferredServerId: requestedServerId, servers, role: isParent ? "parent" : "child", expiresIn: 600
+          preferredServerId, servers, role: isParent ? "parent" : "child", expiresIn: 600
         });
       }
 
@@ -402,7 +403,7 @@ export default {
       const primary = servers[0];
       return jsonResponse({
         token: primary.token, serverUrl: primary.serverUrl, serverId: primary.id,
-        preferredServerId: requestedServerId, servers, role: isParent ? "parent" : "child", expiresIn: 600
+        preferredServerId, servers, role: isParent ? "parent" : "child", expiresIn: 600
       });
     } catch (error) {
       return jsonResponse({ error: "Internal server error" }, 500);
