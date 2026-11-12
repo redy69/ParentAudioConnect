@@ -1757,6 +1757,17 @@ private var receivedMp3File: File? = null
         val input = EditText(this).apply {
             hint = "Masukkan 8 karakter kode"
             isSingleLine = true
+            textSize = 18f
+            letterSpacing = 0.08f
+            gravity = Gravity.CENTER
+            setTypeface(android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+            filters = arrayOf(
+                android.text.InputFilter.LengthFilter(8),
+                android.text.InputFilter.AllCaps()
+            )
         }
 
         AlertDialog.Builder(this)
