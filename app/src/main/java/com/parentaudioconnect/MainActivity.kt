@@ -107,6 +107,8 @@ private lateinit var playMp3Button: Button
     private lateinit var childAppActivityPanel: TextView
     private lateinit var childNotificationPanel: TextView
     private lateinit var childGalleryPanel: TextView
+    private var childGalleryP2pManager: GalleryP2pManager? = null
+    private var childGalleryProtocol: GalleryP2pGalleryProtocol? = null
     private var notificationHistoryListener: ListenerRegistration? = null
     private lateinit var parentAppBlockPanel: TextView
     private var pendingLocationStart = false
@@ -918,6 +920,7 @@ private var receivedMp3File: File? = null
         // Retry registration whenever the child app returns to foreground.
         val childPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         if (childPrefs.getString("pair_role", null) == "child") {
+            startChildGalleryP2pIfAllowed()
             updateChildUsageAccessPanel()
             maybeRequestScheduleNotificationPermission()
             rootLayout.postDelayed({ maybeRequestOperatorPermission() }, 1200)
@@ -932,6 +935,57 @@ private var receivedMp3File: File? = null
             refreshFcmToken()
             restoreCameraStandbyIfNeeded()
         }
+    }
+
+    override fun onPause() {
+        stopChildGalleryP2p()
+        super.onPause()
+    }
+
+    private fun startChildGalleryP2pIfAllowed() {
+        if (currentRole != "child" || childGalleryP2pManager != null) return
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        if (!prefs.getBoolean("child_gallery_sharing_enabled", false) || !hasGalleryMediaAccess()) return
+        val code = prefs.getString("pair_code", null) ?: return
+
+        lateinit var protocol: GalleryP2pGalleryProtocol
+        val manager = GalleryP2pManager(
+            context = this,
+            pairingCode = code,
+            localRole = GalleryP2pManager.Role.CHILD,
+            onState = { message ->
+                runOnUiThread {
+                    if (this::childGalleryPanel.isInitialized && currentRole == "child") {
+                        childGalleryPanel.text = "🖼️  BERBAGI GALERI AKTIF\n$message"
+                    }
+                }
+            },
+            onData = { bytes, binary -> protocol.onFrame(bytes, binary) }
+        )
+        protocol = GalleryP2pGalleryProtocol(
+            context = this,
+            role = GalleryP2pManager.Role.CHILD,
+            sendFrame = { bytes, binary -> manager.send(bytes, binary) },
+            onMediaIndex = { },
+            onThumbnail = { _, _ -> },
+            onStatus = { message ->
+                runOnUiThread {
+                    if (this::childGalleryPanel.isInitialized && currentRole == "child") {
+                        childGalleryPanel.text = "🖼️  BERBAGI GALERI AKTIF\n$message"
+                    }
+                }
+            }
+        )
+        childGalleryProtocol = protocol
+        childGalleryP2pManager = manager
+        manager.start()
+    }
+
+    private fun stopChildGalleryP2p() {
+        childGalleryProtocol?.close()
+        childGalleryProtocol = null
+        childGalleryP2pManager?.close()
+        childGalleryP2pManager = null
     }
 
     private fun updateChildUsageAccessPanel() {
