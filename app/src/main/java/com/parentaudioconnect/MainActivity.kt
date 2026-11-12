@@ -996,7 +996,8 @@ private var receivedMp3File: File? = null
             val empty = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(dp(10), dp(10), dp(10), dp(10))
+                minHeight = dp(112)
+                setPadding(dp(14), dp(14), dp(14), dp(14))
                 background = GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
                     intArrayOf(Color.WHITE, Color.rgb(247, 250, 255))
