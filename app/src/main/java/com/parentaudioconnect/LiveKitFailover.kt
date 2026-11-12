@@ -33,7 +33,6 @@ object LiveKitFailover {
                 .put("serverUrl", response.optString("serverUrl"))
                 .put("id", response.optString("serverId", "main")))
         }
-        val preferred = response.optString("preferredServerId")
         var lastError: Exception? = null
 
         for (index in 0 until candidates.length()) {
@@ -62,7 +61,7 @@ object LiveKitFailover {
 
         throw IllegalStateException(
             "Semua server LiveKit gagal dihubungi (${candidates.length()} server)",
-            if (preferred.isNotBlank()) null else lastError
+            lastError
         )
     }
 }
