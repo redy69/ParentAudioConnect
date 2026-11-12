@@ -879,11 +879,11 @@ private var receivedMp3File: File? = null
             }
         }
         val helper = when (label) {
-            "BICARA LIVE" -> "Dengarkan suara sekitar"
-            "HENTIKAN LIVE" -> "Akhiri sesi audio"
-            "PUTAR MP3" -> "Kirim audio ke perangkat"
-            "KAMERA LIVE" -> "Lihat kamera perangkat"
-            "CHAT ADMIN" -> "Bantuan dan dukungan"
+            "BICARA LIVE" -> "Dengar suara sekitar"
+            "HENTIKAN LIVE" -> "Akhiri audio live"
+            "PUTAR MP3" -> "Kirim MP3 ke anak"
+            "KAMERA LIVE" -> "Lihat kamera anak"
+            "CHAT ADMIN" -> "Hubungi admin"
             else -> "Kontrol perangkat"
         }
         card.contentDescription = "$label. $helper"
