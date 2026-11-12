@@ -431,7 +431,7 @@ private var receivedMp3File: File? = null
         selectedChildButton.setTextColor(Color.rgb(35, 57, 96))
         selectedChildButton.textSize = 13f
         selectedChildButton.maxLines = 1
-        selectedChildButton.ellipsize = android.text.TextUtils.TruncateAt.END
+        selectedChildButton.ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
         selectedChildButton.setPadding(dp(12), 0, dp(8), 0)
         selectedChildButton.contentDescription = "Pilih perangkat anak"
         selectedChildButton.background = GradientDrawable(
