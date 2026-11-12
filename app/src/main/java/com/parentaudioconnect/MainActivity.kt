@@ -336,6 +336,7 @@ private var receivedMp3File: File? = null
             visibility = View.GONE
         }
 
+        androidx.core.view.ViewCompat.setAccessibilityHeading(pairingInstructionText, true)
         roleIntroText = TextView(this).apply {
             text = "SELAMAT DATANG DI SANTETHP\nPilih jenis perangkat untuk melanjutkan. Pastikan Anda memilih peran yang sesuai dengan HP ini."
             textSize = 13.5f
