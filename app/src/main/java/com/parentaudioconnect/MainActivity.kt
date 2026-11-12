@@ -481,7 +481,7 @@ private var receivedMp3File: File? = null
         cancelPairingButton = createButton("BATALKAN KODE")
         updateButton = createButton("PERIKSA PEMBARUAN")
         cameraStandbyButton = createButton("AKTIFKAN SIAGA KAMERA")
-        liveKitTestButton = createButton("UJI SERVER LIVEKIT")
+        liveKitTestButton = createButton("PILIHAN SERVER")
         liveKitTestButton.setOnClickListener { showLiveKitServerTestDialog() }
         childrenContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -705,6 +705,8 @@ private var receivedMp3File: File? = null
         parentOnlyViews.add(childAudioActivityText)
         // Keep the four primary parent actions directly below the child's activity card.
         rootLayout.addView(actionButtonsRow)
+        rootLayout.addView(liveKitTestButton)
+        parentOnlyViews.add(liveKitTestButton)
         rootLayout.addView(childDeviceStatusText)
         parentOnlyViews.add(childDeviceStatusText)
         parentAppBlockPanel = TextView(this).apply {
@@ -781,8 +783,6 @@ private var receivedMp3File: File? = null
         controlHeading.text = "KONTROL TAMBAHAN"
         rootLayout.addView(controlHeading)
         parentOnlyViews.add(controlHeading)
-        rootLayout.addView(liveKitTestButton)
-        parentOnlyViews.add(liveKitTestButton)
         rootLayout.addView(playMp3Button)
         rootLayout.addView(cameraStandbyButton)
 
