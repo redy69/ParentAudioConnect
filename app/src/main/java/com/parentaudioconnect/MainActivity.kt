@@ -123,6 +123,7 @@ private lateinit var playMp3Button: Button
     private val parentGalleryMediaItems = linkedMapOf<String, GalleryP2pGalleryProtocol.RemoteMedia>()
     private val parentGalleryThumbQueue = ArrayDeque<String>()
     private var parentGalleryThumbInFlight: String? = null
+    private var parentGalleryIndexRequested = false
     private var notificationHistoryListener: ListenerRegistration? = null
     private lateinit var parentAppBlockPanel: TextView
     private var pendingLocationStart = false
@@ -3093,6 +3094,7 @@ private var receivedMp3File: File? = null
                 parentGalleryRows.clear()
                 parentGalleryThumbQueue.clear()
                 parentGalleryThumbInFlight = null
+                parentGalleryIndexRequested = false
                 parentGalleryProtocol?.requestIndex()
                 status.text = "Meminta daftar foto dan video terbaru…"
             }
@@ -3119,6 +3121,7 @@ private var receivedMp3File: File? = null
                     parentGalleryMediaItems.clear()
                     parentGalleryThumbQueue.clear()
                     parentGalleryThumbInFlight = null
+                    parentGalleryIndexRequested = true
                     items.forEach { parentGalleryMediaItems[it.key] = it }
                     if (items.isEmpty()) {
                         list.addView(TextView(this).apply {
@@ -3237,7 +3240,10 @@ private var receivedMp3File: File? = null
             onState = { message ->
                 runOnUiThread {
                     if (parentGalleryDialog?.isShowing == true) status.text = message
-                    if (message.contains("P2P TERHUBUNG")) protocol.requestIndex()
+                    if (message.contains("P2P TERHUBUNG") && !parentGalleryIndexRequested) {
+                        parentGalleryIndexRequested = true
+                        protocol.requestIndex()
+                    }
                 }
             },
             onData = { bytes, binary -> protocol.onFrame(bytes, binary) }
@@ -3252,8 +3258,8 @@ private var receivedMp3File: File? = null
         parentGalleryThumbInFlight = next
         if (parentGalleryProtocol?.requestThumbnail(next) != true) {
             parentGalleryThumbInFlight = null
-            parentGalleryStatus?.text = "Permintaan thumbnail tertunda • mencoba item berikutnya"
-            parentGalleryList?.post { requestNextParentGalleryThumbnail() }
+            parentGalleryThumbQueue.addFirst(next)
+            parentGalleryStatus?.text = "Koneksi belum siap mengirim thumbnail. Ketuk Muat ulang setelah P2P tersambung."
         }
     }
 
@@ -3297,6 +3303,7 @@ private var receivedMp3File: File? = null
         parentGalleryP2pManager = null
         parentGalleryThumbQueue.clear()
         parentGalleryThumbInFlight = null
+        parentGalleryIndexRequested = false
         parentGalleryRows.clear()
     }
 
