@@ -10,6 +10,7 @@ on:
       - fix/camera-standby-return-and-fcm
       - feature/device-health-monitoring
       - feature/livekit-multi-server-failover
+      - recovery/full-features-2026-11-12
 
 permissions:
   contents: write
