@@ -92,9 +92,11 @@ service cloud.firestore {
           || (request.resource.data.safeZones is list
             && request.resource.data.safeZones.size() <= 10))
         && (!changed.hasAny(['audioLiveKitServerId'])
-          || request.resource.data.audioLiveKitServerId in ['main', 'backup-2', 'backup-3', 'backup-4', 'backup-5'])
+          || (request.resource.data.audioLiveKitServerId is string
+            && request.resource.data.audioLiveKitServerId in ['main', 'backup-2', 'backup-3', 'backup-4', 'backup-5']))
         && (!changed.hasAny(['cameraLiveKitServerId'])
-          || request.resource.data.cameraLiveKitServerId in ['main', 'backup-2', 'backup-3', 'backup-4', 'backup-5']);
+          || (request.resource.data.cameraLiveKitServerId is string
+            && request.resource.data.cameraLiveKitServerId in ['main', 'backup-2', 'backup-3', 'backup-4', 'backup-5']));
     }
 
     function validChildStatusUpdate() {
