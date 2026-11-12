@@ -145,15 +145,15 @@ private var receivedMp3File: File? = null
         val title = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(15), dp(9), dp(15), dp(9))
+            setPadding(dp(11), dp(6), dp(11), dp(6))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.rgb(15, 29, 64), Color.rgb(35, 69, 139), Color.rgb(67, 104, 183))
             ).apply {
-                cornerRadius = dp(22).toFloat()
+                cornerRadius = dp(19).toFloat()
                 setStroke(dp(1), Color.argb(68, 255, 255, 255))
             }
-            elevation = dp(5).toFloat()
+            elevation = dp(3).toFloat()
 
             addView(TextView(this@MainActivity).apply {
                 text = "PARENTAL CARE  •  FAMILY CONNECT"
@@ -168,11 +168,11 @@ private var receivedMp3File: File? = null
             val brandRow = LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, dp(5), 0, dp(2))
+                setPadding(0, dp(3), 0, dp(1))
             }
             brandRow.addView(TextView(this@MainActivity).apply {
                 text = "SantetHP"
-                textSize = 26f
+                textSize = 23f
                 letterSpacing = 0.005f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE)
@@ -266,7 +266,7 @@ private var receivedMp3File: File? = null
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(5)) }
+            ).apply { setMargins(0, dp(2), 0, dp(3)) }
             visibility = View.GONE
         }
 
@@ -515,10 +515,10 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.105f
-            setPadding(dp(4), dp(4), dp(4), dp(3))
+            setPadding(dp(3), dp(2), dp(3), dp(2))
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(2), 0, 0) }
+            ).apply { setMargins(0, dp(1), 0, 0) }
         }
         androidx.core.view.ViewCompat.setAccessibilityHeading(deviceSectionTitle, true)
         rootLayout.addView(deviceSectionTitle)
