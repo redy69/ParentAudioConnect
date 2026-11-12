@@ -42,6 +42,7 @@ class CameraViewerActivity : Activity() {
     private var room: Room? = null
     private lateinit var renderer: SurfaceViewRenderer
     private lateinit var status: TextView
+    private lateinit var cameraFacingLabel: TextView
     private var code: String = ""
     private var facing = "back"
     private var stopping = false
@@ -79,6 +80,43 @@ class CameraViewerActivity : Activity() {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             ))
+
+            val cameraInfo = LinearLayout(this@CameraViewerActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(dp(16), dp(9), dp(16), dp(9))
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    setColor(Color.argb(210, 17, 27, 45))
+                    cornerRadius = dp(13).toFloat()
+                    setStroke(dp(1), Color.argb(150, 255, 255, 255))
+                }
+                elevation = dp(4).toFloat()
+            }
+            cameraFacingLabel = TextView(this@CameraViewerActivity).apply {
+                text = "KAMERA BELAKANG"
+                setTextColor(Color.WHITE)
+                textSize = 13f
+                setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+                letterSpacing = 0.04f
+            }
+            val creatorLabel = TextView(this@CameraViewerActivity).apply {
+                text = "Dibuat oleh: lim45ekawan"
+                setTextColor(Color.rgb(218, 229, 248))
+                textSize = 10.5f
+                gravity = Gravity.CENTER
+                setPadding(0, dp(3), 0, 0)
+                letterSpacing = 0.01f
+            }
+            cameraInfo.addView(cameraFacingLabel)
+            cameraInfo.addView(creatorLabel)
+            addView(cameraInfo, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            ).apply {
+                topMargin = dp(12)
+            })
         }
         val controls = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -175,6 +213,7 @@ class CameraViewerActivity : Activity() {
 
     private fun switchCamera() {
         facing = if (facing == "back") "front" else "back"
+        cameraFacingLabel.text = if (facing == "front") "KAMERA DEPAN" else "KAMERA BELAKANG"
         sendCameraCommand("switch", facing, closeAfter = false)
     }
 
