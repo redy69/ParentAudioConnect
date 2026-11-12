@@ -511,6 +511,7 @@ private var receivedMp3File: File? = null
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { setMargins(0, dp(2), 0, 0) }
         }
+        androidx.core.view.ViewCompat.setAccessibilityHeading(deviceSectionTitle, true)
         rootLayout.addView(deviceSectionTitle)
         parentOnlyViews.add(deviceSectionTitle)
         val childHeaderRow = LinearLayout(this).apply {
