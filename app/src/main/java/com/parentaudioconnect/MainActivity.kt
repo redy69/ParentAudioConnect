@@ -225,19 +225,21 @@ private var receivedMp3File: File? = null
 
         connectionStatusText = TextView(this).apply {
             text = "○ OFFLINE"
-            textSize = 10.5f
+            textSize = 11f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(105, 116, 137))
             gravity = Gravity.CENTER
-            setPadding(dp(10), dp(8), dp(10), dp(8))
+            setPadding(dp(8), dp(7), dp(8), dp(7))
             background = GradientDrawable().apply {
                 setColor(Color.rgb(239, 243, 249))
                 cornerRadius = dp(14).toFloat()
+                setStroke(dp(1), Color.rgb(215, 223, 235))
             }
+            minWidth = dp(76)
             maxLines = 1
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)
-            ).apply { setMargins(dp(6), 0, dp(6), 0) }
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(38)
+            ).apply { setMargins(dp(4), 0, dp(4), 0) }
         }
 
         updateInfoText = TextView(this).apply {
@@ -406,7 +408,10 @@ private var receivedMp3File: File? = null
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
         selectedChildButton.setOnClickListener { toggleChildrenPanel() }
         selectedChildButton.setTextColor(Color.rgb(35, 57, 96))
-        selectedChildButton.textSize = 13.5f
+        selectedChildButton.textSize = 12.5f
+        selectedChildButton.maxLines = 1
+        selectedChildButton.ellipsize = android.text.TextUtils.TruncateAt.END
+        selectedChildButton.setPadding(dp(12), 0, dp(8), 0)
         selectedChildButton.contentDescription = "Pilih perangkat anak"
         selectedChildButton.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
@@ -956,9 +961,13 @@ private var receivedMp3File: File? = null
         connectionStatusText.setTextColor(
             if (connected) Color.rgb(24, 128, 82) else Color.rgb(105, 116, 137)
         )
-        (connectionStatusText.background as? GradientDrawable)?.setColor(
-            if (connected) Color.rgb(226, 247, 237) else Color.rgb(239, 243, 249)
-        )
+        (connectionStatusText.background as? GradientDrawable)?.apply {
+            setColor(if (connected) Color.rgb(226, 247, 237) else Color.rgb(239, 243, 249))
+            setStroke(
+                dp(1),
+                if (connected) Color.rgb(196, 230, 211) else Color.rgb(215, 223, 235)
+            )
+        }
     }
 
     private fun toggleChildrenPanel() {
