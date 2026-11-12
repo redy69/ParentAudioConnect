@@ -138,14 +138,14 @@ private var receivedMp3File: File? = null
         rootLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.TOP
-            setPadding(dp(16), dp(18), dp(16), dp(28))
+            setPadding(dp(12), dp(8), dp(12), dp(12))
             setBackgroundColor(Color.rgb(244, 247, 252))
         }
 
         val title = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(21), dp(18), dp(21), dp(18))
+            setPadding(dp(16), dp(11), dp(16), dp(11))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.rgb(15, 29, 64), Color.rgb(35, 69, 139), Color.rgb(67, 104, 183))
@@ -208,7 +208,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(34, 57, 96))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(15), dp(13), dp(15), dp(13))
+            setPadding(dp(12), dp(8), dp(12), dp(8))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
@@ -217,10 +217,10 @@ private var receivedMp3File: File? = null
                 setStroke(dp(1), Color.rgb(195, 215, 245))
             }
             elevation = dp(2).toFloat()
-            minHeight = dp(52)
+            minHeight = dp(44)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(4), 0, dp(6)) }
+            ).apply { setMargins(0, dp(2), 0, dp(4)) }
         }
 
         connectionStatusText = TextView(this).apply {
@@ -268,7 +268,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(32, 55, 92))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(4).toFloat(), 1f)
-            setPadding(dp(16), dp(14), dp(16), dp(14))
+            setPadding(dp(13), dp(8), dp(13), dp(8))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(237, 245, 255))
@@ -279,7 +279,7 @@ private var receivedMp3File: File? = null
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(4), 0, dp(6)) }
+            ).apply { setMargins(0, dp(2), 0, dp(4)) }
         }
 
         codeText = TextView(this).apply {
@@ -385,14 +385,14 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
-        val actionParams = LinearLayout.LayoutParams(0, dp(104), 1f).apply {
-            setMargins(dp(4), dp(5), dp(4), dp(5))
+        val actionParams = LinearLayout.LayoutParams(0, dp(84), 1f).apply {
+            setMargins(dp(3), dp(3), dp(3), dp(3))
         }
         microphoneSlot.addView(startButton, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(104)
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(84)
         ))
         microphoneSlot.addView(stopButton, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(104)
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(84)
         ))
         firstActionRow.addView(microphoneSlot, LinearLayout.LayoutParams(actionParams))
         firstActionRow.addView(sendMp3Button, LinearLayout.LayoutParams(actionParams))
@@ -403,7 +403,7 @@ private var receivedMp3File: File? = null
         addChildButton = createButton("＋")
         addChildButton.textSize = 25f
         addChildButton.contentDescription = "Tambah anak"
-        addChildButton.layoutParams = LinearLayout.LayoutParams(dp(52), dp(52)).apply { setMargins(dp(8), dp(7), 0, dp(7)) }
+        addChildButton.layoutParams = LinearLayout.LayoutParams(dp(44), dp(44)).apply { setMargins(dp(6), dp(3), 0, dp(3)) }
         selectedChildButton = createButton("Pilih anak  ▾")
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
         selectedChildButton.setOnClickListener { toggleChildrenPanel() }
@@ -454,7 +454,7 @@ private var receivedMp3File: File? = null
 
         rootLayout.addView(title, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply { bottomMargin = dp(15) })
+        ).apply { bottomMargin = dp(8) })
         childModePanel = TextView(this).apply {
             text = "🛡️  HP ANAK SIAP\n\nPerangkat berhasil terhubung\nMenunggu perintah dari HP orang tua"
             textSize = 16f
@@ -492,7 +492,7 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        childHeaderRow.addView(selectedChildButton, LinearLayout.LayoutParams(0, dp(52), 1f))
+        childHeaderRow.addView(selectedChildButton, LinearLayout.LayoutParams(0, dp(44), 1f))
         childHeaderRow.addView(connectionStatusText)
         childHeaderRow.addView(addChildButton)
         rootLayout.addView(childHeaderRow)
@@ -509,7 +509,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.105f
-            setPadding(dp(4), dp(11), dp(4), dp(7))
+            setPadding(dp(4), dp(5), dp(4), dp(4))
         }
         rootLayout.addView(statusHeading)
         parentOnlyViews.add(statusHeading)
@@ -522,7 +522,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.105f
-            setPadding(dp(4), dp(11), dp(4), dp(7))
+            setPadding(dp(4), dp(5), dp(4), dp(4))
         }
         rootLayout.addView(activityHeading)
         parentOnlyViews.add(activityHeading)
@@ -535,7 +535,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.105f
-            setPadding(dp(4), dp(11), dp(4), dp(7))
+            setPadding(dp(4), dp(5), dp(4), dp(4))
         }
         rootLayout.addView(controlHeading)
         parentOnlyViews.add(controlHeading)
@@ -813,7 +813,7 @@ private var receivedMp3File: File? = null
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(8), dp(7), dp(8))
+            setPadding(dp(7), dp(6), dp(6), dp(7))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(246, 249, 255))
