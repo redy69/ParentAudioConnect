@@ -497,7 +497,10 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.105f
-            setPadding(dp(4), dp(7), dp(4), dp(8))
+            setPadding(dp(4), dp(4), dp(4), dp(3))
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(2), 0, 0) }
         }
         rootLayout.addView(deviceSectionTitle)
         parentOnlyViews.add(deviceSectionTitle)
