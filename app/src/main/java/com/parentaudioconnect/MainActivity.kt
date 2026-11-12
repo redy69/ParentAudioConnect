@@ -689,6 +689,7 @@ private var receivedMp3File: File? = null
         rootLayout.addView(statusHeading)
         parentOnlyViews.add(statusHeading)
         rootLayout.addView(statusText)
+        parentOnlyViews.add(statusText)
         rootLayout.addView(pairingInstructionText)
         rootLayout.addView(codeText)
         val activityHeading = TextView(this).apply {
