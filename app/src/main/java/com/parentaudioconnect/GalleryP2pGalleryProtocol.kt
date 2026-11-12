@@ -112,6 +112,19 @@ class GalleryP2pGalleryProtocol(
                 sendThumbnail(message.optString("key"))
             }
             "thumbnail_response" -> if (role == GalleryP2pManager.Role.PARENT) receiveThumbnail(message)
+            "original_request" -> if (role == GalleryP2pManager.Role.CHILD) {
+                sendOriginal(message.optString("key"), message.optString("transferId"))
+            }
+            "original_cancel" -> if (role == GalleryP2pManager.Role.CHILD) {
+                cancelledTransfers.add(message.optString("transferId"))
+            }
+            "original_start" -> if (role == GalleryP2pManager.Role.PARENT) receiveOriginalStart(message)
+            "original_chunk" -> if (role == GalleryP2pManager.Role.PARENT) receiveOriginalChunk(message)
+            "original_end" -> if (role == GalleryP2pManager.Role.PARENT) receiveOriginalEnd(message)
+            "original_error" -> if (role == GalleryP2pManager.Role.PARENT) {
+                requestedTransfers.remove(message.optString("transferId"))
+                onStatus(message.optString("message", "File asli tidak dapat dikirim"))
+            }
         }
     }
 
@@ -142,6 +155,9 @@ class GalleryP2pGalleryProtocol(
     private fun sendIndex(offset: Int) {
         worker.execute {
             if (!sharingAllowed()) {
+                sendJson(JSONObject().put("type", "index_response").put("offset", offset)
+                    .put("nextOffset", offset).put("hasMore", false).put("total", 0)
+                    .put("items", JSONArray()))
                 onStatus("Berbagi galeri nonaktif atau izin media tidak tersedia di HP anak")
                 return@execute
             }
@@ -230,6 +246,7 @@ class GalleryP2pGalleryProtocol(
         if (key.isBlank() || key.length > 160) return
         worker.execute {
             if (!sharingAllowed()) {
+                sendJson(JSONObject().put("type", "thumbnail_response").put("key", key).put("error", true))
                 onStatus("Permintaan thumbnail ditolak: berbagi galeri tidak aktif")
                 return@execute
             }
@@ -241,6 +258,7 @@ class GalleryP2pGalleryProtocol(
             try {
                 val preview = repository.thumbnail(item, maxEdge = 240, quality = 60)
                 if (preview.size > MAX_THUMB_BYTES) {
+                    sendJson(JSONObject().put("type", "thumbnail_response").put("key", key).put("error", true))
                     onStatus("Thumbnail terlalu besar untuk koneksi ini")
                     return@execute
                 }
@@ -252,6 +270,7 @@ class GalleryP2pGalleryProtocol(
                 if (!sendJson(message)) onStatus("Thumbnail gagal dikirim; coba lagi")
             } catch (error: Exception) {
                 Log.e(TAG, "Thumbnail gagal dibuat", error)
+                sendJson(JSONObject().put("type", "thumbnail_response").put("key", key).put("error", true))
                 onStatus("Thumbnail tidak tersedia: " + (error.localizedMessage ?: "kesalahan"))
             }
         }
