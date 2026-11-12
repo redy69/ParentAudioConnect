@@ -292,11 +292,13 @@ service cloud.firestore {
       function galleryParent(code) {
         return signedIn()
           && get(/databases/$(database)/documents/pairings/$(code)).data.parentUid == request.auth.uid
-          && get(/databases/$(database)/documents/pairings/$(code)).data.childUid != null;
+          && get(/databases/$(database)/documents/pairings/$(code)).data.childUid != null
+          && get(/databases/$(database)/documents/pairings/$(code)).data.gallerySharingEnabled == true;
       }
       function galleryChild(code) {
         return signedIn()
-          && get(/databases/$(database)/documents/pairings/$(code)).data.childUid == request.auth.uid;
+          && get(/databases/$(database)/documents/pairings/$(code)).data.childUid == request.auth.uid
+          && get(/databases/$(database)/documents/pairings/$(code)).data.gallerySharingEnabled == true;
       }
 
       match /gallerySignals/{signalId} {

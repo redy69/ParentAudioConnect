@@ -955,7 +955,10 @@ private var receivedMp3File: File? = null
     private fun startChildGalleryP2pIfAllowed() {
         if (currentRole != "child" || childGalleryP2pManager != null) return
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
-        if (!prefs.getBoolean("child_gallery_sharing_enabled", false) || !hasGalleryMediaAccess()) return
+        if (!prefs.getBoolean("child_gallery_sharing_enabled", false) ||
+            !prefs.getBoolean("child_gallery_server_consent_confirmed", false) ||
+            !hasGalleryMediaAccess()
+        ) return
         val code = prefs.getString("pair_code", null) ?: return
 
         lateinit var protocol: GalleryP2pGalleryProtocol
@@ -2984,12 +2987,20 @@ private var receivedMp3File: File? = null
         )
     }
 
-    private fun updateGalleryConsentOnServer(enabled: Boolean) {
-        val code = getSharedPreferences("parent_audio", MODE_PRIVATE)
-            .getString("pair_code", null) ?: return
+    private fun updateGalleryConsentOnServer(enabled: Boolean, onSaved: (() -> Unit)? = null) {
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        val code = prefs.getString("pair_code", null) ?: return
+        if (!enabled) {
+            prefs.edit().putBoolean("child_gallery_server_consent_confirmed", false).apply()
+            stopChildGalleryP2p()
+        }
         db.collection("pairings").document(code).update(
             mapOf("gallerySharingEnabled" to enabled, "gallerySharingUpdatedAt" to Timestamp.now())
-        ).addOnFailureListener { error ->
+        ).addOnSuccessListener {
+            prefs.edit().putBoolean("child_gallery_server_consent_confirmed", enabled).apply()
+            if (enabled) onSaved?.invoke()
+        }.addOnFailureListener { error ->
+            prefs.edit().putBoolean("child_gallery_server_consent_confirmed", false).apply()
             Toast.makeText(this,
                 "Status berbagi galeri belum tersimpan: ${error.localizedMessage ?: "periksa koneksi"}",
                 Toast.LENGTH_LONG).show()
@@ -3008,6 +3019,7 @@ private var receivedMp3File: File? = null
             .setPositiveButton(if (enabled) "Hentikan berbagi" else "Saya setuju • Lanjutkan") { _, _ ->
                 if (enabled) {
                     prefs.edit().putBoolean("child_gallery_sharing_enabled", false).apply()
+                    stopChildGalleryP2p()
                     updateGalleryConsentOnServer(false)
                     updateChildGalleryPanel()
                 } else {
@@ -4284,11 +4296,13 @@ private fun playReceivedMp3() {
         if (requestCode == GALLERY_MEDIA_PERMISSION) {
             val granted = hasGalleryMediaAccess()
             if (granted) {
-                updateGalleryConsentOnServer(true)
+                updateGalleryConsentOnServer(true) { startChildGalleryP2pIfAllowed() }
                 Toast.makeText(this, "Izin media galeri aktif.", Toast.LENGTH_LONG).show()
             } else {
+                stopChildGalleryP2p()
                 getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
-                    .putBoolean("child_gallery_sharing_enabled", false).apply()
+                    .putBoolean("child_gallery_sharing_enabled", false)
+                    .putBoolean("child_gallery_server_consent_confirmed", false).apply()
                 updateGalleryConsentOnServer(false)
                 Toast.makeText(this, "Izin foto/video tidak diberikan. Berbagi galeri tetap nonaktif.", Toast.LENGTH_LONG).show()
             }
