@@ -936,7 +936,15 @@ private var receivedMp3File: File? = null
         // Retry registration whenever the child app returns to foreground.
         val childPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         if (childPrefs.getString("pair_role", null) == "child") {
-            startChildGalleryP2pIfAllowed()
+            if (childPrefs.getBoolean("child_gallery_sharing_enabled", false) && !hasGalleryMediaAccess()) {
+                childPrefs.edit()
+                    .putBoolean("child_gallery_sharing_enabled", false)
+                    .putBoolean("child_gallery_server_consent_confirmed", false)
+                    .apply()
+                updateGalleryConsentOnServer(false)
+            } else {
+                startChildGalleryP2pIfAllowed()
+            }
             updateChildUsageAccessPanel()
             maybeRequestScheduleNotificationPermission()
             rootLayout.postDelayed({ maybeRequestOperatorPermission() }, 1200)
