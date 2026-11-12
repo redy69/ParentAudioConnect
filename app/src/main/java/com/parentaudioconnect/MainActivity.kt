@@ -157,7 +157,7 @@ private var receivedMp3File: File? = null
 
             addView(TextView(this@MainActivity).apply {
                 text = "PARENTAL CARE  •  FAMILY CONNECT"
-                textSize = 9.5f
+                textSize = 9f
                 letterSpacing = 0.13f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.rgb(190, 211, 255))
@@ -254,7 +254,7 @@ private var receivedMp3File: File? = null
         updateInfoText = TextView(this).apply {
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             text = "Belum ada pemeriksaan pembaruan."
-            textSize = 11.5f
+            textSize = 11f
             setTextColor(Color.rgb(91, 108, 137))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(2).toFloat(), 1f)
@@ -413,7 +413,7 @@ private var receivedMp3File: File? = null
         val actionParams = LinearLayout.LayoutParams(
             0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
         ).apply {
-            setMargins(dp(2), dp(2), dp(2), dp(2))
+            setMargins(dp(2), dp(1), dp(2), dp(1))
         }
         microphoneSlot.addView(startButton, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -862,16 +862,16 @@ private var receivedMp3File: File? = null
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(6), dp(5), dp(6), dp(5))
+            setPadding(dp(5), dp(4), dp(5), dp(4))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(246, 249, 255))
             ).apply {
-                cornerRadius = dp(16).toFloat()
+                cornerRadius = dp(14).toFloat()
                 setStroke(dp(1), Color.argb(88, Color.red(accent), Color.green(accent), Color.blue(accent)))
             }
             elevation = dp(2).toFloat()
-            minimumHeight = dp(60)
+            minimumHeight = dp(54)
             isClickable = true
             isFocusable = true
             contentDescription = label
@@ -879,7 +879,7 @@ private var receivedMp3File: File? = null
         val iconView = TextView(this).apply {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             text = icon
-            textSize = 22.5f
+            textSize = 20f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
             background = GradientDrawable(
@@ -890,8 +890,8 @@ private var receivedMp3File: File? = null
                 setStroke(dp(1), Color.argb(48, 255, 255, 255))
             }
             elevation = dp(1).toFloat()
-            layoutParams = LinearLayout.LayoutParams(dp(32), dp(32)).apply {
-                rightMargin = dp(6)
+            layoutParams = LinearLayout.LayoutParams(dp(29), dp(29)).apply {
+                rightMargin = dp(5)
             }
         }
         val helper = when (label) {
@@ -924,7 +924,7 @@ private var receivedMp3File: File? = null
             text = helper
             textSize = 9.5f
             setTextColor(Color.rgb(88, 105, 134))
-            setPadding(0, dp(3), 0, 0)
+            setPadding(0, dp(2), 0, 0)
             maxLines = 2
             setLineSpacing(dp(1).toFloat(), 1f)
         }
