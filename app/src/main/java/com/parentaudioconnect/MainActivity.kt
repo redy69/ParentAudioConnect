@@ -883,7 +883,7 @@ private var receivedMp3File: File? = null
         }
         val labelView = TextView(this).apply {
             text = label
-            textSize = 11.25f
+            textSize = 11.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.012f
             setTextColor(Color.rgb(27, 43, 73))
