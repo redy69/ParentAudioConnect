@@ -3630,7 +3630,6 @@ private var receivedMp3File: File? = null
         val selectedIndex = serverIds.indexOf(activeLiveKitServerId).coerceAtLeast(0)
         AlertDialog.Builder(this)
             .setTitle("Uji Server LiveKit")
-            .setMessage("Pilih server untuk koneksi audio berikutnya. HP anak akan disamakan saat Audio Live dimulai.")
             .setSingleChoiceItems(labels, selectedIndex) { dialog, which ->
                 dialog.dismiss()
                 applyLiveKitTestServer(code, serverIds[which], labels[which])
