@@ -1082,10 +1082,10 @@ private var receivedMp3File: File? = null
             })
             details.addView(TextView(this).apply {
                 text = if (connected) "● ONLINE  •  Terhubung" else "○ OFFLINE  •  Menunggu koneksi"
-                textSize = 9f
+                textSize = 9.5f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 letterSpacing = 0.005f
-                setPadding(dp(7), dp(3), dp(7), dp(3))
+                setPadding(dp(8), dp(4), dp(8), dp(4))
                 setTextColor(if (connected) Color.rgb(24, 128, 82) else Color.rgb(105, 116, 137))
                 background = GradientDrawable().apply {
                     setColor(if (connected) Color.rgb(226, 247, 237) else Color.rgb(239, 243, 249))
@@ -1097,11 +1097,13 @@ private var receivedMp3File: File? = null
             row.addView(details)
             if (selectedChildCode == code) row.addView(TextView(this).apply {
                 text = "✓"
-                textSize = 18f
+                textSize = 16f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 gravity = Gravity.CENTER
                 setTextColor(Color.WHITE)
-                setPadding(dp(6), dp(3), dp(6), dp(3))
+                minWidth = dp(28)
+                minHeight = dp(28)
+                setPadding(0, 0, 0, 0)
                 background = GradientDrawable().apply {
                     setColor(Color.rgb(55, 100, 210))
                     cornerRadius = dp(20).toFloat()
@@ -1111,8 +1113,9 @@ private var receivedMp3File: File? = null
                 text = "Lepaskan"
                 textSize = 10.5f
                 isAllCaps = false
-                minHeight = dp(32)
-                setPadding(dp(7), 0, dp(7), 0)
+                minHeight = dp(36)
+                minWidth = dp(66)
+                setPadding(dp(8), 0, dp(8), 0)
                 setTextColor(Color.rgb(169, 62, 72))
                 background = GradientDrawable().apply {
                     setColor(Color.rgb(255, 247, 247))
@@ -1120,8 +1123,8 @@ private var receivedMp3File: File? = null
                     setStroke(dp(1), Color.rgb(245, 220, 222))
                 }
                 layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(32)
-                ).apply { leftMargin = dp(5) }
+                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)
+                ).apply { leftMargin = dp(7) }
                 setOnClickListener { promptRemoveChild(code) }
             }
             row.addView(removeButton)
