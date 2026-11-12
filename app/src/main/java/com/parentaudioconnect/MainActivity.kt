@@ -980,7 +980,7 @@ private var receivedMp3File: File? = null
         if (!::childrenContainer.isInitialized) return
         childrenContainer.removeAllViews()
         childrenContainer.orientation = LinearLayout.VERTICAL
-        childrenContainer.setPadding(dp(8), dp(9), dp(8), dp(9))
+        childrenContainer.setPadding(dp(7), dp(7), dp(7), dp(7))
         childrenContainer.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
             intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
@@ -994,7 +994,7 @@ private var receivedMp3File: File? = null
             val empty = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(dp(14), dp(16), dp(14), dp(16))
+                setPadding(dp(12), dp(12), dp(12), dp(12))
                 background = GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
                     intArrayOf(Color.WHITE, Color.rgb(247, 250, 255))
@@ -1033,7 +1033,7 @@ private var receivedMp3File: File? = null
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(10), dp(9), dp(8), dp(9))
+                setPadding(dp(9), dp(7), dp(7), dp(7))
                 background = GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
                     if (selectedChildCode == code)
@@ -1052,10 +1052,10 @@ private var receivedMp3File: File? = null
                 isFocusable = true
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply { setMargins(0, dp(3), 0, dp(3)) }
+                ).apply { setMargins(0, dp(2), 0, dp(2)) }
             }
             val phoneIcon = ChildAvatarView().apply {
-                layoutParams = LinearLayout.LayoutParams(dp(50), dp(50)).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(44), dp(44)).apply {
                     rightMargin = dp(9)
                 }
                 contentDescription = "Ilustrasi profil perangkat anak"
@@ -1085,7 +1085,7 @@ private var receivedMp3File: File? = null
                 textSize = 9f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 letterSpacing = 0.005f
-                setPadding(dp(7), dp(4), dp(7), dp(4))
+                setPadding(dp(7), dp(3), dp(7), dp(3))
                 setTextColor(if (connected) Color.rgb(24, 128, 82) else Color.rgb(105, 116, 137))
                 background = GradientDrawable().apply {
                     setColor(if (connected) Color.rgb(226, 247, 237) else Color.rgb(239, 243, 249))
@@ -1111,7 +1111,7 @@ private var receivedMp3File: File? = null
                 text = "Lepaskan"
                 textSize = 10.5f
                 isAllCaps = false
-                minHeight = dp(34)
+                minHeight = dp(32)
                 setPadding(dp(7), 0, dp(7), 0)
                 setTextColor(Color.rgb(169, 62, 72))
                 background = GradientDrawable().apply {
@@ -1120,7 +1120,7 @@ private var receivedMp3File: File? = null
                     setStroke(dp(1), Color.rgb(245, 220, 222))
                 }
                 layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)
+                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(32)
                 ).apply { leftMargin = dp(5) }
                 setOnClickListener { promptRemoveChild(code) }
             }
@@ -1137,7 +1137,7 @@ private var receivedMp3File: File? = null
             letterSpacing = 0.005f
             setTextColor(Color.rgb(42, 82, 174))
             gravity = Gravity.CENTER
-            setPadding(dp(14), dp(12), dp(14), dp(12))
+            setPadding(dp(12), dp(9), dp(12), dp(9))
             background = GradientDrawable(
                 GradientDrawable.Orientation.LEFT_RIGHT,
                 intArrayOf(Color.rgb(239, 245, 255), Color.rgb(229, 238, 255))
