@@ -363,8 +363,11 @@ private var receivedMp3File: File? = null
         ).apply { cornerRadius = dp(18).toFloat() }
         childButton.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
-            intArrayOf(Color.rgb(35, 73, 174), Color.rgb(55, 105, 220))
-        ).apply { cornerRadius = dp(18).toFloat() }
+            intArrayOf(Color.rgb(18, 139, 151), Color.rgb(29, 104, 176))
+        ).apply {
+            cornerRadius = dp(18).toFloat()
+            setStroke(dp(1), Color.rgb(89, 184, 194))
+        }
         startButton = createActionButton("🎙", "BICARA LIVE", Color.rgb(55, 80, 220))
         stopButton = createActionButton("🎙", "HENTIKAN LIVE", Color.rgb(220, 75, 75))
         sendMp3Button = createActionButton("♫", "PUTAR MP3", Color.rgb(55, 80, 220))
