@@ -1076,12 +1076,6 @@ private var receivedMp3File: File? = null
                 ellipsize = android.text.TextUtils.TruncateAt.END
             })
             details.addView(TextView(this).apply {
-                text = "Perangkat terdaftar"
-                textSize = 10f
-                setTextColor(Color.rgb(112, 127, 151))
-                setPadding(0, dp(2), 0, 0)
-            })
-            details.addView(TextView(this).apply {
                 text = if (connected) "● ONLINE  •  Terhubung" else "○ OFFLINE  •  Menunggu koneksi"
                 textSize = 9.5f
                 setTypeface(null, android.graphics.Typeface.BOLD)
