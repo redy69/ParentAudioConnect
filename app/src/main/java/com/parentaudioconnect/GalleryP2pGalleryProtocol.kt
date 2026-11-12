@@ -71,6 +71,30 @@ class GalleryP2pGalleryProtocol(
             key.isNotBlank() && key.length <= 160 &&
             sendJson(JSONObject().put("type", "thumbnail_request").put("key", key))
 
+
+    fun requestOriginal(key: String): Boolean {
+        if (role != GalleryP2pGalleryProtocol.Role.PARENT || key.isBlank() || key.length > 160) return false
+        if (incomingTransfer != null || requestedTransfers.isNotEmpty()) {
+            onStatus("Selesaikan unduhan yang sedang berjalan terlebih dahulu")
+            return false
+        }
+        val id = UUID.randomUUID().toString()
+        requestedTransfers[id] = key
+        val sent = sendJson(JSONObject().put("type", "original_request").put("key", key).put("transferId", id))
+        if (!sent) requestedTransfers.remove(id) else onStatus("Meminta file asli dari HP anak…")
+        return sent
+    }
+
+    fun cancelOriginal() {
+        if (role != GalleryP2pGalleryProtocol.Role.PARENT) return
+        requestedTransfers.keys.toList().forEach { id ->
+            sendJson(JSONObject().put("type", "original_cancel").put("transferId", id))
+            requestedTransfers.remove(id)
+        }
+        incomingTransfer?.let { closeIncoming(it, true) }
+        incomingTransfer = null
+    }
+
     fun onFrame(bytes: ByteArray, binary: Boolean) {
         if (closed || binary || bytes.isEmpty() || bytes.size > MAX_FRAME_BYTES) return
         val message = try {
@@ -233,6 +257,160 @@ class GalleryP2pGalleryProtocol(
         }
     }
 
+
+    private fun sendOriginal(key: String, transferId: String) {
+        if (key.isBlank() || key.length > 160 || transferId.isBlank() || transferId.length > 64) return
+        worker.execute {
+            if (!sharingAllowed()) {
+                sendJson(JSONObject().put("type", "original_error").put("transferId", transferId).put("message", "Persetujuan berbagi galeri sudah tidak aktif"))
+                return@execute
+            }
+            val item = childItems[key]
+            if (item == null) {
+                sendJson(JSONObject().put("type", "original_error").put("transferId", transferId).put("message", "Media tidak ditemukan; muat ulang daftar galeri"))
+                return@execute
+            }
+            if (item.sizeBytes <= 0 || item.sizeBytes > MAX_ORIGINAL_BYTES) {
+                sendJson(JSONObject().put("type", "original_error").put("transferId", transferId).put("message", "Ukuran file melebihi batas transfer 200 MB"))
+                return@execute
+            }
+            cancelledTransfers.remove(transferId)
+            try {
+                val digest = MessageDigest.getInstance("SHA-256")
+                val start = JSONObject().put("type", "original_start").put("transferId", transferId)
+                    .put("key", key).put("name", item.displayName.take(180))
+                    .put("mime", item.mimeType.take(120)).put("size", item.sizeBytes)
+                if (!sendJsonWithRetry(start, transferId)) return@execute
+                var sequence = 0
+                var sentBytes = 0L
+                repository.openOriginal(item).use { input ->
+                    val buffer = ByteArray(ORIGINAL_CHUNK_BYTES)
+                    while (true) {
+                        if (closed || cancelledTransfers.contains(transferId)) {
+                            onStatus("Transfer file asli dibatalkan")
+                            return@execute
+                        }
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        if (count == 0) continue
+                        sentBytes += count
+                        if (sentBytes > item.sizeBytes || sentBytes > MAX_ORIGINAL_BYTES) throw IllegalStateException("Ukuran file berubah saat transfer")
+                        digest.update(buffer, 0, count)
+                        val chunk = JSONObject().put("type", "original_chunk").put("transferId", transferId)
+                            .put("sequence", sequence++)
+                            .put("data", Base64.encodeToString(buffer, 0, count, Base64.NO_WRAP))
+                        if (!sendJsonWithRetry(chunk, transferId)) return@execute
+                        onStatus("Mengirim file asli: " + android.text.format.Formatter.formatFileSize(appContext, sentBytes) +
+                            " / " + android.text.format.Formatter.formatFileSize(appContext, item.sizeBytes))
+                    }
+                }
+                if (sentBytes != item.sizeBytes) throw IllegalStateException("Ukuran file tidak cocok")
+                val hash = digest.digest().joinToString("") { "%02x".format(it) }
+                sendJsonWithRetry(JSONObject().put("type", "original_end").put("transferId", transferId)
+                    .put("totalBytes", sentBytes).put("sha256", hash), transferId)
+            } catch (error: Exception) {
+                Log.e(TAG, "Gagal mengirim file asli", error)
+                sendJson(JSONObject().put("type", "original_error").put("transferId", transferId)
+                    .put("message", "Transfer gagal: " + (error.localizedMessage ?: "kesalahan")))
+            } finally {
+                cancelledTransfers.remove(transferId)
+            }
+        }
+    }
+
+    private fun sendJsonWithRetry(message: JSONObject, transferId: String): Boolean {
+        repeat(100) {
+            if (closed || cancelledTransfers.contains(transferId)) return false
+            if (sendJson(message)) return true
+            try { Thread.sleep(100) } catch (_: InterruptedException) { return false }
+        }
+        onStatus("Koneksi P2P terlalu sibuk; transfer dihentikan")
+        return false
+    }
+
+    private fun receiveOriginalStart(message: JSONObject) {
+        val id = message.optString("transferId")
+        val key = message.optString("key")
+        val expected = message.optLong("size", -1)
+        if (requestedTransfers[id] != key || expected <= 0 || expected > MAX_ORIGINAL_BYTES) return
+        try {
+            incomingTransfer?.let { closeIncoming(it, true) }
+            val file = File.createTempFile("santethp-gallery-", ".part", appContext.cacheDir)
+            incomingTransfer = IncomingTransfer(
+                transferId = id, key = key, name = message.optString("name").take(180),
+                mime = message.optString("mime").take(120).ifBlank { "application/octet-stream" },
+                expectedBytes = expected, file = file, output = FileOutputStream(file),
+                digest = MessageDigest.getInstance("SHA-256")
+            )
+            onStatus("Menerima file asli: 0 / " + android.text.format.Formatter.formatFileSize(appContext, expected))
+        } catch (error: Exception) {
+            requestedTransfers.remove(id)
+            onStatus("Tidak dapat menyiapkan file sementara")
+        }
+    }
+
+    private fun receiveOriginalChunk(message: JSONObject) {
+        val transfer = incomingTransfer ?: return
+        if (message.optString("transferId") != transfer.transferId) return
+        val sequence = message.optInt("sequence", -1)
+        val encoded = message.optString("data")
+        if (sequence != transfer.nextSequence || encoded.isBlank() || encoded.length > ORIGINAL_CHUNK_BYTES * 2) {
+            failIncoming(transfer, "Urutan potongan file tidak valid")
+            return
+        }
+        try {
+            val bytes = Base64.decode(encoded, Base64.DEFAULT)
+            if (bytes.isEmpty() || bytes.size > ORIGINAL_CHUNK_BYTES || transfer.receivedBytes + bytes.size > transfer.expectedBytes) {
+                failIncoming(transfer, "Potongan file melewati batas ukuran")
+                return
+            }
+            transfer.output.write(bytes)
+            transfer.digest.update(bytes)
+            transfer.receivedBytes += bytes.size
+            transfer.nextSequence++
+            onStatus("Menerima file asli: " + android.text.format.Formatter.formatFileSize(appContext, transfer.receivedBytes) +
+                " / " + android.text.format.Formatter.formatFileSize(appContext, transfer.expectedBytes))
+        } catch (error: Exception) {
+            failIncoming(transfer, "Gagal menulis potongan file")
+        }
+    }
+
+    private fun receiveOriginalEnd(message: JSONObject) {
+        val transfer = incomingTransfer ?: return
+        if (message.optString("transferId") != transfer.transferId) return
+        try {
+            transfer.output.flush()
+            transfer.output.close()
+            val hash = transfer.digest.digest().joinToString("") { "%02x".format(it) }
+            if (transfer.receivedBytes != transfer.expectedBytes ||
+                message.optLong("totalBytes", -1) != transfer.receivedBytes ||
+                hash != message.optString("sha256")
+            ) {
+                failIncoming(transfer, "Verifikasi SHA-256 gagal; file sementara dihapus")
+                return
+            }
+            incomingTransfer = null
+            requestedTransfers.remove(transfer.transferId)
+            onOriginalReady(transfer.key, transfer.file, transfer.name, transfer.mime)
+            onStatus("File asli diterima dan lolos verifikasi SHA-256")
+        } catch (error: Exception) {
+            failIncoming(transfer, "Verifikasi file gagal")
+        }
+    }
+
+    private fun failIncoming(transfer: IncomingTransfer, message: String) {
+        closeIncoming(transfer, true)
+        if (incomingTransfer?.transferId == transfer.transferId) incomingTransfer = null
+        requestedTransfers.remove(transfer.transferId)
+        sendJson(JSONObject().put("type", "original_cancel").put("transferId", transfer.transferId))
+        onStatus(message)
+    }
+
+    private fun closeIncoming(transfer: IncomingTransfer, deleteFile: Boolean) {
+        try { transfer.output.close() } catch (_: Exception) { }
+        if (deleteFile) transfer.file.delete()
+    }
+
     private fun receiveThumbnail(message: JSONObject) {
         val key = message.optString("key")
         val encoded = message.optString("data")
@@ -259,8 +437,13 @@ class GalleryP2pGalleryProtocol(
     }
 
     fun close() {
+        if (role == GalleryP2pGalleryProtocol.Role.PARENT) cancelOriginal()
         closed = true
         worker.shutdownNow()
+        incomingTransfer?.let { closeIncoming(it, true) }
+        incomingTransfer = null
+        requestedTransfers.clear()
+        cancelledTransfers.clear()
         childItems = emptyMap()
         synchronized(receivedIndex) { receivedIndex.clear() }
     }
