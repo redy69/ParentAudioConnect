@@ -924,8 +924,8 @@ private var receivedMp3File: File? = null
             textSize = 9.5f
             setTextColor(Color.rgb(88, 105, 134))
             setPadding(0, dp(3), 0, 0)
-            maxLines = 1
-            ellipsize = android.text.TextUtils.TruncateAt.END
+            maxLines = 2
+            setLineSpacing(dp(1).toFloat(), 1f)
         }
         textStack.addView(labelView)
         textStack.addView(helperView)
@@ -1161,8 +1161,8 @@ private var receivedMp3File: File? = null
                     setColor(if (connected) Color.rgb(226, 247, 237) else Color.rgb(239, 243, 249))
                     cornerRadius = dp(8).toFloat()
                 }
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
+                maxLines = 2
+                setLineSpacing(dp(1).toFloat(), 1f)
             })
             row.addView(details)
             if (selectedChildCode == code) row.addView(TextView(this).apply {
