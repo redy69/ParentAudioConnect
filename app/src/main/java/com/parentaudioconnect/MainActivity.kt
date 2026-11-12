@@ -3175,10 +3175,26 @@ private var receivedMp3File: File? = null
                                             Toast.makeText(this, "Simpan langsung ke galeri memerlukan Android 10 atau lebih baru.", Toast.LENGTH_LONG).show()
                                         } else if (item.sizeBytes <= 0 || item.sizeBytes > 200L * 1024L * 1024L) {
                                             Toast.makeText(this, "File kosong atau lebih besar dari batas transfer 200 MB.", Toast.LENGTH_LONG).show()
-                                        } else if (parentGalleryProtocol?.requestOriginal(item.key) != true) {
-                                            Toast.makeText(this, "Permintaan unduh belum terkirim. Periksa koneksi P2P.", Toast.LENGTH_LONG).show()
                                         } else {
-                                            status.text = "Meminta file asli: " + item.name
+                                            val savedPrefs = getSharedPreferences("parent_gallery_cache", MODE_PRIVATE)
+                                            val prefKey = gallerySavedUriPreferenceKey(item.key)
+                                            val savedUriText = savedPrefs.getString(prefKey, null)
+                                            val savedUri = savedUriText?.let { Uri.parse(it) }
+                                            val cachedFileExists = if (savedUri != null) {
+                                                try {
+                                                    contentResolver.openFileDescriptor(savedUri, "r")?.use { true } ?: false
+                                                } catch (_: Exception) { false }
+                                            } else false
+                                            if (cachedFileExists && savedUri != null) {
+                                                openSavedGalleryMedia(savedUri, item.mime)
+                                            } else {
+                                                if (savedUriText != null) savedPrefs.edit().remove(prefKey).apply()
+                                                if (parentGalleryProtocol?.requestOriginal(item.key) != true) {
+                                                    Toast.makeText(this, "Permintaan unduh belum terkirim. Periksa koneksi P2P.", Toast.LENGTH_LONG).show()
+                                                } else {
+                                                    status.text = "Meminta file asli: " + item.name
+                                                }
+                                            }
                                         }
                                     }
                                     .show()
@@ -3227,15 +3243,11 @@ private var receivedMp3File: File? = null
                     try {
                         val uri = saveGalleryOriginalToDevice(file, fileName, mime)
                         if (uri != null) {
+                            getSharedPreferences("parent_gallery_cache", MODE_PRIVATE).edit()
+                                .putString(gallerySavedUriPreferenceKey(key), uri.toString()).apply()
                             status.text = "File asli tersimpan di galeri HP orang tua."
-                            val openIntent = Intent(Intent.ACTION_VIEW).apply {
-                                setDataAndType(uri, mime)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            try {
-                                startActivity(Intent.createChooser(openIntent, "Buka media"))
-                            } catch (_: Exception) {
-                                Toast.makeText(this, "File tersimpan. Tidak ada aplikasi untuk membukanya.", Toast.LENGTH_LONG).show()
+                            if (!openSavedGalleryMedia(uri, mime)) {
+                                Toast.makeText(this, "File tersimpan di galeri, tetapi tidak ada aplikasi untuk membukanya.", Toast.LENGTH_LONG).show()
                             }
                         }
                     } catch (error: Exception) {
@@ -3276,6 +3288,25 @@ private var receivedMp3File: File? = null
             parentGalleryThumbInFlight = null
             parentGalleryThumbQueue.addFirst(next)
             parentGalleryStatus?.text = "Koneksi belum siap mengirim thumbnail. Ketuk Muat ulang setelah P2P tersambung."
+        }
+    }
+
+    private fun gallerySavedUriPreferenceKey(key: String): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(key.toByteArray(Charsets.UTF_8))
+        val hash = digest.joinToString("") { "%02x".format(it.toInt() and 0xff) }
+        return "media_" + hash
+    }
+
+    private fun openSavedGalleryMedia(uri: Uri, mime: String): Boolean {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, mime)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        return try {
+            startActivity(Intent.createChooser(intent, "Buka media"))
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 
