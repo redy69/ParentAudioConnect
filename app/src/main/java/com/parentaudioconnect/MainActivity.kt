@@ -871,8 +871,8 @@ private var receivedMp3File: File? = null
             textSize = 9.25f
             setTextColor(Color.rgb(88, 105, 134))
             setPadding(0, dp(3), 0, 0)
-            maxLines = 2
-            setLineSpacing(dp(1).toFloat(), 1f)
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
         }
         textStack.addView(labelView)
         textStack.addView(helperView)
