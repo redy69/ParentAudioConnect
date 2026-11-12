@@ -86,7 +86,6 @@ class CameraViewerActivity : Activity() {
             val cameraInfo = LinearLayout(this@CameraViewerActivity).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                maxWidth = dp(220)
                 setPadding(dp(16), dp(9), dp(16), dp(9))
                 background = android.graphics.drawable.GradientDrawable().apply {
                     setColor(Color.argb(210, 17, 27, 45))
