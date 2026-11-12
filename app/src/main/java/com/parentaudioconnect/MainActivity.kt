@@ -199,6 +199,8 @@ private var receivedMp3File: File? = null
                 textSize = 12.5f
                 setTextColor(Color.rgb(224, 234, 255))
                 letterSpacing = 0.015f
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
             })
         }
 
