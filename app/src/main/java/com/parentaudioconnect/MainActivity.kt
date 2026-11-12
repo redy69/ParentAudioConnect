@@ -328,33 +328,33 @@ private var receivedMp3File: File? = null
 
         roleIntroText = TextView(this).apply {
             text = "SELAMAT DATANG DI SANTETHP\nPilih jenis perangkat untuk melanjutkan. Pastikan Anda memilih peran yang sesuai dengan HP ini."
-            textSize = 14f
+            textSize = 13.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(48, 67, 103))
             gravity = Gravity.CENTER
-            setLineSpacing(dp(4).toFloat(), 1f)
-            setPadding(dp(18), dp(20), dp(18), dp(20))
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(dp(16), dp(15), dp(16), dp(15))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(237, 244, 255))
             ).apply {
-                cornerRadius = dp(21).toFloat()
+                cornerRadius = dp(18).toFloat()
                 setStroke(dp(1), Color.rgb(205, 220, 246))
             }
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(24), 0, dp(12)) }
+            ).apply { setMargins(0, dp(12), 0, dp(9)) }
             visibility = View.GONE
         }
         parentButton = createButton("👨‍👩‍👧  ORANG TUA\nKelola perangkat anak")
         childButton = createButton("📱  PERANGKAT ANAK\nHubungkan ke orang tua")
         listOf(parentButton, childButton).forEach { button ->
-            button.textSize = 14f
+            button.textSize = 13.5f
             button.gravity = Gravity.CENTER
-            button.setLineSpacing(dp(3).toFloat(), 1f)
+            button.setLineSpacing(dp(2).toFloat(), 1f)
             button.minHeight = dp(76)
-            button.setPadding(dp(12), dp(10), dp(12), dp(10))
+            button.setPadding(dp(12), dp(9), dp(12), dp(9))
         }
         parentButton.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
@@ -458,23 +458,23 @@ private var receivedMp3File: File? = null
         ).apply { bottomMargin = dp(8) })
         childModePanel = TextView(this).apply {
             text = "🛡️  HP ANAK SIAP\n\nPerangkat berhasil terhubung\nMenunggu perintah dari HP orang tua"
-            textSize = 16f
+            textSize = 15f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(35, 53, 88))
             gravity = Gravity.CENTER
-            setLineSpacing(dp(4).toFloat(), 1f)
-            setPadding(dp(22), dp(29), dp(22), dp(29))
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(dp(18), dp(22), dp(18), dp(22))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(231, 239, 255))
             ).apply {
-                cornerRadius = dp(23).toFloat()
+                cornerRadius = dp(20).toFloat()
                 setStroke(dp(1), Color.rgb(207, 222, 248))
             }
             elevation = dp(3).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(12), 0, dp(14)) }
+            ).apply { setMargins(0, dp(8), 0, dp(10)) }
             visibility = View.GONE
         }
         rootLayout.addView(roleIntroText)
