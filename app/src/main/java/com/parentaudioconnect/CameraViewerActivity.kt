@@ -94,6 +94,7 @@ class CameraViewerActivity : Activity() {
                 elevation = dp(4).toFloat()
             }
             cameraFacingLabel = TextView(this@CameraViewerActivity).apply {
+                accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
                 text = "KAMERA BELAKANG"
                 contentDescription = "Kamera belakang sedang digunakan"
                 setTextColor(Color.WHITE)
