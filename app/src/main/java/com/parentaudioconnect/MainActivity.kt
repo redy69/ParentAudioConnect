@@ -2994,13 +2994,17 @@ private var receivedMp3File: File? = null
         if (!this::childGalleryPanel.isInitialized || currentRole != "child") return
         val enabled = getSharedPreferences("parent_audio", MODE_PRIVATE)
             .getBoolean("child_gallery_sharing_enabled", false)
+        val mediaAccess = hasGalleryMediaAccess()
+        val serverConfirmed = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            .getBoolean("child_gallery_server_consent_confirmed", false)
         childGalleryPanel.text = when {
             !enabled -> "🖼️  BERBAGI GALERI HP INI\nNonaktif • Ketuk untuk membaca penjelasan dan memilih media yang boleh dibagikan"
-            hasGalleryMediaAccess() -> "🖼️  BERBAGI GALERI AKTIF\nIzin media Android tersedia. File asli tidak dikirim otomatis. Ketuk untuk menghentikan."
-            else -> "🖼️  BERBAGI GALERI BELUM SIAP\nPersetujuan tersimpan, tetapi izin foto/video Android belum tersedia. Ketuk untuk mengatur."
+            !mediaAccess -> "🖼️  BERBAGI GALERI BELUM SIAP\nIzin foto/video Android belum tersedia. Ketuk untuk mengatur."
+            !serverConfirmed -> "🖼️  MENUNGGU KONFIRMASI\nPersetujuan lokal aktif, tetapi status server belum tersimpan. Periksa koneksi internet."
+            else -> "🖼️  BERBAGI GALERI AKTIF\nIzin media dan persetujuan server tersedia. File asli tidak dikirim otomatis. Ketuk untuk menghentikan."
         }
         childGalleryPanel.setTextColor(
-            if (enabled && hasGalleryMediaAccess()) Color.rgb(28, 132, 86) else Color.rgb(35, 53, 88)
+            if (enabled && mediaAccess && serverConfirmed) Color.rgb(28, 132, 86) else Color.rgb(35, 53, 88)
         )
     }
 
@@ -3016,8 +3020,10 @@ private var receivedMp3File: File? = null
         ).addOnSuccessListener {
             prefs.edit().putBoolean("child_gallery_server_consent_confirmed", enabled).apply()
             if (enabled) onSaved?.invoke()
+            updateChildGalleryPanel()
         }.addOnFailureListener { error ->
             prefs.edit().putBoolean("child_gallery_server_consent_confirmed", false).apply()
+            updateChildGalleryPanel()
             Toast.makeText(this,
                 "Status berbagi galeri belum tersimpan: ${error.localizedMessage ?: "periksa koneksi"}",
                 Toast.LENGTH_LONG).show()
