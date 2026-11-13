@@ -522,8 +522,9 @@ private var receivedMp3File: File? = null
             cornerRadius = dp(13).toFloat()
             setStroke(dp(1), Color.rgb(210, 223, 245))
         }
-        selectedChildButton.setPadding(dp(10), dp(2), dp(7), dp(2))
+        selectedChildButton.setPadding(dp(12), dp(2), dp(10), dp(2))
         selectedChildButton.elevation = dp(1).toFloat()
+        selectedChildButton.minimumHeight = dp(40)
         selectedChildButton.setTypeface(null, android.graphics.Typeface.BOLD)
         addChildButton.setTextColor(Color.WHITE)
         addChildButton.background = GradientDrawable(
@@ -755,7 +756,7 @@ private var receivedMp3File: File? = null
             gravity = Gravity.CENTER_VERTICAL
         }
         childIdentityColumn.addView(selectedChildButton, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(34)
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(40)
         ))
         childIdentityColumn.addView(childQuickStatusText, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(21)
@@ -1985,7 +1986,7 @@ private var receivedMp3File: File? = null
     private fun updateSelectedChildButton() {
         val name = selectedChildCode?.let { childNames[it] }
         val arrow = if (isChildrenPanelExpanded) "▴" else "▾"
-        selectedChildButton.text = if (name.isNullOrBlank()) "▣  Pilih perangkat anak  $arrow" else "▣  $name  $arrow"
+        selectedChildButton.text = if (name.isNullOrBlank()) "🧒  Pilih perangkat anak  $arrow" else "🧒  $name  $arrow"
         val connected = selectedChildCode?.let { childConnected[it] == true } == true
         connectionStatusText.text = if (connected) "● ONLINE" else "○ OFFLINE"
         connectionStatusText.setTextColor(
