@@ -382,8 +382,8 @@ private var receivedMp3File: File? = null
         childActivityRowsContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
-        childDeviceStatusText = createChildActivityCard("📊", "RIWAYAT PENGGUNAAN APLIKASI", childUsageRowsContainer)
-        childAppActivityStatusText = createChildActivityCard("📱", "PEMANTAUAN APLIKASI AKTIF", childActivityRowsContainer)
+        childDeviceStatusText = createChildActivityCard("📊", "RIWAYAT PENGGUNAAN (24 JAM)", childUsageRowsContainer)
+        childAppActivityStatusText = createChildActivityCard("📱", "APLIKASI TERAKHIR DIBUKA", childActivityRowsContainer)
         addChildActivityRow(childUsageRowsContainer, "Menunggu data dari perangkat anak...")
         addChildActivityRow(childActivityRowsContainer, "Menunggu data dari perangkat anak...")
 
@@ -4520,6 +4520,42 @@ private var receivedMp3File: File? = null
         container.addView(row)
     }
 
+    private fun addChildActivityDataRow(container: LinearLayout, label: String, value: String) {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(9), dp(8), dp(9), dp(8))
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(244, 248, 255))
+                cornerRadius = dp(10).toFloat()
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(2), 0, dp(2)) }
+        }
+        row.addView(TextView(this).apply {
+            text = label
+            textSize = 11.5f
+            setTextColor(Color.rgb(48, 65, 96))
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        row.addView(TextView(this).apply {
+            text = value
+            textSize = 11f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(43, 76, 139))
+            gravity = Gravity.CENTER_VERTICAL or Gravity.END
+            maxLines = 1
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { marginStart = dp(8) }
+        })
+        container.addView(row)
+    }
+
     private fun renderChildDeviceStatus(snapshot: DocumentSnapshot) {
         childUsageRowsContainer.removeAllViews()
         val permissionGranted = snapshot.getBoolean("appUsagePermissionGranted") == true
@@ -4540,7 +4576,12 @@ private var receivedMp3File: File? = null
                     val app = item as? Map<*, *> ?: return@forEach
                     val name = app["appName"] as? String ?: "Aplikasi"
                     val minutes = (app["foregroundMinutes"] as? Number)?.toInt() ?: 0
-                    addChildActivityRow(childUsageRowsContainer, "$name     ${(minutes / 60)} jam ${(minutes % 60)} menit")
+                    val duration = if (minutes >= 60) {
+                        "${minutes / 60} jam ${minutes % 60} mnt"
+                    } else {
+                        "$minutes menit"
+                    }
+                    addChildActivityDataRow(childUsageRowsContainer, name, duration)
                 }
             }
             addChildActivityRow(childUsageRowsContainer, if (usageFresh) "✓ Data penggunaan diperbarui" else "ⓘ Data penggunaan mungkin sudah lama", true)
@@ -4572,18 +4613,16 @@ private var receivedMp3File: File? = null
                     addChildActivityRow(childActivityRowsContainer, "Terakhir terdeteksi: $activeName${if (activityTime != null) " • $activityTime" else ""}")
                 }
             } else {
-                addChildActivityRow(childActivityRowsContainer, "10 aplikasi terakhir dibuka", true)
+                addChildActivityRow(childActivityRowsContainer, "${history.size} aplikasi terakhir dibuka", true)
                 history.forEachIndexed { index, entry ->
                     val time = entry.second?.let {
                         android.text.format.DateFormat.getTimeFormat(this@MainActivity).format(it.toDate())
                     } ?: "waktu tidak tersedia"
-                    addChildActivityRow(childActivityRowsContainer, "${index + 1}.  ${entry.first}     $time")
+                    addChildActivityDataRow(childActivityRowsContainer, "${index + 1}. ${entry.first}", time)
                 }
                 addChildActivityRow(childActivityRowsContainer, "Diurutkan dari yang paling baru", true)
             }
         }
-
-    }
 
         val blockConsent = snapshot.getBoolean("appBlockConsent") == true
         val nowForBlocks = System.currentTimeMillis()
