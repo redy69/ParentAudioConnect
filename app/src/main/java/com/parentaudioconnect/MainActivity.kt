@@ -295,6 +295,8 @@ private var receivedMp3File: File? = null
             })
         }
 
+        title.tag = "santethp_brand_header"
+
         statusText = TextView(this).apply {
             text = "Memeriksa koneksi..."
             textSize = 13.5f
@@ -1607,6 +1609,7 @@ private var receivedMp3File: File? = null
     }
 
     private fun showParentDashboard() {
+        rootLayout.findViewWithTag<View>("santethp_brand_header")?.visibility = View.VISIBLE
         requestParentNotificationPermission()
         childLocationMapView.setMapTapMode(false)
         roleIntroText.visibility = View.GONE
