@@ -8,6 +8,10 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.Handler
+import android.os.Looper
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import android.util.Log
 import androidx.core.app.NotificationCompat
 
@@ -28,6 +32,20 @@ class ChildGalleryP2pService : Service() {
     private var manager: GalleryP2pManager? = null
     private var protocol: GalleryP2pGalleryProtocol? = null
     private var parentReceiveProtocol: ParentToChildMediaProtocol? = null
+    private var backupPolicyListener: ListenerRegistration? = null
+    private val backupNetworkHandler = Handler(Looper.getMainLooper())
+    private val backupNetworkRunnable = object : Runnable {
+        override fun run() {
+            val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            val wifiOnly = prefs.getBoolean("drive_backup_wifi_only", true)
+            if (BackupNetworkPolicy.canUseBackupNetwork(this@ChildGalleryP2pService, wifiOnly)) {
+                protocol?.notifyPendingBackup()
+            }
+            if (prefs.getBoolean("child_drive_backup_consent", false)) {
+                backupNetworkHandler.postDelayed(this, 15000L)
+            }
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -56,7 +74,12 @@ class ChildGalleryP2pService : Service() {
         }
 
         startAsForeground()
+        if (backupConsent) listenForBackupNetworkPolicy(code)
         if (manager == null) startTransport(code)
+        if (backupConsent) {
+            backupNetworkHandler.removeCallbacks(backupNetworkRunnable)
+            backupNetworkHandler.post(backupNetworkRunnable)
+        }
         return START_STICKY
     }
 
@@ -111,6 +134,20 @@ class ChildGalleryP2pService : Service() {
             }
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
+    }
+
+    private fun listenForBackupNetworkPolicy(pairingCode: String) {
+        backupPolicyListener?.remove()
+        backupPolicyListener = FirebaseFirestore.getInstance().collection("pairings")
+            .document(pairingCode).addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null || !snapshot.exists()) return@addSnapshotListener
+                val wifiOnly = snapshot.getBoolean("driveBackupWifiOnly") ?: true
+                getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                    .putBoolean("drive_backup_wifi_only", wifiOnly).apply()
+                if (BackupNetworkPolicy.canUseBackupNetwork(this, wifiOnly)) {
+                    protocol?.notifyPendingBackup()
+                }
+            }
     }
 
     private fun startTransport(pairingCode: String) {
@@ -178,6 +215,9 @@ class ChildGalleryP2pService : Service() {
     }
 
     private fun stopTransport() {
+        backupNetworkHandler.removeCallbacks(backupNetworkRunnable)
+        backupPolicyListener?.remove()
+        backupPolicyListener = null
         parentReceiveProtocol?.close()
         parentReceiveProtocol = null
         protocol?.close()
