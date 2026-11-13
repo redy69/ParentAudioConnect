@@ -22,6 +22,7 @@ class ParentDriveBackupService : Service() {
         const val ACTION_STOP = "com.santethp.action.STOP_PARENT_DRIVE_BACKUP"
         const val EXTRA_PAIR_CODE = "pair_code"
         const val EXTRA_ACCESS_TOKEN = "drive_access_token"
+        const val EXTRA_CHILD_NAME = "child_name"
         private const val TAG = "SantetHP-ParentBackup"
         private const val CHANNEL_ID = "parent_drive_backup"
         private const val NOTIFICATION_ID = 4310
@@ -35,6 +36,7 @@ class ParentDriveBackupService : Service() {
     private val reconnectHandler = Handler(Looper.getMainLooper())
     @Volatile private var stopping = false
     private var pairingCode: String? = null
+    private var childDisplayName: String = "HP Anak"
     private val reconnectRunnable = Runnable {
         val code = pairingCode
         if (!stopping && !code.isNullOrBlank() &&
@@ -58,12 +60,14 @@ class ParentDriveBackupService : Service() {
         }
         val code = intent?.getStringExtra(EXTRA_PAIR_CODE)
         val token = intent?.getStringExtra(EXTRA_ACCESS_TOKEN)
+        val displayName = intent?.getStringExtra(EXTRA_CHILD_NAME)?.trim().orEmpty()
         if (code.isNullOrBlank() || token.isNullOrBlank()) {
             stopSelf()
             return START_NOT_STICKY
         }
         if (accessToken != token) folderId = null
         accessToken = token
+        if (displayName.isNotBlank()) childDisplayName = displayName
         if (manager != null) {
             updateStatus("Izin Google Drive diperbarui • melanjutkan antrean backup")
             protocol?.requestNextBackup()
@@ -72,6 +76,7 @@ class ParentDriveBackupService : Service() {
         getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
             .putBoolean("parent_drive_backup_service_active", true)
             .putString("parent_drive_backup_pair_code", code)
+            .putString("parent_drive_backup_child_name", childDisplayName)
             .apply()
         startAsForeground("Menunggu koneksi HP anak untuk backup media baru")
         pairingCode = code
@@ -175,9 +180,15 @@ class ParentDriveBackupService : Service() {
                     Thread {
                         try {
                             val uploader = GoogleDriveUploader(token)
-                            val parentFolder = folderId ?: uploader.ensureBackupFolder().also { folderId = it }
+                            val rootFolder = folderId ?: uploader.ensureBackupFolder().also { folderId = it }
+                            val childKey = java.security.MessageDigest.getInstance("SHA-256")
+                                .digest((pairingCode ?: "unknown-child").toByteArray(Charsets.UTF_8))
+                                .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+                            val childFolder = uploader.ensureChildFolder(childKey, childDisplayName, rootFolder)
+                            val mediaType = if (mime.startsWith("video/")) "video" else "photo"
+                            val mediaFolder = uploader.ensureMediaFolder(childKey, mediaType, childFolder)
                             uploader.uploadFile(
-                                file, name, mime, parentFolder, stableKey = key,
+                                file, name, mime, mediaFolder, stableKey = key,
                                 progress = GoogleDriveUploader.ProgressListener { sent, total ->
                                     updateStatus(
                                         "Mengunggah ke Google Drive: " +
@@ -251,6 +262,7 @@ class ParentDriveBackupService : Service() {
         accessToken = null
         folderId = null
         pairingCode = null
+        childDisplayName = "HP Anak"
         if (clearSavedState) {
             getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
                 .putBoolean("parent_drive_backup_service_active", false)
