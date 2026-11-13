@@ -758,11 +758,7 @@ private var receivedMp3File: File? = null
         childIdentityColumn.addView(selectedChildButton, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(40)
         ))
-        childIdentityColumn.addView(childQuickStatusText, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(21)
-        ))
-        childHeaderRow.addView(childIdentityColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { weight = 1f })
-        childHeaderRow.addView(connectionStatusText)
+        childHeaderRow.addView(childIdentityColumn, LinearLayout.LayoutParams(0, dp(40), 1f).apply { weight = 1f })
         val notificationsBellButton = createButton("🔔")
         notificationsBellButton.textSize = 19f
         notificationsBellButton.contentDescription = "Lihat notifikasi HP anak"
@@ -781,6 +777,10 @@ private var receivedMp3File: File? = null
         childHeaderRow.addView(addChildButton)
         rootLayout.addView(childHeaderRow)
         parentOnlyViews.add(childHeaderRow)
+        rootLayout.addView(childQuickStatusText, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(21)
+        ).apply { setMargins(dp(3), 0, dp(3), dp(2)) })
+        parentOnlyViews.add(childQuickStatusText)
         rootLayout.addView(childrenContainer)
         parentOnlyViews.add(childrenContainer)
         rootLayout.addView(parentButton)
@@ -1986,14 +1986,12 @@ private var receivedMp3File: File? = null
     private fun updateSelectedChildButton() {
         val name = selectedChildCode?.let { childNames[it] }
         val arrow = if (isChildrenPanelExpanded) "▴" else "▾"
-        selectedChildButton.text = if (name.isNullOrBlank()) "🧒  Pilih perangkat anak  $arrow" else "🧒  $name  $arrow"
         val connected = selectedChildCode?.let { childConnected[it] == true } == true
-        connectionStatusText.text = if (connected) "● ONLINE" else "○ OFFLINE"
-        connectionStatusText.setTextColor(
-            if (connected) Color.rgb(24, 128, 82) else Color.rgb(105, 116, 137)
-        )
-        (connectionStatusText.background as? GradientDrawable)?.setColor(
-            if (connected) Color.rgb(226, 247, 237) else Color.rgb(239, 243, 249)
+        val childLabel = if (name.isNullOrBlank()) "Pilih perangkat anak" else name
+        val connectionLabel = if (connected) "● ONLINE" else "○ OFFLINE"
+        selectedChildButton.text = "🧒  $childLabel  ·  $connectionLabel  $arrow"
+        selectedChildButton.setTextColor(
+            if (connected) Color.rgb(24, 105, 72) else Color.rgb(75, 91, 119)
         )
         val selectedSnapshot = selectedChildCode?.let { childSnapshots[it] }
         if (selectedSnapshot == null) {
