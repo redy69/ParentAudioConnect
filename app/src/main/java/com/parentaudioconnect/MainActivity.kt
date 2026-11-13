@@ -3240,8 +3240,13 @@ private var receivedMp3File: File? = null
                             googleDriveAccessToken = null
                         } else {
                             googleDriveAccessToken = token
+                            googleDriveBackupFolderId = null
                             status.text = "Izin Google Drive berhasil diberikan untuk sesi ini. Token tidak disimpan permanen."
                             Toast.makeText(this, "Izin Google Drive berhasil diberikan.", Toast.LENGTH_LONG).show()
+                            if (childSnapshots[code]?.getBoolean("driveBackupEnabled") == true) {
+                                dialog.dismiss()
+                                rootLayout.post { showParentGalleryStatus() }
+                            }
                         }
                     }
                 }
@@ -3257,10 +3262,11 @@ private var receivedMp3File: File? = null
             return
         }
         val enabled = childSnapshots[code]?.getBoolean("gallerySharingEnabled") == true
+        val backupEnabled = childSnapshots[code]?.getBoolean("driveBackupEnabled") == true
         val name = childNames[code] ?: "HP Anak"
-        if (!enabled) {
+        if (!enabled && !backupEnabled) {
             AlertDialog.Builder(this)
-                .setTitle("Galeri • " + name)
+                .setTitle(if (enabled) "Galeri • " + name else "Backup Google Drive • " + name)
                 .setMessage("Berbagi galeri belum diaktifkan dari HP anak. Minta anak membuka panel BERBAGI GALERI HP INI, membaca penjelasan, lalu menyetujui izin media Android.")
                 .setPositiveButton("Mengerti", null)
                 .show()
@@ -3457,6 +3463,7 @@ private var receivedMp3File: File? = null
                     if (parentGalleryDialog?.isShowing == true) status.text = message
                 }
             },
+            canReceiveBackup = { !googleDriveAccessToken.isNullOrBlank() },
             onBackupFileReady = { key, file, fileName, mime, complete ->
                 val accessToken = googleDriveAccessToken
                 if (accessToken.isNullOrBlank()) {
