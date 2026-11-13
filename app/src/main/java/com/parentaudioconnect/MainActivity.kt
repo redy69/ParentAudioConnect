@@ -278,7 +278,7 @@ private var receivedMp3File: File? = null
                 textSize = 23f
                 letterSpacing = 0.005f
                 setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(Color.WHITE)
+                setTextColor(Color.rgb(190, 235, 215))
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             })
             brandRow.addView(TextView(this@MainActivity).apply {
