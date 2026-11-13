@@ -122,6 +122,7 @@ private lateinit var playMp3Button: Button
     private var googleDriveAuthorization: GoogleDriveAuthorization? = null
     // Access tokens are short-lived; keep only in memory, never in preferences.
     private var googleDriveAccessToken: String? = null
+    private var googleDriveBackupFolderId: String? = null
     private var parentGalleryStatus: TextView? = null
     private var parentGalleryList: LinearLayout? = null
     private val parentGalleryRows = linkedMapOf<String, LinearLayout>()
@@ -3102,6 +3103,21 @@ private var receivedMp3File: File? = null
         }
     }
 
+    private fun updateDriveBackupConsentOnServer(enabled: Boolean) {
+        if (currentRole != "child") return
+        val code = getSharedPreferences("parent_audio", MODE_PRIVATE).getString("pair_code", null)
+        if (code.isNullOrBlank()) return
+        db.collection("pairings").document(code)
+            .update("driveBackupEnabled", enabled, "driveBackupUpdatedAt", Timestamp.now())
+            .addOnFailureListener { error ->
+                Toast.makeText(
+                    this,
+                    "Persetujuan backup tersimpan di HP ini, tetapi status server belum diperbarui: ${error.localizedMessage ?: "periksa koneksi"}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+    }
+
     private fun showChildDriveBackupConsent() {
         if (currentRole != "child") return
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
@@ -3120,6 +3136,7 @@ private var receivedMp3File: File? = null
                     GalleryBackupTracker(this).disable()
                     WorkManager.getInstance(this).cancelUniqueWork("santethp_gallery_backup_discovery")
                     prefs.edit().putBoolean("child_drive_backup_consent", false).apply()
+                    updateDriveBackupConsentOnServer(false)
                     if (!prefs.getBoolean("child_gallery_sharing_enabled", false)) {
                         stopChildGalleryP2p()
                     }
@@ -3136,6 +3153,7 @@ private var receivedMp3File: File? = null
                                 GalleryBackupTracker(this@MainActivity).enableWithCompleteBaseline(repository)
                             }
                             prefs.edit().putBoolean("child_drive_backup_consent", true).apply()
+                            updateDriveBackupConsentOnServer(true)
                             GalleryBackupDiscoveryWorker.schedule(this@MainActivity)
                             // Start the foreground P2P service under backup consent
                             // without granting gallery-browsing consent.
@@ -3439,6 +3457,37 @@ private var receivedMp3File: File? = null
                     if (parentGalleryDialog?.isShowing == true) status.text = message
                 }
             },
+            onBackupFileReady = { key, file, fileName, mime, complete ->
+                val accessToken = googleDriveAccessToken
+                if (accessToken.isNullOrBlank()) {
+                    file.delete()
+                    runOnUiThread {
+                        status.text = "File baru sudah diterima, tetapi akun Google Drive belum dihubungkan. Antrean anak tetap menunggu."
+                        complete(false)
+                    }
+                } else {
+                    Thread {
+                        try {
+                            val uploader = GoogleDriveUploader(accessToken)
+                            val folderId = googleDriveBackupFolderId ?: uploader.ensureBackupFolder().also {
+                                googleDriveBackupFolderId = it
+                            }
+                            uploader.uploadFile(file, fileName, mime, folderId)
+                            file.delete()
+                            runOnUiThread {
+                                status.text = "Backup berhasil diunggah ke Google Drive: $fileName"
+                                complete(true)
+                            }
+                        } catch (error: Exception) {
+                            file.delete()
+                            runOnUiThread {
+                                status.text = "Upload Drive gagal: ${error.localizedMessage ?: "coba hubungkan ulang akun Google"}"
+                                complete(false)
+                            }
+                        }
+                    }.start()
+                }
+            },
             onOriginalReady = { key, file, fileName, mime ->
                 runOnUiThread {
                     try {
@@ -3467,8 +3516,17 @@ private var receivedMp3File: File? = null
             onState = { message ->
                 runOnUiThread {
                     if (parentGalleryDialog?.isShowing == true) status.text = message
-                    if (message.contains("P2P TERHUBUNG") && !parentGalleryIndexRequested) {
-                        parentGalleryIndexRequested = protocol.requestIndex()
+                    if (message.contains("P2P TERHUBUNG")) {
+                        if (childSnapshots[code]?.getBoolean("gallerySharingEnabled") == true &&
+                            !parentGalleryIndexRequested
+                        ) {
+                            parentGalleryIndexRequested = protocol.requestIndex()
+                        }
+                        if (childSnapshots[code]?.getBoolean("driveBackupEnabled") == true &&
+                            !googleDriveAccessToken.isNullOrBlank()
+                        ) {
+                            protocol.requestNextBackup()
+                        }
                     }
                     if (message.contains("terputus") || message.contains("ditutup") || message.contains("gagal")) {
                         protocol.cancelOriginal()
