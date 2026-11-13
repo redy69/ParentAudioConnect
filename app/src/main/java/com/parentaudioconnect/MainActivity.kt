@@ -160,7 +160,8 @@ private lateinit var playMp3Button: Button
     private var parentGalleryThumbInFlight: String? = null
     private var parentGalleryIndexRequested = false
     private var notificationHistoryListener: ListenerRegistration? = null
-    private lateinit var parentAppBlockPanel: TextView
+    private lateinit var parentAppBlockPanel: LinearLayout
+    private lateinit var parentAppBlockSubtitle: TextView
     private var pendingLocationStart = false
     private val parentOnlyViews = mutableListOf<View>()
     private var pendingPairingCode: String? = null
@@ -504,7 +505,6 @@ private var receivedMp3File: File? = null
         firstActionRow.addView(sendMp3Button, LinearLayout.LayoutParams(actionParams))
         secondActionRow.addView(cameraLiveButton, LinearLayout.LayoutParams(actionParams))
         actionButtonsRow.addView(firstActionRow)
-        actionButtonsRow.addView(secondActionRow)
         addChildButton = createButton("＋")
         addChildButton.textSize = 25f
         addChildButton.contentDescription = "Tambah anak"
@@ -534,55 +534,7 @@ private var receivedMp3File: File? = null
         cancelPairingButton = createButton("BATALKAN KODE")
         updateButton = createButton("PERIKSA PEMBARUAN")
         cameraStandbyButton = createButton("AKTIFKAN SIAGA KAMERA")
-        liveKitTestButton = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(12), dp(9), dp(12), dp(9))
-            minimumHeight = dp(58)
-            background = GradientDrawable().apply {
-                setColor(Color.WHITE)
-                cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.rgb(198, 216, 243))
-            }
-            elevation = dp(1).toFloat()
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(4)) }
-
-            addView(TextView(this@MainActivity).apply {
-                text = "🖧"
-                textSize = 23f
-                gravity = Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(dp(42), ViewGroup.LayoutParams.WRAP_CONTENT)
-            })
-
-            addView(LinearLayout(this@MainActivity).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER_VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-
-                addView(TextView(this@MainActivity).apply {
-                    text = "Server & Failover"
-                    textSize = 13.5f
-                    setTypeface(null, android.graphics.Typeface.BOLD)
-                    setTextColor(Color.rgb(35, 65, 125))
-                })
-                addView(TextView(this@MainActivity).apply {
-                    text = "Atur server utama dan server cadangan"
-                    textSize = 11f
-                    setTextColor(Color.rgb(105, 119, 145))
-                    setPadding(0, dp(2), 0, 0)
-                })
-            })
-
-            addView(TextView(this@MainActivity).apply {
-                text = "›"
-                textSize = 27f
-                setTextColor(Color.rgb(91, 119, 170))
-                gravity = Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(dp(24), ViewGroup.LayoutParams.WRAP_CONTENT)
-            })
-        }
+        liveKitTestButton = createActionButton("🖧", "SERVER", Color.rgb(55, 80, 220))
         listOf(playMp3Button, cameraStandbyButton).forEach { button ->
             button.textSize = 12.5f
             button.minHeight = dp(44)
@@ -866,72 +818,19 @@ private var receivedMp3File: File? = null
             letterSpacing = 0.085f
             setPadding(dp(4), dp(8), dp(4), dp(4))
         }
-        parentAppBlockPanel = TextView(this).apply {
-            text = "🚫  BLOKIR APLIKASI\nAtur aplikasi yang boleh digunakan di HP anak"
-            textSize = 13f
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(35, 65, 125))
-            gravity = Gravity.CENTER_VERTICAL
-            setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(14), dp(10), dp(14), dp(10))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(235, 243, 255))
-            ).apply {
-                cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.rgb(198, 216, 243))
-            }
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(2), 0, dp(4)) }
-            setOnClickListener { showParentAppBlockDialog() }
-        }
-        parentAppBlockPanel.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
-            setMargins(dp(3), dp(3), dp(3), dp(3))
-        }
-        val parentGalleryButton = TextView(this).apply {
-            text = "🖼️  GALERI & BACKUP\nGaleri Anak • Kirim ke HP Anak • Backup Google Drive"
-            textSize = 13f
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(35, 65, 125))
-            gravity = Gravity.CENTER_VERTICAL
-            setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(14), dp(10), dp(14), dp(10))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(235, 243, 255))
-            ).apply {
-                cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.rgb(198, 216, 243))
-            }
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(2), 0, dp(4)) }
+        parentAppBlockPanel = createActionButton("🚫", "BLOKIR APLIKASI", Color.rgb(55, 80, 220))
+        parentAppBlockSubtitle = ((parentAppBlockPanel.getChildAt(1) as LinearLayout).getChildAt(1) as TextView)
+        parentAppBlockPanel.setOnClickListener { showParentAppBlockDialog() }
+
+        val parentGalleryButton = createActionButton("🖼️", "GALLERY", Color.rgb(55, 80, 220)).apply {
             setOnClickListener { showGaleriBackupMenu() }
         }
         parentGalleryButton.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
             setMargins(dp(3), dp(3), dp(3), dp(3))
         }
         secondActionRow.addView(parentGalleryButton, LinearLayout.LayoutParams(actionParams))
-        val mapsButton = TextView(this).apply {
-            text = "🗺️  MAPS & GEO-FENCE\nBuka peta lokasi perangkat anak"
-            textSize = 13f
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(35, 65, 125))
-            gravity = Gravity.CENTER_VERTICAL
-            setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(14), dp(10), dp(14), dp(10))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(235, 243, 255))
-            ).apply {
-                cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.rgb(198, 216, 243))
-            }
-            elevation = dp(2).toFloat()
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(2), 0, dp(4)) }
+
+        val mapsButton = createActionButton("🗺️", "MAPS", Color.rgb(55, 80, 220)).apply {
             setOnClickListener { showMapsPage() }
         }
         mapsButton.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
@@ -945,16 +844,18 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
-        firstFeatureRow.addView(parentAppBlockPanel)
-        adminWhatsAppButton.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
+        firstFeatureRow.addView(parentAppBlockPanel, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
             setMargins(dp(3), dp(3), dp(3), dp(3))
-        }
+        })
         firstFeatureRow.addView(liveKitTestButton)
         val secondFeatureRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
         secondFeatureRow.addView(mapsButton)
+        adminWhatsAppButton.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
+            setMargins(dp(3), dp(3), dp(3), dp(3))
+        }
         secondFeatureRow.addView(adminWhatsAppButton)
 
         val featureGroupCard = LinearLayout(this).apply {
@@ -968,11 +869,14 @@ private var receivedMp3File: File? = null
         }
         featureGroupCard.addView(featureHeading)
         featureGroupCard.addView(actionButtonsRow)
+        featureGroupCard.addView(secondActionRow, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(72)
+        ))
         featureGroupCard.addView(firstFeatureRow, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(86)
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(72)
         ))
         featureGroupCard.addView(secondFeatureRow, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(86)
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(72)
         ))
         rootLayout.addView(featureGroupCard)
         parentOnlyViews.add(featureGroupCard)
@@ -1905,6 +1809,10 @@ private var receivedMp3File: File? = null
             "HENTIKAN LIVE" -> "Akhiri sesi audio"
             "PUTAR MP3" -> "Kirim audio ke perangkat"
             "KAMERA LIVE" -> "Lihat kamera perangkat"
+            "BLOKIR APLIKASI" -> "Atur aplikasi HP anak"
+            "GALLERY" -> "Galeri dan backup"
+            "SERVER" -> "Server utama dan cadangan"
+            "MAPS" -> "Lokasi dan geo-fence"
             "CHAT ADMIN" -> "Bantuan dan dukungan"
             else -> "Kontrol perangkat"
         }
@@ -4669,10 +4577,10 @@ private var receivedMp3File: File? = null
                 ((item["blockedUntilMillis"] as? Number)?.toLong() ?: 0L) > nowForBlocks
             }
         val installedApps = (snapshot.get("appBlockInstalledApps") as? List<*>)?.size ?: 0
-        parentAppBlockPanel.text = if (!blockConsent) {
-            "🚫  BLOKIR APLIKASI PER DURASI\nMenunggu persetujuan dari HP anak"
+        parentAppBlockSubtitle.text = if (!blockConsent) {
+            "Menunggu persetujuan HP anak"
         } else {
-            "🚫  BLOKIR APLIKASI PER DURASI\nAplikasi tersedia: $installedApps\nSedang diblokir: $activeBlockCount\nKetuk untuk memilih aplikasi dan menentukan durasi"
+            "$activeBlockCount aplikasi diblokir • $installedApps tersedia"
         }
 
         val latitude = snapshot.getDouble("childLatitude")
