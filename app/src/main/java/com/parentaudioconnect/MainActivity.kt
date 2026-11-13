@@ -3510,7 +3510,18 @@ private var receivedMp3File: File? = null
                             val folderId = googleDriveBackupFolderId ?: uploader.ensureBackupFolder().also {
                                 googleDriveBackupFolderId = it
                             }
-                            uploader.uploadFile(file, fileName, mime, folderId, stableKey = key)
+                            uploader.uploadFile(
+                                file, fileName, mime, folderId, stableKey = key,
+                                progress = GoogleDriveUploader.ProgressListener { sent, total ->
+                                    runOnUiThread {
+                                        if (parentGalleryDialog?.isShowing == true) {
+                                            status.text = "Mengunggah ke Google Drive: " +
+                                                android.text.format.Formatter.formatFileSize(this, sent) +
+                                                " / " + android.text.format.Formatter.formatFileSize(this, total)
+                                        }
+                                    }
+                                }
+                            )
                             file.delete()
                             runOnUiThread {
                                 status.text = "Backup berhasil diunggah ke Google Drive: $fileName"
