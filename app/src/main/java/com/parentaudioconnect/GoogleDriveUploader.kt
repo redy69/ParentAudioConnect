@@ -118,9 +118,9 @@ class GoogleDriveUploader(private val accessToken: String) {
 
     /** Finds a previous successful upload so a lost P2P acknowledgement cannot create duplicates. */
     private fun findExistingBackup(stableKey: String, parentFolderId: String): UploadedFile? {
-        val query = "appProperties has { key='santethpStableKey' and value='\${stableKey.replace("'", "\\\\'")}' }" +
+        val query = "appProperties has { key='santethpStableKey' and value='${stableKey.replace("'", "\\'")}' }" +
             " and '$parentFolderId' in parents and trashed=false"
-        val url = "$API/files?q=\${encode(query)}&pageSize=5&fields=files(id,name,mimeType,size)"
+        val url = "$API/files?q=${encode(query)}&pageSize=5&fields=files(id,name,mimeType,size)"
         val files = request("GET", url, null).optJSONArray("files") ?: return null
         if (files.length() == 0) return null
         val item = files.optJSONObject(0) ?: return null
