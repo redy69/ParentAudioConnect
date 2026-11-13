@@ -188,9 +188,16 @@ class GoogleDriveUploader(private val accessToken: String) {
         val query = "appProperties has { key='santethpStableKey' and value='${stableKey.replace("'", "\\'")}' }" +
             " and '$parentFolderId' in parents and trashed=false"
         val url = "$API/files?q=${encode(query)}&pageSize=5&fields=files(id,name,mimeType,size)"
-        val files = request("GET", url, null).optJSONArray("files") ?: return null
-        if (files.length() == 0) return null
-        val item = files.optJSONObject(0) ?: return null
+        val files = request("GET", url, null).optJSONArray("files")
+        val item = if (files != null && files.length() > 0) {
+            files.optJSONObject(0)
+        } else {
+            // v337 stored successful files directly in the root folder. Search
+            // globally by stable key before creating a second copy in a subfolder.
+            val globalQuery = "appProperties has { key='santethpStableKey' and value='${stableKey.replace("'", "\\\\'")}' } and trashed=false"
+            val globalUrl = "$API/files?q=${encode(globalQuery)}&pageSize=5&fields=files(id,name,mimeType,size)"
+            request("GET", globalUrl, null).optJSONArray("files")?.optJSONObject(0)
+        } ?: return null
         val id = item.optString("id")
         if (id.isBlank()) return null
         return UploadedFile(
