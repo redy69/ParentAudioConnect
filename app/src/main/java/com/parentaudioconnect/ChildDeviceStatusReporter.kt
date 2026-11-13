@@ -46,7 +46,9 @@ object ChildDeviceStatusReporter {
                 BatteryManager.EXTRA_STATUS,
                 BatteryManager.BATTERY_STATUS_UNKNOWN
             ) ?: BatteryManager.BATTERY_STATUS_UNKNOWN
-            val charging = batteryStatus == BatteryManager.BATTERY_STATUS_CHARGING
+            // EXTRA_PLUGGED also covers a device connected to power at FULL.
+            val pluggedIn = (batteryIntent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
+            val charging = pluggedIn || batteryStatus == BatteryManager.BATTERY_STATUS_CHARGING
             val temperatureTenths = batteryIntent?.getIntExtra(
                 BatteryManager.EXTRA_TEMPERATURE,
                 -1
