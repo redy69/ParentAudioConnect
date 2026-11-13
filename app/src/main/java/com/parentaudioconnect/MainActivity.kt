@@ -503,7 +503,7 @@ private var receivedMp3File: File? = null
         firstActionRow.addView(microphoneSlot, LinearLayout.LayoutParams(actionParams))
         firstActionRow.addView(sendMp3Button, LinearLayout.LayoutParams(actionParams))
         secondActionRow.addView(cameraLiveButton, LinearLayout.LayoutParams(actionParams))
-        secondActionRow.addView(adminWhatsAppButton, LinearLayout.LayoutParams(actionParams))
+        secondActionRow.addView(liveKitTestButton, LinearLayout.LayoutParams(actionParams))
         actionButtonsRow.addView(firstActionRow)
         actionButtonsRow.addView(secondActionRow)
         addChildButton = createButton("＋")
@@ -946,13 +946,16 @@ private var receivedMp3File: File? = null
             gravity = Gravity.CENTER
         }
         firstFeatureRow.addView(parentAppBlockPanel)
-        firstFeatureRow.addView(parentGalleryButton)
+        adminWhatsAppButton.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
+            setMargins(dp(3), dp(3), dp(3), dp(3))
+        }
+        firstFeatureRow.addView(adminWhatsAppButton)
         val secondFeatureRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
         secondFeatureRow.addView(mapsButton)
-        secondFeatureRow.addView(liveKitTestButton)
+        secondFeatureRow.addView(parentGalleryButton)
 
         val featureGroupCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -991,7 +994,7 @@ private var receivedMp3File: File? = null
         rootLayout.addView(additionalControlsHeading)
         rootLayout.addView(playMp3Button)
         rootLayout.addView(cameraStandbyButton)
-        // Server & Failover is grouped with the other four dashboard features above.
+        // All eight dashboard actions are grouped together as equal main features.
 
         val mapsPage = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
