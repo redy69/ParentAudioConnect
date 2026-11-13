@@ -4884,7 +4884,9 @@ private var receivedMp3File: File? = null
             .addSnapshotListener { snapshot, error ->
 
                 if (error != null) {
-                    statusText.text = "Gagal memeriksa pasangan"
+                    if (statusText.text != "Gagal memeriksa pasangan") {
+                        statusText.text = "Gagal memeriksa pasangan"
+                    }
                     return@addSnapshotListener
                 }
 
@@ -4893,8 +4895,12 @@ private var receivedMp3File: File? = null
                     maybeStartParentDriveBackupForChild(code, snapshot)
                     val childUid = snapshot.getString("childUid")
                     val connected = !childUid.isNullOrEmpty()
+                    val connectionStateChanged = childConnected[code] != connected
                     childConnected[code] = connected
-                    renderChildrenList()
+                    // Avoid tearing down and rebuilding the child list on every
+                    // Firestore cache/reconnect snapshot, which can cause visible flicker.
+                    if (connectionStateChanged) renderChildrenList()
+                    if (selectedChildCode == code) updateSelectedChildButton()
                     if (selectedChildCode == code) {
                         latestPairingSnapshot = snapshot
                         renderChildAudioActivity(snapshot)
@@ -4915,7 +4921,12 @@ private var receivedMp3File: File? = null
                             childNames[code]?.startsWith("Anak ") == true &&
                             renamePromptedCodes.add(code) && selectedChildCode == code
                         ) promptRenameChild(code)
-                        if (currentRole == "parent") showParentDashboard()
+                        if (currentRole == "parent" &&
+                            rootLayout.findViewWithTag<View>("santethp_maps_page")?.visibility != View.VISIBLE &&
+                            rootLayout.findViewWithTag<View>("santethp_brand_header")?.visibility != View.VISIBLE
+                        ) {
+                            showParentDashboard()
+                        }
                     }
                 }
             }
