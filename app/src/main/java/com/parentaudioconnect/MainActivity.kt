@@ -264,7 +264,7 @@ private var receivedMp3File: File? = null
                 setPadding(0, dp(3), 0, dp(1))
             }
             brandRow.addView(TextView(this@MainActivity).apply {
-                text = "SantetHP"
+                text = "lim45ekawan"
                 textSize = 23f
                 letterSpacing = 0.005f
                 setTypeface(null, android.graphics.Typeface.BOLD)
@@ -272,13 +272,13 @@ private var receivedMp3File: File? = null
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             })
             brandRow.addView(TextView(this@MainActivity).apply {
-                text = "ORTU"
+                text = "BantengMati"
                 textSize = 10f
-                letterSpacing = 0.08f
+                letterSpacing = 0.035f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.WHITE)
                 gravity = Gravity.CENTER
-                setPadding(dp(13), dp(7), dp(13), dp(7))
+                setPadding(dp(12), dp(7), dp(12), dp(7))
                 background = GradientDrawable().apply {
                     setColor(Color.argb(46, 255, 255, 255))
                     cornerRadius = dp(20).toFloat()
