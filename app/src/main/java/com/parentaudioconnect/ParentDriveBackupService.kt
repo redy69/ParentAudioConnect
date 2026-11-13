@@ -173,7 +173,16 @@ class ParentDriveBackupService : Service() {
                         try {
                             val uploader = GoogleDriveUploader(token)
                             val parentFolder = folderId ?: uploader.ensureBackupFolder().also { folderId = it }
-                            uploader.uploadFile(file, name, mime, parentFolder, stableKey = key)
+                            uploader.uploadFile(
+                                file, name, mime, parentFolder, stableKey = key,
+                                progress = GoogleDriveUploader.ProgressListener { sent, total ->
+                                    updateStatus(
+                                        "Mengunggah ke Google Drive: " +
+                                            android.text.format.Formatter.formatFileSize(this, sent) +
+                                            " / " + android.text.format.Formatter.formatFileSize(this, total)
+                                    )
+                                }
+                            )
                             file.delete()
                             updateStatus("Backup Google Drive berhasil: $name")
                             complete(true)
