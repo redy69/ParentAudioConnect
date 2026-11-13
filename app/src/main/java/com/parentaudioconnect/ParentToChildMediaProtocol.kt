@@ -260,7 +260,17 @@ class ParentToChildMediaProtocol(
                 )
                 val directory = File(publicDir, "SantetHP")
                 if (!directory.exists() && !directory.mkdirs()) throw IllegalStateException("Folder galeri tidak dapat dibuat")
-                put(MediaStore.MediaColumns.DATA, File(directory, sanitizeName(name)).absolutePath)
+                val safeName = sanitizeName(name)
+                val base = safeName.substringBeforeLast('.', safeName)
+                val extension = safeName.substringAfterLast('.', "").takeIf { it.isNotBlank() }?.let { ".$it" }.orEmpty()
+                var target = File(directory, safeName)
+                var suffix = 1
+                while (target.exists()) {
+                    target = File(directory, "$base ($suffix)$extension")
+                    suffix++
+                }
+                put(MediaStore.MediaColumns.DISPLAY_NAME, target.name)
+                put(MediaStore.MediaColumns.DATA, target.absolutePath)
             }
         }
         val uri = app.contentResolver.insert(collection, values) ?: return null
