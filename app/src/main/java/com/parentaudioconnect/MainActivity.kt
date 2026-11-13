@@ -814,16 +814,6 @@ private var receivedMp3File: File? = null
         parentOnlyViews.add(statusText)
         rootLayout.addView(pairingInstructionText)
         rootLayout.addView(codeText)
-        val activityHeading = TextView(this).apply {
-            text = "AKTIVITAS AUDIO ANAK"
-            textSize = 11.5f
-            setTextColor(Color.rgb(49, 82, 145))
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.085f
-            setPadding(dp(4), dp(8), dp(4), dp(4))
-        }
-        rootLayout.addView(activityHeading)
-        parentOnlyViews.add(activityHeading)
         rootLayout.addView(childAudioActivityText)
         parentOnlyViews.add(childAudioActivityText)
         val featureHeading = TextView(this).apply {
