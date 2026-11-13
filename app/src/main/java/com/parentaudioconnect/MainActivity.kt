@@ -1918,20 +1918,32 @@ private var receivedMp3File: File? = null
         )
         val selectedSnapshot = selectedChildCode?.let { childSnapshots[it] }
         if (selectedSnapshot == null) {
-            childQuickStatusText.text = "🔋 --   •   ᯤ Menunggu data jaringan"
+            childQuickStatusText.text = "🔋 --"
         } else {
             val battery = selectedSnapshot.getLong("deviceBatteryPercent")?.toInt() ?: -1
-            val network = selectedSnapshot.getString("deviceNetworkType")?.takeIf { it.isNotBlank() }
-                ?: "Jaringan --"
-            val internet = selectedSnapshot.getBoolean("deviceInternetValidated") == true
-            val updatedAt = selectedSnapshot.getTimestamp("deviceStatusAt")
-            val ageMs = updatedAt?.toDate()?.time?.let { System.currentTimeMillis() - it }
-            val fresh = ageMs != null && ageMs in -60_000L..15 * 60 * 1000L
+            val network = selectedSnapshot.getString("deviceNetworkType")
+                ?.trim()?.lowercase(java.util.Locale.ROOT).orEmpty()
             val batteryLabel = if (battery in 0..100) "$battery%" else "--"
-            val networkLabel = network.replace('_', ' ').take(15)
-            childQuickStatusText.text = "🔋 $batteryLabel  •  ᯤ ${networkLabel.take(10)}  •  " +
-                (if (internet) "Net aktif" else "Net --") +
-                (if (fresh) "" else " · lama")
+            val networkStatus = when {
+                network.contains("wi-fi") || network.contains("wifi") -> "⌁"
+                network.contains("data seluler") || network.contains("seluler") ||
+                    network.contains("cellular") || network.contains("mobile") -> {
+                    val operator = selectedSnapshot.getString("deviceOperatorName")
+                        ?.trim()?.takeIf {
+                            it.isNotBlank() &&
+                                !it.equals("Tidak terdeteksi / tanpa SIM", ignoreCase = true) &&
+                                !it.equals("Tidak tersedia", ignoreCase = true)
+                        }
+                    if (operator.isNullOrBlank()) "ᯤ" else "ᯤ $operator"
+                }
+                network.contains("ethernet") -> "⌁ Ethernet"
+                else -> ""
+            }
+            childQuickStatusText.text = if (networkStatus.isBlank()) {
+                "🔋 $batteryLabel"
+            } else {
+                "🔋 $batteryLabel   •   $networkStatus"
+            }
         }
         val conditionTitle = "KONDISI HP ${name?.takeIf { it.isNotBlank() } ?: "ANAK"}"
         childDeviceStatusText.text = childDeviceStatusText.text.toString()
