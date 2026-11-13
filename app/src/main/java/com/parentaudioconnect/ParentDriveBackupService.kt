@@ -234,8 +234,11 @@ class ParentDriveBackupService : Service() {
                             }
                             val mediaType = if (mime.startsWith("video/")) "video" else "photo"
                             val mediaFolder = uploader.ensureMediaFolder(childKey, mediaType, childFolder)
+                            val driveStableKey = java.security.MessageDigest.getInstance("SHA-256")
+                                .digest("$childKey:$key".toByteArray(Charsets.UTF_8))
+                                .joinToString("") { "%02x".format(it.toInt() and 0xff) }
                             uploader.uploadFile(
-                                file, name, mime, mediaFolder, stableKey = key,
+                                file, name, mime, mediaFolder, stableKey = driveStableKey,
                                 progress = GoogleDriveUploader.ProgressListener { sent, total ->
                                     updateStatus(
                                         "Mengunggah ke Google Drive: " +
