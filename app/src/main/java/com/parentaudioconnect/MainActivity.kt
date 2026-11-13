@@ -3450,6 +3450,9 @@ private var receivedMp3File: File? = null
             return
         }
         val childName = childNames[code] ?: "HP Anak"
+        val childKey = MessageDigest.getInstance("SHA-256")
+            .digest(code.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it.toInt() and 0xff) }
         val backupPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         val status = TextView(this).apply {
             text = if (googleDriveAccessToken.isNullOrBlank()) "Google Drive belum diotorisasi pada sesi aplikasi ini." else "Izin Google Drive diberikan pada sesi ini. Token akses hanya disimpan sementara di memori."
@@ -3461,6 +3464,17 @@ private var receivedMp3File: File? = null
             textSize = 13f
             setTextColor(Color.rgb(35, 53, 88))
             setPadding(dp(4), dp(4), dp(4), dp(8))
+        }
+        val folderNameInput = EditText(this).apply {
+            hint = "Nama folder anak di Google Drive"
+            setSingleLine(true)
+            setText(backupPrefs.getString("parent_drive_child_folder_name_$childKey", childName))
+        }
+        val wifiOnlyCheckBox = CheckBox(this).apply {
+            text = "Backup hanya saat HP anak dan HP orang tua terhubung ke Wi-Fi"
+            isChecked = childSnapshots[code]?.getBoolean("driveBackupWifiOnly") ?: true
+            setTextColor(Color.rgb(35, 53, 88))
+            textSize = 13f
         }
         fun refreshBackupStats() {
             val successful = backupPrefs.getInt("parent_drive_backup_success_count", 0)
@@ -3483,6 +3497,13 @@ private var receivedMp3File: File? = null
             addView(status)
             addView(statsView)
             addView(TextView(this@MainActivity).apply {
+                text = "Nama folder khusus perangkat ini:"
+                textSize = 12.5f
+                setTextColor(Color.rgb(75, 88, 112))
+            })
+            addView(folderNameInput)
+            addView(wifiOnlyCheckBox)
+            addView(TextView(this@MainActivity).apply {
                 text = "Backup hanya memasukkan foto dan video BARU setelah diaktifkan dan disetujui dari HP anak. File lama tetap hanya tampil di Galeri Anak dan tidak diunggah otomatis. Akun Google yang dipilih adalah akun Drive milik orang tua.\n\nSetelah akun terhubung, layanan backup berjalan di latar depan. Jika token Google kedaluwarsa, hubungkan ulang akun untuk melanjutkan antrean."
                 textSize = 12.5f
                 setTextColor(Color.rgb(75, 88, 112))
@@ -3492,7 +3513,7 @@ private var receivedMp3File: File? = null
         val dialog = AlertDialog.Builder(this).setTitle("Backup Google Drive")
             .setView(content).setPositiveButton("Hubungkan Google Drive", null)
             .setNegativeButton("Hentikan backup", null)
-            .setNeutralButton("Tutup", null).create()
+            .setNeutralButton("Simpan nama folder", null).create()
         val statsRefresh = object : Runnable {
             override fun run() {
                 if (!dialog.isShowing) return
@@ -3504,6 +3525,55 @@ private var receivedMp3File: File? = null
             refreshBackupStats()
             rootLayout.post(statsRefresh)
             dialog.setOnDismissListener { rootLayout.removeCallbacks(statsRefresh) }
+            wifiOnlyCheckBox.setOnCheckedChangeListener { _, enabled ->
+                val previous = !enabled
+                backupPrefs.edit().putBoolean("drive_backup_wifi_only", enabled).apply()
+                db.collection("pairings").document(code)
+                    .update("driveBackupWifiOnly", enabled)
+                    .addOnSuccessListener {
+                        status.text = if (enabled) {
+                            "Pengaturan tersimpan • backup menunggu Wi-Fi pada kedua HP."
+                        } else {
+                            "Pengaturan tersimpan • backup boleh memakai Wi-Fi atau data seluler."
+                        }
+                    }
+                    .addOnFailureListener { error ->
+                        wifiOnlyCheckBox.setOnCheckedChangeListener(null)
+                        wifiOnlyCheckBox.isChecked = previous
+                        wifiOnlyCheckBox.setOnCheckedChangeListener { _, value ->
+                            backupPrefs.edit().putBoolean("drive_backup_wifi_only", value).apply()
+                        }
+                        backupPrefs.edit().putBoolean("drive_backup_wifi_only", previous).apply()
+                        status.text = "Pengaturan jaringan gagal disimpan: ${error.localizedMessage ?: "periksa koneksi"}"
+                    }
+            }
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                val newName = folderNameInput.text.toString().trim()
+                if (newName.isBlank() || newName.length > 80) {
+                    folderNameInput.error = "Nama folder harus 1–80 karakter"
+                    return@setOnClickListener
+                }
+                backupPrefs.edit()
+                    .putString("parent_drive_child_folder_name_$childKey", newName)
+                    .putBoolean("parent_drive_child_folder_rename_pending_$childKey", true)
+                    .apply()
+                val folderId = backupPrefs.getString("parent_drive_child_folder_id_$childKey", null)
+                val token = googleDriveAccessToken
+                if (!folderId.isNullOrBlank() && !token.isNullOrBlank()) {
+                    status.text = "Mengubah nama folder Google Drive..."
+                    Thread {
+                        try {
+                            GoogleDriveUploader(token).renameFolder(folderId, newName)
+                            backupPrefs.edit().putBoolean("parent_drive_child_folder_rename_pending_$childKey", false).apply()
+                            runOnUiThread { status.text = "Nama folder berhasil diubah menjadi: $newName" }
+                        } catch (error: Exception) {
+                            runOnUiThread { status.text = "Nama disimpan, tetapi perubahan Drive menunggu koneksi/otorisasi: ${error.localizedMessage ?: "coba lagi"}" }
+                        }
+                    }.start()
+                } else {
+                    status.text = "Nama folder disimpan. Nama ini akan digunakan saat folder anak dibuat atau backup berikutnya berjalan."
+                }
+            }
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
                 startService(Intent(this, ParentDriveBackupService::class.java).setAction(ParentDriveBackupService.ACTION_STOP))
                 googleDriveAccessToken = null
@@ -3523,7 +3593,10 @@ private var receivedMp3File: File? = null
                             getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
                                 .putLong("parent_drive_backup_authorized_at", System.currentTimeMillis())
                                 .putBoolean("parent_drive_backup_reauth_required", false)
-                                .putString("parent_drive_backup_pair_code", code).apply()
+                                .putString("parent_drive_backup_pair_code", code)
+                                .putString("parent_drive_backup_child_name", folderNameInput.text.toString().trim().ifBlank { childName })
+                                .putString("parent_drive_child_folder_name_$childKey", folderNameInput.text.toString().trim().ifBlank { childName })
+                                .apply()
                             googleDriveBackupFolderId = null
                             status.text = "Izin Google Drive berhasil diberikan untuk sesi ini. Token tidak disimpan permanen."
                             Toast.makeText(this, "Izin Google Drive berhasil diberikan.", Toast.LENGTH_LONG).show()
@@ -3537,6 +3610,7 @@ private var receivedMp3File: File? = null
                                     action = ParentDriveBackupService.ACTION_START
                                     putExtra(ParentDriveBackupService.EXTRA_PAIR_CODE, code)
                                     putExtra(ParentDriveBackupService.EXTRA_ACCESS_TOKEN, token)
+                                    putExtra(ParentDriveBackupService.EXTRA_CHILD_NAME, folderNameInput.text.toString().trim().ifBlank { childName })
                                 }
                                 try {
                                     ContextCompat.startForegroundService(this, serviceIntent)
