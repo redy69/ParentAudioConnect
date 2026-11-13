@@ -41,7 +41,8 @@ service cloud.firestore {
           'safeZones',
           'audioLiveKitServerId',
           'cameraLiveKitServerId',
-          'galleryP2pSessionId'
+          'galleryP2pSessionId',
+          'driveBackupWifiOnly'
         ])
         && (!changed.hasAny(['usageScheduleEnabled'])
           || request.resource.data.usageScheduleEnabled is bool)
@@ -101,7 +102,9 @@ service cloud.firestore {
         && (!changed.hasAny(['galleryP2pSessionId'])
           || !request.resource.data.keys().hasAny(['galleryP2pSessionId'])
           || (request.resource.data.galleryP2pSessionId is string
-            && request.resource.data.galleryP2pSessionId.size() <= 64));
+            && request.resource.data.galleryP2pSessionId.size() <= 64) )
+        && (!changed.hasAny(['driveBackupWifiOnly'])
+          || request.resource.data.driveBackupWifiOnly is bool);
     }
 
     function validChildStatusUpdate() {
