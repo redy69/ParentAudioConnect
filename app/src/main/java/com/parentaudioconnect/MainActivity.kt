@@ -1398,6 +1398,10 @@ private var receivedMp3File: File? = null
             .setView(form).setNegativeButton("Batal", null)
             .setPositiveButton("Simpan", null).create()
         dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
+                stopService(Intent(this, ParentDriveBackupService::class.java).setAction(ParentDriveBackupService.ACTION_STOP))
+                status.text = "Perintah menghentikan layanan backup telah dikirim."
+            }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val name = nameInput.text.toString().trim()
                 val radius = radiusInput.text.toString().toIntOrNull()
@@ -3227,6 +3231,7 @@ private var receivedMp3File: File? = null
         }
         val dialog = AlertDialog.Builder(this).setTitle("Backup Google Drive")
             .setView(content).setPositiveButton("Hubungkan Google Drive", null)
+            .setNegativeButton("Hentikan backup", null)
             .setNeutralButton("Tutup", null).create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
@@ -3270,6 +3275,16 @@ private var receivedMp3File: File? = null
         val code = selectedChildCode
         if (code.isNullOrBlank()) {
             Toast.makeText(this, "Pilih HP anak terlebih dahulu.", Toast.LENGTH_LONG).show()
+            return
+        }
+        val backupServiceActive = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            .getBoolean("parent_drive_backup_service_active", false)
+        if (backupServiceActive) {
+            AlertDialog.Builder(this)
+                .setTitle("Backup Google Drive sedang aktif")
+                .setMessage("Layanan backup sedang memakai koneksi P2P HP anak. Hentikan backup terlebih dahulu melalui menu Backup Google Drive sebelum membuka Galeri Anak agar kedua koneksi tidak saling memutus.")
+                .setPositiveButton("Mengerti", null)
+                .show()
             return
         }
         val enabled = childSnapshots[code]?.getBoolean("gallerySharingEnabled") == true
