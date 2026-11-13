@@ -474,7 +474,7 @@ private var receivedMp3File: File? = null
         stopButton = createActionButton("🎙", "HENTIKAN LIVE", Color.rgb(220, 75, 75))
         sendMp3Button = createActionButton("♫", "PUTAR MP3", Color.rgb(55, 80, 220))
         playMp3Button = createButton("PUTAR MP3 DITERIMA")
-        adminWhatsAppButton = createActionButton("☎", "CHAT ADMIN", Color.rgb(37, 211, 102))
+        adminWhatsAppButton = createActionButton("WA", "CHAT ADMIN", Color.rgb(37, 211, 102))
         cameraLiveButton = createActionButton("📷", "KAMERA LIVE", Color.rgb(45, 91, 210))
         actionButtonsRow = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -534,7 +534,7 @@ private var receivedMp3File: File? = null
         cancelPairingButton = createButton("BATALKAN KODE")
         updateButton = createButton("PERIKSA PEMBARUAN")
         cameraStandbyButton = createButton("AKTIFKAN SIAGA KAMERA")
-        liveKitTestButton = createActionButton("🖧", "SERVER", Color.rgb(55, 80, 220))
+        liveKitTestButton = createActionButton("▤", "SERVER", Color.rgb(55, 80, 220))
         listOf(playMp3Button, cameraStandbyButton).forEach { button ->
             button.textSize = 12.5f
             button.minHeight = dp(44)
@@ -1775,6 +1775,46 @@ private var receivedMp3File: File? = null
             setStroke(dp(1), Color.argb(185, 255, 255, 255))
         }
 
+    private inner class WhatsAppBrandIconView : View(this@MainActivity) {
+        private val iconPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+
+        override fun onDraw(canvas: android.graphics.Canvas) {
+            super.onDraw(canvas)
+            val side = minOf(width, height).toFloat()
+            val cx = width / 2f
+            val cy = height / 2f
+            val radius = side * 0.47f
+
+            iconPaint.style = android.graphics.Paint.Style.FILL
+            iconPaint.color = Color.rgb(37, 211, 102)
+            canvas.drawCircle(cx, cy, radius, iconPaint)
+
+            // White WhatsApp-style chat bubble with a handset silhouette.
+            iconPaint.color = Color.WHITE
+            iconPaint.style = android.graphics.Paint.Style.STROKE
+            iconPaint.strokeWidth = side * 0.085f
+            iconPaint.strokeCap = android.graphics.Paint.Cap.ROUND
+            iconPaint.strokeJoin = android.graphics.Paint.Join.ROUND
+            val bubble = android.graphics.Path().apply {
+                moveTo(cx - side * 0.25f, cy - side * 0.20f)
+                cubicTo(cx - side * 0.39f, cy - side * 0.02f, cx - side * 0.30f, cy + side * 0.22f, cx - side * 0.10f, cy + side * 0.28f)
+                cubicTo(cx + side * 0.08f, cy + side * 0.35f, cx + side * 0.30f, cy + side * 0.19f, cx + side * 0.29f, cy - side * 0.04f)
+                cubicTo(cx + side * 0.28f, cy - side * 0.28f, cx + side * 0.02f, cy - side * 0.38f, cx - side * 0.18f, cy - side * 0.27f)
+                close()
+            }
+            canvas.drawPath(bubble, iconPaint)
+
+            iconPaint.style = android.graphics.Paint.Style.STROKE
+            iconPaint.strokeWidth = side * 0.105f
+            val handset = android.graphics.Path().apply {
+                moveTo(cx - side * 0.15f, cy - side * 0.14f)
+                cubicTo(cx - side * 0.20f, cy - side * 0.05f, cx - side * 0.02f, cy + side * 0.15f, cx + side * 0.10f, cy + side * 0.12f)
+                lineTo(cx + side * 0.17f, cy + side * 0.04f)
+            }
+            canvas.drawPath(handset, iconPaint)
+        }
+    }
+
     private fun createActionButton(icon: String, label: String, accent: Int): LinearLayout {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -1787,21 +1827,29 @@ private var receivedMp3File: File? = null
             isFocusable = true
             contentDescription = label
         }
-        val iconView = TextView(this).apply {
-            text = icon
-            textSize = 20f
-            gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(blendWithWhite(accent, 0.12f), accent, blendWithWhite(accent, 0.28f))
-            ).apply {
-                cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.argb(115, 255, 255, 255))
+        val iconView: View = if (label == "CHAT ADMIN") {
+            WhatsAppBrandIconView().apply {
+                layoutParams = LinearLayout.LayoutParams(dp(30), dp(30)).apply {
+                    rightMargin = dp(5)
+                }
             }
-            elevation = dp(1).toFloat()
-            layoutParams = LinearLayout.LayoutParams(dp(28), dp(28)).apply {
-                rightMargin = dp(5)
+        } else {
+            TextView(this).apply {
+                text = icon
+                textSize = if (label == "SERVER") 21f else 20f
+                gravity = Gravity.CENTER
+                setTextColor(Color.WHITE)
+                background = GradientDrawable(
+                    GradientDrawable.Orientation.TL_BR,
+                    intArrayOf(blendWithWhite(accent, 0.12f), accent, blendWithWhite(accent, 0.28f))
+                ).apply {
+                    cornerRadius = dp(15).toFloat()
+                    setStroke(dp(1), Color.argb(115, 255, 255, 255))
+                }
+                elevation = dp(1).toFloat()
+                layoutParams = LinearLayout.LayoutParams(dp(28), dp(28)).apply {
+                    rightMargin = dp(5)
+                }
             }
         }
         val helper = when (label) {
