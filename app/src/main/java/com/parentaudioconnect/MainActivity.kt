@@ -354,7 +354,8 @@ private var receivedMp3File: File? = null
             ellipsize = android.text.TextUtils.TruncateAt.END
             setPadding(dp(11), dp(4), dp(11), dp(4))
             compoundDrawablePadding = dp(7)
-            setCompoundDrawablesRelativeWithIntrinsicBounds(childBatteryGlyph, null, childNetworkGlyph, null)
+            // Keep battery at the leading edge; network glyph is placed inline before its label. 
+            setCompoundDrawablesRelativeWithIntrinsicBounds(childBatteryGlyph, null, null, null)
             background = GradientDrawable().apply {
                 setColor(Color.WHITE)
                 cornerRadius = dp(13).toFloat()
@@ -2191,11 +2192,24 @@ private var receivedMp3File: File? = null
                     "Jaringan"
                 }
             }
-            childQuickStatusText.text = if (networkStatus.isBlank()) {
+            val statusLine = if (networkStatus.isBlank()) {
                 batteryLabel
             } else {
-                "$batteryLabel    ·    $networkStatus"
+                "$batteryLabel    ·    ◇  $networkStatus"
             }
+            val statusDisplay = android.text.SpannableString(statusLine)
+            if (networkStatus.isNotBlank()) {
+                val glyphIndex = statusLine.indexOf('◇')
+                if (glyphIndex >= 0) {
+                    childNetworkGlyph.setBounds(0, 0, dp(16), dp(16))
+                    statusDisplay.setSpan(
+                        android.text.style.ImageSpan(childNetworkGlyph, android.text.style.ImageSpan.ALIGN_CENTER),
+                        glyphIndex, glyphIndex + 1,
+                        android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                }
+            }
+            childQuickStatusText.text = statusDisplay
         }
 
     }
