@@ -706,7 +706,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(35, 53, 88))
             gravity = Gravity.CENTER
             setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(14), dp(12), dp(14), dp(12))
+            setPadding(dp(14), dp(10), dp(14), dp(10))
             background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(255, 244, 237))).apply {
                 cornerRadius = dp(15).toFloat()
@@ -714,7 +714,7 @@ private var receivedMp3File: File? = null
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(7)) }
+            ).apply { setMargins(0, dp(2), 0, dp(5)) }
             visibility = View.GONE
             setOnClickListener { showChildAppBlockConsent() }
         }
@@ -726,7 +726,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(35, 53, 88))
             gravity = Gravity.CENTER
             setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(14), dp(12), dp(14), dp(12))
+            setPadding(dp(14), dp(10), dp(14), dp(10))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(237, 248, 244))
@@ -736,7 +736,7 @@ private var receivedMp3File: File? = null
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(7)) }
+            ).apply { setMargins(0, dp(2), 0, dp(5)) }
             visibility = View.GONE
             setOnClickListener { showChildAppActivityConsent() }
         }
@@ -748,7 +748,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(35, 53, 88))
             gravity = Gravity.CENTER
             setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(14), dp(12), dp(14), dp(12))
+            setPadding(dp(14), dp(10), dp(14), dp(10))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(245, 241, 255))
@@ -758,7 +758,7 @@ private var receivedMp3File: File? = null
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(7)) }
+            ).apply { setMargins(0, dp(2), 0, dp(5)) }
             visibility = View.GONE
             setOnClickListener { showChildNotificationConsent() }
         }
@@ -770,7 +770,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(35, 53, 88))
             gravity = Gravity.CENTER
             setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(14), dp(12), dp(14), dp(12))
+            setPadding(dp(14), dp(10), dp(14), dp(10))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(239, 246, 255))
@@ -780,7 +780,7 @@ private var receivedMp3File: File? = null
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(7)) }
+            ).apply { setMargins(0, dp(2), 0, dp(5)) }
             visibility = View.GONE
             setOnClickListener { showChildMediaSettingsMenu() }
         }
