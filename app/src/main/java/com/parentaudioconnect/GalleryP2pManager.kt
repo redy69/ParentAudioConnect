@@ -11,7 +11,6 @@ import org.webrtc.IceCandidate
 import org.webrtc.MediaConstraints
 import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
-import org.webrtc.RTCConfiguration
 import org.webrtc.SessionDescription
 import org.webrtc.SdpObserver
 import java.nio.ByteBuffer
@@ -109,7 +108,7 @@ class GalleryP2pManager(
             PeerConnection.IceServer.builder("stun:stun.l.google.com:19302")
                 .createIceServer()
         )
-        peer = factory?.createPeerConnection(RTCConfiguration(servers), peerObserver)
+        peer = factory?.createPeerConnection(PeerConnection.RTCConfiguration(servers), peerObserver)
         if (peer == null) throw IllegalStateException("Mesin P2P tidak dapat dibuat")
     }
 
