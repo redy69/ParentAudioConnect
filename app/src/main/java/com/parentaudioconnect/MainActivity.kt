@@ -3072,6 +3072,20 @@ private var receivedMp3File: File? = null
      * MediaStore snapshot is captured on IO before enabling the tracker, so media
      * already on the device is never added to the new-file upload queue.
      */
+    /**
+     * A complete backup baseline must see the full image and video library.
+     * Android 14's selected-media permission is intentionally insufficient:
+     * otherwise an older, previously unselected file could later look new.
+     */
+    private fun hasFullGalleryMediaAccessForBackup(): Boolean {
+        return if (Build.VERSION.SDK_INT >= 33) {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_VIDEO) == PackageManager.PERMISSION_GRANTED
+        } else {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
     private fun showChildDriveBackupConsent() {
         if (currentRole != "child") return
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
@@ -3091,8 +3105,8 @@ private var receivedMp3File: File? = null
                     prefs.edit().putBoolean("child_drive_backup_consent", false).apply()
                     updateChildGalleryPanel()
                     Toast.makeText(this, "Persetujuan Backup Drive dicabut.", Toast.LENGTH_LONG).show()
-                } else if (!hasGalleryMediaAccess()) {
-                    Toast.makeText(this, "Aktifkan izin foto dan video terlebih dahulu melalui Berbagi Galeri.", Toast.LENGTH_LONG).show()
+                } else if (!hasFullGalleryMediaAccessForBackup()) {
+                    Toast.makeText(this, "Backup memerlukan izin akses penuh ke foto DAN video agar file lama yang belum dipilih tidak keliru dianggap file baru. Atur izin media penuh melalui pengaturan Android.", Toast.LENGTH_LONG).show()
                 } else {
                     Toast.makeText(this, "Sedang mencatat galeri yang sudah ada sebagai batas awal backup…", Toast.LENGTH_LONG).show()
                     activityScope.launch {
