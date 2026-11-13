@@ -312,7 +312,7 @@ private var receivedMp3File: File? = null
             minHeight = dp(42)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(4), 0, dp(6)) }
+            ).apply { setMargins(0, dp(3), 0, dp(5)) }
         }
 
         connectionStatusText = TextView(this).apply {
@@ -634,7 +634,7 @@ private var receivedMp3File: File? = null
 
         rootLayout.addView(title, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply { bottomMargin = dp(15) })
+        ).apply { bottomMargin = dp(11) })
         childModePanel = TextView(this).apply {
             text = "🛡️  HP ANAK SIAP\n\nPerangkat berhasil terhubung\nMenunggu perintah dari HP orang tua"
             textSize = 16f
@@ -791,7 +791,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.085f
-            setPadding(dp(4), dp(8), dp(4), dp(4))
+            setPadding(dp(4), dp(7), dp(4), dp(3))
         }
         rootLayout.addView(deviceSectionTitle)
         parentOnlyViews.add(deviceSectionTitle)
