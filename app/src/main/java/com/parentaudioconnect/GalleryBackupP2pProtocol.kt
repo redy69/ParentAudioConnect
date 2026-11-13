@@ -279,7 +279,7 @@ class GalleryBackupP2pProtocol(
             tracker.markUploaded(key)
             onStatus("Backup Google Drive berhasil • " + tracker.pendingItems().size + " file masih dalam antrean")
         } else {
-            onStatus("Upload Google Drive belum berhasil • file tetap dalam antrean untuk dicoba lagi")
+            onStatus("Upload Google Drive gagal • file tetap dalam antrean; hubungkan ulang Drive untuk mencoba lagi")
         }
         sendingId = null
         sendingKey = null
@@ -291,6 +291,7 @@ class GalleryBackupP2pProtocol(
         transfer.file.delete()
         if (incoming?.id == transfer.id) incoming = null
         requestOutstanding = false
+        if (awaitingAckKey == transfer.key) awaitingAckKey = null
         send(JSONObject().put("type", "backup_error").put("transferId", transfer.id)
             .put("key", transfer.key).put("message", message))
         onStatus(message)
