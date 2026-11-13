@@ -1487,7 +1487,7 @@ private var receivedMp3File: File? = null
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply { setMargins(0, dp(3), 0, dp(3)) }
+                ).apply { setMargins(0, dp(2), 0, dp(2)) }
             })
         }
     }
@@ -2065,15 +2065,15 @@ private var receivedMp3File: File? = null
         if (!::childrenContainer.isInitialized) return
         childrenContainer.removeAllViews()
         childrenContainer.orientation = LinearLayout.VERTICAL
-        childrenContainer.setPadding(dp(7), dp(7), dp(7), dp(7))
+        childrenContainer.setPadding(dp(6), dp(6), dp(6), dp(6))
         childrenContainer.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
             intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
         ).apply {
-            cornerRadius = dp(21).toFloat()
+            cornerRadius = dp(18).toFloat()
             setStroke(dp(1), Color.rgb(215, 226, 245))
         }
-        childrenContainer.elevation = dp(4).toFloat()
+        childrenContainer.elevation = dp(2).toFloat()
 
         if (childNames.isEmpty()) {
             val empty = LinearLayout(this).apply {
@@ -2118,7 +2118,7 @@ private var receivedMp3File: File? = null
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(9), dp(7), dp(7), dp(7))
+                setPadding(dp(8), dp(6), dp(6), dp(6))
                 background = GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
                     if (selectedChildCode == code)
@@ -2140,7 +2140,7 @@ private var receivedMp3File: File? = null
                 ).apply { setMargins(0, dp(3), 0, dp(3)) }
             }
             val phoneIcon = ChildAvatarView().apply {
-                layoutParams = LinearLayout.LayoutParams(dp(42), dp(42)).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
                     rightMargin = dp(8)
                 }
                 contentDescription = "Ilustrasi profil perangkat anak"
@@ -2216,7 +2216,7 @@ private var receivedMp3File: File? = null
             letterSpacing = 0.005f
             setTextColor(Color.rgb(42, 82, 174))
             gravity = Gravity.CENTER
-            setPadding(dp(14), dp(10), dp(14), dp(10))
+            setPadding(dp(14), dp(8), dp(14), dp(8))
             background = GradientDrawable(
                 GradientDrawable.Orientation.LEFT_RIGHT,
                 intArrayOf(Color.rgb(239, 245, 255), Color.rgb(229, 238, 255))
@@ -2226,7 +2226,7 @@ private var receivedMp3File: File? = null
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(dp(2), dp(8), dp(2), dp(2)) }
+            ).apply { setMargins(dp(2), dp(6), dp(2), dp(2)) }
             isClickable = true
             isFocusable = true
         }
