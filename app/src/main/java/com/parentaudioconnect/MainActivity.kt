@@ -3106,7 +3106,7 @@ private var receivedMp3File: File? = null
             })
             addView(status)
             addView(TextView(this@MainActivity).apply {
-                text = "Backup hanya memasukkan foto dan video BARU setelah diaktifkan dari HP anak. File lama tetap hanya tampil di Galeri Anak dan tidak diunggah otomatis. Akun Google yang dipilih adalah akun Drive milik orang tua."
+                text = "Rancangan backup hanya memasukkan foto dan video BARU setelah diaktifkan dan disetujui dari HP anak. File lama tetap hanya tampil di Galeri Anak dan tidak diunggah otomatis. Akun Google yang dipilih adalah akun Drive milik orang tua.\n\nCatatan: tahap ini menyiapkan dan menguji izin akun Google. Pengiriman P2P otomatis dan antrean upload masih dalam proses integrasi."
                 textSize = 12.5f
                 setTextColor(Color.rgb(75, 88, 112))
                 setPadding(dp(4), dp(4), dp(4), dp(8))
