@@ -168,6 +168,11 @@ class GalleryP2pGalleryProtocol(
     fun requestNextBackup(): Boolean =
         role == GalleryP2pManager.Role.PARENT && backupProtocol.requestNext()
 
+    /** Child re-announces its durable queue after Wi-Fi becomes available. */
+    fun notifyPendingBackup() {
+        if (role == GalleryP2pManager.Role.CHILD) backupProtocol.notifyPending()
+    }
+
     fun cancelOriginal() {
         if (role != GalleryP2pManager.Role.PARENT) return
         requestedTransfers.keys.toList().forEach { id ->
