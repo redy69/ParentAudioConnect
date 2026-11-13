@@ -97,8 +97,6 @@ class ParentDriveBackupService : Service() {
             .apply()
         startAsForeground("Menunggu koneksi HP anak untuk backup media baru")
         stopping = false
-        reconnectHandler.removeCallbacks(networkGateRunnable)
-        reconnectHandler.post(networkGateRunnable)
         pairingCode = code
         listenForConsent(code)
         startTransport(code)
@@ -168,6 +166,8 @@ class ParentDriveBackupService : Service() {
 
     private fun startTransport(code: String) {
         stopping = false
+        reconnectHandler.removeCallbacks(networkGateRunnable)
+        reconnectHandler.post(networkGateRunnable)
         lateinit var activeProtocol: GalleryP2pGalleryProtocol
         val activeManager = GalleryP2pManager(
             context = applicationContext,
@@ -198,7 +198,11 @@ class ParentDriveBackupService : Service() {
             canReceiveBackup = { !accessToken.isNullOrBlank() && canUseBackupNetwork() },
             onBackupFileReady = { key, file, name, mime, complete ->
                 val token = accessToken
-                if (token.isNullOrBlank()) {
+                if (!canUseBackupNetwork()) {
+                    file.delete()
+                    updateStatus("Backup dijeda • menunggu Wi-Fi sebelum upload")
+                    complete(false)
+                } else if (token.isNullOrBlank()) {
                     file.delete()
                     complete(false)
                 } else {
