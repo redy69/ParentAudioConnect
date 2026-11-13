@@ -337,7 +337,7 @@ private var receivedMp3File: File? = null
         }
 
         childQuickStatusText = TextView(this).apply {
-            text = "🔋 --   •   ᯤ Menunggu data jaringan"
+            text = "▰  --    ·    ≋  Menunggu jaringan"
             textSize = 10.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.01f
@@ -508,7 +508,7 @@ private var receivedMp3File: File? = null
         addChildButton = createButton("＋")
         addChildButton.textSize = 25f
         addChildButton.contentDescription = "Tambah anak"
-        addChildButton.layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply { setMargins(dp(3), dp(5), 0, dp(5)) }
+        addChildButton.layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply { setMargins(dp(3), 0, dp(2), 0) }
         selectedChildButton = createButton("Pilih anak  ▾")
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
         selectedChildButton.setOnClickListener { toggleChildrenPanel() }
@@ -769,17 +769,17 @@ private var receivedMp3File: File? = null
             setStroke(dp(1), Color.rgb(210, 223, 245))
         }
         notificationsBellButton.layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
-            setMargins(dp(2), dp(5), dp(2), dp(5))
+            setMargins(dp(2), 0, dp(2), 0)
         }
         notificationsBellButton.setOnClickListener { showChildNotificationsDialog() }
         childHeaderRow.addView(notificationsBellButton)
         parentOnlyViews.add(notificationsBellButton)
         childHeaderRow.addView(addChildButton)
-        rootLayout.addView(childHeaderRow)
+        rootLayout.addView(childHeaderRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(40)))
         parentOnlyViews.add(childHeaderRow)
         rootLayout.addView(childQuickStatusText, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(21)
-        ).apply { setMargins(dp(3), 0, dp(3), dp(2)) })
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(28)
+        ).apply { setMargins(dp(3), dp(4), dp(3), dp(3)) })
         parentOnlyViews.add(childQuickStatusText)
         rootLayout.addView(childrenContainer)
         parentOnlyViews.add(childrenContainer)
@@ -1995,14 +1995,14 @@ private var receivedMp3File: File? = null
         )
         val selectedSnapshot = selectedChildCode?.let { childSnapshots[it] }
         if (selectedSnapshot == null) {
-            childQuickStatusText.text = "🔋 --"
+            childQuickStatusText.text = "▰  --    ·    ≋  Menunggu jaringan"
         } else {
             val battery = selectedSnapshot.getLong("deviceBatteryPercent")?.toInt() ?: -1
             val network = selectedSnapshot.getString("deviceNetworkType")
                 ?.trim()?.lowercase(java.util.Locale.ROOT).orEmpty()
             val batteryLabel = if (battery in 0..100) "$battery%" else "--"
             val networkStatus = when {
-                network.contains("wi-fi") || network.contains("wifi") -> "🛜"
+                network.contains("wi-fi") || network.contains("wifi") -> "≋  Wi-Fi"
                 network.contains("data seluler") || network.contains("seluler") ||
                     network.contains("cellular") || network.contains("mobile") -> {
                     val operator = selectedSnapshot.getString("deviceOperatorName")
@@ -2014,15 +2014,15 @@ private var receivedMp3File: File? = null
                     val compactOperator = operator?.let {
                         if (it.length > 12) "${it.take(11)}…" else it
                     }
-                    if (compactOperator.isNullOrBlank()) "📶" else "📶 $compactOperator"
+                    if (compactOperator.isNullOrBlank()) "▥  Data seluler" else "▥  $compactOperator"
                 }
-                network.contains("ethernet") -> "⌁ Ethernet"
+                network.contains("ethernet") -> "⌁  Ethernet"
                 else -> ""
             }
             childQuickStatusText.text = if (networkStatus.isBlank()) {
-                "🔋 $batteryLabel"
+                "▰  $batteryLabel"
             } else {
-                "🔋 $batteryLabel   •   $networkStatus"
+                "▰  $batteryLabel    ·    $networkStatus"
             }
         }
 
