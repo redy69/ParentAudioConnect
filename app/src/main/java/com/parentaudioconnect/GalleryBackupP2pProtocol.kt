@@ -73,6 +73,7 @@ class GalleryBackupP2pProtocol(
         when (type) {
             "backup_next_request" -> if (role == GalleryP2pManager.Role.CHILD) sendNextPending()
             "backup_queue_available" -> if (role == GalleryP2pManager.Role.PARENT) requestNext()
+            "backup_queue_empty" -> if (role == GalleryP2pManager.Role.PARENT) requestOutstanding = false
             "backup_start" -> if (role == GalleryP2pManager.Role.PARENT) receiveStart(message)
             "backup_chunk" -> if (role == GalleryP2pManager.Role.PARENT) receiveChunk(message)
             "backup_end" -> if (role == GalleryP2pManager.Role.PARENT) receiveEnd(message)
@@ -112,6 +113,7 @@ class GalleryBackupP2pProtocol(
             val pending = tracker.pendingItems().firstOrNull()
             if (pending == null) {
                 onStatus("Antrean backup kosong • menunggu foto/video baru")
+                send(JSONObject().put("type", "backup_queue_empty"))
                 return@execute
             }
             if (pending.sizeBytes <= 0 || pending.sizeBytes > MAX_FILE_BYTES) {
@@ -188,7 +190,8 @@ class GalleryBackupP2pProtocol(
         if (!requestOutstanding || id.isBlank() || id.length > 64 || key.isBlank() || key.length > 160 ||
             size <= 0 || size > MAX_FILE_BYTES || incoming != null
         ) {
-            send(JSONObject().put("type", "backup_error").put("message", "Metadata backup tidak valid"))
+            requestOutstanding = false
+            send(JSONObject().put("type", "backup_error").put("transferId", id).put("message", "Metadata backup tidak valid"))
             return
         }
         requestOutstanding = false
@@ -199,7 +202,8 @@ class GalleryBackupP2pProtocol(
                 size, file, FileOutputStream(file), MessageDigest.getInstance("SHA-256"))
             onStatus("Menerima file backup: 0 / " + android.text.format.Formatter.formatFileSize(app, size))
         } catch (_: Exception) {
-            send(JSONObject().put("type", "backup_error").put("message", "Tidak dapat membuat file sementara"))
+            send(JSONObject().put("type", "backup_error").put("transferId", id)
+                .put("message", "Tidak dapat membuat file sementara"))
         }
     }
 
@@ -254,6 +258,7 @@ class GalleryBackupP2pProtocol(
                     send(JSONObject().put("type", "backup_ack").put("transferId", transfer.id)
                         .put("key", transfer.key).put("success", true))
                 } else {
+                    if (awaitingAckKey == transfer.key) awaitingAckKey = null
                     transfer.file.delete()
                     send(JSONObject().put("type", "backup_ack").put("transferId", transfer.id)
                         .put("key", transfer.key).put("success", false))
