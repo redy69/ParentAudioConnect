@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - feature/livekit-multi-server-failover
+      - feature/gallery-webrtc-p2p
     paths:
       - 'firestore.rules'
       - 'tests/firestore.rules.test.js'
