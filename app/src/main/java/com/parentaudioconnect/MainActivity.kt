@@ -669,108 +669,108 @@ private var receivedMp3File: File? = null
         rootLayout.addView(childModePanel)
         childLocationPanel = TextView(this).apply {
             text = "📍  BERBAGI LOKASI HP INI\nNonaktif • Ketuk untuk membaca penjelasan dan mengaktifkan berbagi lokasi"
-            textSize = 13f
+            textSize = 12.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(35, 53, 88))
             gravity = Gravity.CENTER
-            setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(18), dp(18), dp(18), dp(18))
+            setLineSpacing(dp(2).toFloat(), 1f)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(236, 246, 255))
             ).apply {
-                cornerRadius = dp(19).toFloat()
+                cornerRadius = dp(15).toFloat()
                 setStroke(dp(1), Color.rgb(190, 218, 245))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(12)) }
+            ).apply { setMargins(0, dp(3), 0, dp(7)) }
             visibility = View.GONE
             setOnClickListener { showChildLocationConsentDialog() }
         }
         rootLayout.addView(childLocationPanel)
         childAppBlockPanel = TextView(this).apply {
             text = "🚫  BLOKIR APLIKASI\nNonaktif • Ketuk untuk membaca penjelasan dan mengaktifkan kontrol aplikasi"
-            textSize = 13f
+            textSize = 12.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(35, 53, 88))
             gravity = Gravity.CENTER
-            setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(18), dp(18), dp(18), dp(18))
+            setLineSpacing(dp(2).toFloat(), 1f)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
             background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(255, 244, 237))).apply {
-                cornerRadius = dp(19).toFloat()
+                cornerRadius = dp(15).toFloat()
                 setStroke(dp(1), Color.rgb(245, 205, 180))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(12)) }
+            ).apply { setMargins(0, dp(3), 0, dp(7)) }
             visibility = View.GONE
             setOnClickListener { showChildAppBlockConsent() }
         }
         rootLayout.addView(childAppBlockPanel)
         childAppActivityPanel = TextView(this).apply {
             text = "📱  PEMANTAUAN APLIKASI AKTIF\nNonaktif • Ketuk untuk membaca penjelasan dan memberi persetujuan"
-            textSize = 13f
+            textSize = 12.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(35, 53, 88))
             gravity = Gravity.CENTER
-            setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(18), dp(18), dp(18), dp(18))
+            setLineSpacing(dp(2).toFloat(), 1f)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(237, 248, 244))
             ).apply {
-                cornerRadius = dp(19).toFloat()
+                cornerRadius = dp(15).toFloat()
                 setStroke(dp(1), Color.rgb(190, 225, 208))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(12)) }
+            ).apply { setMargins(0, dp(3), 0, dp(7)) }
             visibility = View.GONE
             setOnClickListener { showChildAppActivityConsent() }
         }
         rootLayout.addView(childAppActivityPanel)
         childNotificationPanel = TextView(this).apply {
             text = "🔔  PEMANTAUAN NOTIFIKASI\nNonaktif • Ketuk untuk membaca penjelasan dan mengaktifkan akses notifikasi"
-            textSize = 13f
+            textSize = 12.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(35, 53, 88))
             gravity = Gravity.CENTER
-            setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(18), dp(18), dp(18), dp(18))
+            setLineSpacing(dp(2).toFloat(), 1f)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(245, 241, 255))
             ).apply {
-                cornerRadius = dp(19).toFloat()
+                cornerRadius = dp(15).toFloat()
                 setStroke(dp(1), Color.rgb(211, 198, 239))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(12)) }
+            ).apply { setMargins(0, dp(3), 0, dp(7)) }
             visibility = View.GONE
             setOnClickListener { showChildNotificationConsent() }
         }
         rootLayout.addView(childNotificationPanel)
         childGalleryPanel = TextView(this).apply {
             text = "🖼️  BERBAGI GALERI HP INI\nNonaktif • Ketuk untuk membaca penjelasan dan memilih media yang boleh dibagikan"
-            textSize = 13f
+            textSize = 12.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(35, 53, 88))
             gravity = Gravity.CENTER
-            setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(18), dp(18), dp(18), dp(18))
+            setLineSpacing(dp(2).toFloat(), 1f)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(239, 246, 255))
             ).apply {
-                cornerRadius = dp(19).toFloat()
+                cornerRadius = dp(15).toFloat()
                 setStroke(dp(1), Color.rgb(190, 218, 245))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(12)) }
+            ).apply { setMargins(0, dp(3), 0, dp(7)) }
             visibility = View.GONE
             setOnClickListener { showChildMediaSettingsMenu() }
         }
@@ -826,8 +826,8 @@ private var receivedMp3File: File? = null
             textSize = 11.5f
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.105f
-            setPadding(dp(4), dp(8), dp(4), dp(5))
+            letterSpacing = 0.085f
+            setPadding(dp(4), dp(8), dp(4), dp(4))
         }
         rootLayout.addView(statusHeading)
         parentOnlyViews.add(statusHeading)
@@ -840,8 +840,8 @@ private var receivedMp3File: File? = null
             textSize = 11.5f
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.105f
-            setPadding(dp(4), dp(8), dp(4), dp(5))
+            letterSpacing = 0.085f
+            setPadding(dp(4), dp(8), dp(4), dp(4))
         }
         rootLayout.addView(activityHeading)
         parentOnlyViews.add(activityHeading)
@@ -852,8 +852,8 @@ private var receivedMp3File: File? = null
             textSize = 11.5f
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.105f
-            setPadding(dp(4), dp(10), dp(4), dp(5))
+            letterSpacing = 0.085f
+            setPadding(dp(4), dp(8), dp(4), dp(4))
         }
         rootLayout.addView(primaryControlHeading)
         parentOnlyViews.add(primaryControlHeading)
