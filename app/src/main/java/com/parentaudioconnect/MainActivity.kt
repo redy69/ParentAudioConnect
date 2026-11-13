@@ -224,7 +224,10 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.TOP
             setPadding(dp(9), dp(5), dp(9), dp(8))
-            setBackgroundColor(Color.rgb(244, 247, 252))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(231, 239, 255), Color.rgb(247, 249, 255), Color.rgb(229, 238, 253))
+            )
         }
 
         val title = LinearLayout(this).apply {
@@ -315,10 +318,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(105, 116, 137))
             gravity = Gravity.CENTER
             setPadding(dp(8), dp(4), dp(8), dp(4))
-            background = GradientDrawable().apply {
-                setColor(Color.rgb(239, 243, 249))
-                cornerRadius = dp(14).toFloat()
-            }
+            background = roundedPanel(Color.argb(205, 239, 245, 255), 14)
             maxLines = 1
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)
@@ -371,13 +371,7 @@ private var receivedMp3File: File? = null
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(3).toFloat(), 1f)
             setPadding(dp(17), dp(16), dp(17), dp(16))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(237, 245, 255))
-            ).apply {
-                cornerRadius = dp(20).toFloat()
-                setStroke(dp(1), Color.rgb(194, 215, 246))
-            }
+            background = roundedPanel(Color.argb(190, 255, 255, 255), 20)
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -392,13 +386,7 @@ private var receivedMp3File: File? = null
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(3).toFloat(), 1f)
             setPadding(dp(17), dp(16), dp(17), dp(16))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
-            ).apply {
-                cornerRadius = dp(20).toFloat()
-                setStroke(dp(1), Color.rgb(194, 215, 246))
-            }
+            background = roundedPanel(Color.argb(195, 246, 250, 255), 20)
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -413,13 +401,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(39, 78, 180))
             gravity = Gravity.CENTER
             setPadding(dp(16), dp(17), dp(16), dp(17))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(232, 240, 255))
-            ).apply {
-                cornerRadius = dp(19).toFloat()
-                setStroke(dp(1), Color.rgb(198, 216, 246))
-            }
+            background = roundedPanel(Color.argb(195, 239, 246, 255), 19)
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -1792,14 +1774,8 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(5), dp(4), dp(5), dp(4))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(246, 249, 255))
-            ).apply {
-                cornerRadius = dp(14).toFloat()
-                setStroke(dp(1), Color.rgb(215, 226, 245))
-            }
-            elevation = dp(2).toFloat()
+            background = roundedPanel(Color.argb(205, 255, 255, 255), 14)
+            elevation = dp(3).toFloat()
             isClickable = true
             isFocusable = true
             contentDescription = label
@@ -1811,10 +1787,10 @@ private var receivedMp3File: File? = null
             setTextColor(Color.WHITE)
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(accent, blendWithWhite(accent, 0.22f))
+                intArrayOf(blendWithWhite(accent, 0.12f), accent, blendWithWhite(accent, 0.28f))
             ).apply {
                 cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.argb(48, 255, 255, 255))
+                setStroke(dp(1), Color.argb(115, 255, 255, 255))
             }
             elevation = dp(1).toFloat()
             layoutParams = LinearLayout.LayoutParams(dp(29), dp(29)).apply {
@@ -1866,8 +1842,11 @@ private var receivedMp3File: File? = null
             setTextColor(Color.WHITE)
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.rgb(55, 91, 220), Color.rgb(39, 67, 178))
-            ).apply { cornerRadius = dp(16).toFloat() }
+                intArrayOf(Color.rgb(75, 111, 229), Color.rgb(43, 78, 190), Color.rgb(92, 133, 235))
+            ).apply {
+                cornerRadius = dp(16).toFloat()
+                setStroke(dp(1), Color.argb(110, 255, 255, 255))
+            }
             elevation = dp(2).toFloat()
             minHeight = dp(52)
             stateListAnimator = null
