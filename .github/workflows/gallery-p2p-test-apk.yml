@@ -1,6 +1,9 @@
 name: Gallery P2P Test APK
 
 on:
+  push:
+    branches:
+      - feature/gallery-webrtc-p2p
   workflow_dispatch:
 
 permissions:
