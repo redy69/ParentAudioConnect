@@ -3661,6 +3661,7 @@ private var receivedMp3File: File? = null
                     parentDriveBackupConnection,
                     BIND_AUTO_CREATE
                 )
+                parentDriveBackupBound = parentDriveBackupBindRequested
             }
             Toast.makeText(this, "Menghubungkan Galeri Anak ke layanan backup bersama…", Toast.LENGTH_SHORT).show()
             return
