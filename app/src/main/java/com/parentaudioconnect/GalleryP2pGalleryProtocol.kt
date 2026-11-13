@@ -49,6 +49,7 @@ class GalleryP2pGalleryProtocol(
 
     private val appContext = context.applicationContext
     private val repository = GalleryMediaRepository(appContext)
+    private val backupTracker = GalleryBackupTracker(appContext)
     private val worker = Executors.newSingleThreadExecutor()
     @Volatile private var closed = false
     @Volatile private var childItems = emptyMap<String, GalleryMediaRepository.MediaItem>()
@@ -58,7 +59,10 @@ class GalleryP2pGalleryProtocol(
     @Volatile private var incomingTransfer: IncomingTransfer? = null
     private val observerHandler = Handler(Looper.getMainLooper())
     private val mediaRefreshRunnable = Runnable {
-        if (!closed && role == GalleryP2pManager.Role.CHILD && sharingAllowed()) sendIndex(0)
+        if (!closed && role == GalleryP2pManager.Role.CHILD && sharingAllowed()) {
+            refreshChildMediaIndex()
+            sendIndex(0)
+        }
     }
     private var mediaObserver: ContentObserver? = null
 
@@ -83,6 +87,23 @@ class GalleryP2pGalleryProtocol(
         if (closed || !sharingAllowed()) return
         observerHandler.removeCallbacks(mediaRefreshRunnable)
         observerHandler.postDelayed(mediaRefreshRunnable, 2000)
+    }
+
+    /**
+     * Refreshes the child media cache and discovers only items created after
+     * the user-enabled backup baseline. Existing gallery browsing is unchanged.
+     */
+    private fun refreshChildMediaIndex() {
+        if (role != GalleryP2pManager.Role.CHILD || !sharingAllowed()) return
+        worker.execute {
+            try {
+                val items = repository.listMedia(MAX_INDEX_ITEMS)
+                childItems = items.associateBy { it.stableKey }
+                backupTracker.discoverNewMedia(items)
+            } catch (error: Exception) {
+                Log.w(TAG, "Pemindaian media baru untuk antrean backup gagal", error)
+            }
+        }
     }
 
     private data class IncomingTransfer(
