@@ -1031,8 +1031,8 @@ private var receivedMp3File: File? = null
             setTextColor(Color.WHITE)
             backgroundTintList = android.content.res.ColorStateList.valueOf(Color.rgb(36, 91, 169))
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(52)
-            ).apply { setMargins(0, dp(12), 0, dp(8)) }
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(48)
+            ).apply { setMargins(0, dp(9), 0, dp(6)) }
             setOnClickListener { startSafeZoneMapSelection() }
         }
         mapsPage.addView(addSafeZoneButton)
@@ -1428,7 +1428,7 @@ private var receivedMp3File: File? = null
                     childLocationMapView.focusLocation(zone.latitude, zone.longitude)
                     showSafeZoneEditor(zone)
                 }
-            }, LinearLayout.LayoutParams(0, dp(42), 1f))
+            }, LinearLayout.LayoutParams(0, dp(40), 1f))
             row.addView(Button(this).apply {
                 text = "Hapus"
                 isAllCaps = false
@@ -1442,7 +1442,7 @@ private var receivedMp3File: File? = null
                             saveSafeZones(readSafeZones(latest).filterNot { it.id == zone.id })
                         }.show()
                 }
-            }, LinearLayout.LayoutParams(0, dp(42), 1f))
+            }, LinearLayout.LayoutParams(0, dp(40), 1f))
             card.addView(row)
             safeZonesContainer.addView(card)
         }
@@ -3890,15 +3890,15 @@ private var receivedMp3File: File? = null
                                 val row = LinearLayout(this).apply {
                                     orientation = LinearLayout.HORIZONTAL
                                     gravity = Gravity.CENTER_VERTICAL
-                                    setPadding(dp(7), dp(7), dp(7), dp(7))
+                                    setPadding(dp(7), dp(6), dp(7), dp(6))
                                     background = GradientDrawable().apply {
                                         setColor(Color.WHITE)
                                         cornerRadius = dp(12).toFloat()
                                         setStroke(dp(1), Color.rgb(226, 233, 243))
                                     }
                                     layoutParams = LinearLayout.LayoutParams(
-                                        ViewGroup.LayoutParams.MATCH_PARENT, dp(82)
-                                    ).apply { setMargins(0, 0, 0, dp(7)) }
+                                        ViewGroup.LayoutParams.MATCH_PARENT, dp(80)
+                                    ).apply { setMargins(0, 0, 0, dp(6)) }
                                 }
                                 val image = ImageView(this).apply {
                                     scaleType = ImageView.ScaleType.CENTER_CROP
@@ -4065,15 +4065,15 @@ private var receivedMp3File: File? = null
                                 val row = LinearLayout(this).apply {
                                     orientation = LinearLayout.HORIZONTAL
                                     gravity = Gravity.CENTER_VERTICAL
-                                    setPadding(dp(7), dp(7), dp(7), dp(7))
+                                    setPadding(dp(7), dp(6), dp(7), dp(6))
                                     background = GradientDrawable().apply {
                                         setColor(Color.WHITE)
                                         cornerRadius = dp(12).toFloat()
                                         setStroke(dp(1), Color.rgb(226, 233, 243))
                                     }
                                     layoutParams = LinearLayout.LayoutParams(
-                                        ViewGroup.LayoutParams.MATCH_PARENT, dp(82)
-                                    ).apply { setMargins(0, 0, 0, dp(7)) }
+                                        ViewGroup.LayoutParams.MATCH_PARENT, dp(80)
+                                    ).apply { setMargins(0, 0, 0, dp(6)) }
                                 }
                                 val image = ImageView(this).apply {
                                     scaleType = ImageView.ScaleType.CENTER_CROP
