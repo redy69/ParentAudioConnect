@@ -265,7 +265,7 @@ private var receivedMp3File: File? = null
                 textSize = 10f
                 letterSpacing = 0.13f
                 setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(Color.rgb(190, 211, 255))
+                setTextColor(Color.rgb(190, 235, 215))
             })
 
             val brandRow = LinearLayout(this@MainActivity).apply {
@@ -300,7 +300,7 @@ private var receivedMp3File: File? = null
             addView(TextView(this@MainActivity).apply {
                 text = "Ruang kendali bersama"
                 textSize = 13.5f
-                setTextColor(Color.rgb(224, 234, 255))
+                setTextColor(Color.rgb(224, 245, 234))
                 letterSpacing = 0.015f
             })
         }
@@ -760,7 +760,7 @@ private var receivedMp3File: File? = null
         val deviceSectionTitle = TextView(this).apply {
             text = "PERANGKAT ANAK"
             textSize = 11.5f
-            setTextColor(Color.rgb(49, 82, 145))
+            setTextColor(Color.rgb(205, 239, 220))
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.085f
             setPadding(dp(4), dp(7), dp(4), dp(3))
