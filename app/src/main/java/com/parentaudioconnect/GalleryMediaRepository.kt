@@ -31,6 +31,27 @@ class GalleryMediaRepository(private val context: Context) {
         val kind: Kind
     )
 
+    /**
+     * Backup baseline/discovery must see the complete library. Android 14's
+     * user-selected visual-media grant is not sufficient because unseen older
+     * items could otherwise be misclassified as newly added.
+     */
+    fun hasFullMediaAccess(): Boolean {
+        val permissions = if (Build.VERSION.SDK_INT >= 33) {
+            listOf(
+                android.Manifest.permission.READ_MEDIA_IMAGES,
+                android.Manifest.permission.READ_MEDIA_VIDEO
+            )
+        } else {
+            listOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+        return permissions.all {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context, it
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+    }
+
     fun listMedia(limit: Int? = 500): List<MediaItem> {
         // A null limit is reserved for complete consent-time baseline scans.
         // Normal gallery browsing keeps its existing 1,000-item safety cap.
