@@ -305,7 +305,7 @@ private var receivedMp3File: File? = null
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
             ).apply {
-                cornerRadius = dp(20).toFloat()
+                cornerRadius = dp(15).toFloat()
                 setStroke(dp(1), Color.rgb(195, 215, 245))
             }
             elevation = dp(2).toFloat()
@@ -373,13 +373,13 @@ private var receivedMp3File: File? = null
             letterSpacing = 0.01f
             setTextColor(Color.rgb(32, 55, 92))
             gravity = Gravity.CENTER_VERTICAL
-            setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(14), dp(12), dp(14), dp(12))
-            background = roundedPanel(Color.argb(190, 255, 255, 255), 20)
-            elevation = dp(2).toFloat()
+            setLineSpacing(dp(2).toFloat(), 1f)
+            setPadding(dp(13), dp(10), dp(13), dp(10))
+            background = roundedPanel(Color.argb(190, 255, 255, 255), 16)
+            elevation = dp(1).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(4), 0, dp(6)) }
+            ).apply { setMargins(0, dp(3), 0, dp(5)) }
         }
 
         childUsageRowsContainer = LinearLayout(this).apply {
@@ -815,7 +815,11 @@ private var receivedMp3File: File? = null
         notificationsBellButton.textSize = 19f
         notificationsBellButton.contentDescription = "Lihat notifikasi HP anak"
         notificationsBellButton.setTextColor(Color.rgb(42, 76, 145))
-        notificationsBellButton.background = roundedPanel(Color.WHITE, 14)
+        notificationsBellButton.background = GradientDrawable().apply {
+            setColor(Color.WHITE)
+            cornerRadius = dp(15).toFloat()
+            setStroke(dp(1), Color.rgb(210, 223, 245))
+        }
         notificationsBellButton.layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
             setMargins(dp(2), dp(5), dp(2), dp(5))
         }
