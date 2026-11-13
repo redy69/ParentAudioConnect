@@ -101,7 +101,11 @@ class GalleryP2pGalleryProtocol(
                 // Keep the existing gallery browser cache capped so its behavior
                 // and memory use remain unchanged.
                 val allItems = repository.listMedia(limit = null)
-                backupTracker.discoverNewMedia(allItems)
+                if (repository.hasFullMediaAccess()) {
+                    backupTracker.discoverNewMedia(allItems)
+                } else {
+                    Log.w(TAG, "Antrean backup dijeda: izin akses penuh foto dan video tidak tersedia")
+                }
                 childItems = repository.listMedia(MAX_INDEX_ITEMS).associateBy { it.stableKey }
             } catch (error: Exception) {
                 Log.w(TAG, "Pemindaian media baru untuk antrean backup gagal", error)
@@ -231,7 +235,11 @@ class GalleryP2pGalleryProtocol(
                     // gallery browsing cap. A parent refresh also discovers
                     // newly added media, but does not transfer or upload it.
                     val completeMediaSet = repository.listMedia(limit = null)
-                    backupTracker.discoverNewMedia(completeMediaSet)
+                    if (repository.hasFullMediaAccess()) {
+                        backupTracker.discoverNewMedia(completeMediaSet)
+                    } else {
+                        Log.w(TAG, "Antrean backup dijeda: izin akses penuh foto dan video tidak tersedia")
+                    }
                     childItems = repository.listMedia(MAX_INDEX_ITEMS).associateBy { it.stableKey }
                 }
                 val allItems = childItems.values.toList()
