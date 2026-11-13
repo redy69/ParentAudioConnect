@@ -364,7 +364,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(32, 55, 92))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(17), dp(16), dp(17), dp(16))
+            setPadding(dp(14), dp(12), dp(14), dp(12))
             background = roundedPanel(Color.argb(190, 255, 255, 255), 20)
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
@@ -379,7 +379,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(104, 117, 140))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(17), dp(16), dp(17), dp(16))
+            setPadding(dp(14), dp(12), dp(14), dp(12))
             background = roundedPanel(Color.argb(195, 246, 250, 255), 20)
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
@@ -821,7 +821,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.105f
-            setPadding(dp(4), dp(11), dp(4), dp(7))
+            setPadding(dp(4), dp(8), dp(4), dp(5))
         }
         rootLayout.addView(statusHeading)
         parentOnlyViews.add(statusHeading)
@@ -835,7 +835,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.105f
-            setPadding(dp(4), dp(11), dp(4), dp(7))
+            setPadding(dp(4), dp(8), dp(4), dp(5))
         }
         rootLayout.addView(activityHeading)
         parentOnlyViews.add(activityHeading)
