@@ -510,8 +510,11 @@ private var receivedMp3File: File? = null
         firstActionRow.addView(sendMp3Button, LinearLayout.LayoutParams(actionParams))
         secondActionRow.addView(cameraLiveButton, LinearLayout.LayoutParams(actionParams))
         actionButtonsRow.addView(firstActionRow)
-        addChildButton = createButton("＋")
-        addChildButton.textSize = 25f
+        addChildButton = createButton("+")
+        addChildButton.textSize = 24f
+        addChildButton.includeFontPadding = false
+        addChildButton.textAlignment = View.TEXT_ALIGNMENT_CENTER
+        addChildButton.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD))
         addChildButton.contentDescription = "Tambah anak"
         addChildButton.minimumHeight = dp(42)
         addChildButton.minimumWidth = dp(42)
