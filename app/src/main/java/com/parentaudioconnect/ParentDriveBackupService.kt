@@ -133,7 +133,7 @@ class ParentDriveBackupService : Service() {
             onThumbnail = { _, _ -> },
             onStatus = ::updateStatus,
             canReceiveBackup = { !accessToken.isNullOrBlank() },
-            onBackupFileReady = { _, file, name, mime, complete ->
+            onBackupFileReady = { key, file, name, mime, complete ->
                 val token = accessToken
                 if (token.isNullOrBlank()) {
                     file.delete()
@@ -143,7 +143,7 @@ class ParentDriveBackupService : Service() {
                         try {
                             val uploader = GoogleDriveUploader(token)
                             val parentFolder = folderId ?: uploader.ensureBackupFolder().also { folderId = it }
-                            uploader.uploadFile(file, name, mime, parentFolder)
+                            uploader.uploadFile(file, name, mime, parentFolder, stableKey = key)
                             file.delete()
                             updateStatus("Backup Google Drive berhasil: $name")
                             complete(true)
