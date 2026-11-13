@@ -3049,7 +3049,11 @@ private var receivedMp3File: File? = null
             .setPositiveButton(if (enabled) "Hentikan berbagi" else "Saya setuju • Lanjutkan") { _, _ ->
                 if (enabled) {
                     prefs.edit().putBoolean("child_gallery_sharing_enabled", false).apply()
-                    stopChildGalleryP2p()
+                    // Keep the P2P service running if the child separately
+                    // consented to Google Drive backup.
+                    if (!prefs.getBoolean("child_drive_backup_consent", false)) {
+                        stopChildGalleryP2p()
+                    }
                     updateGalleryConsentOnServer(false)
                     updateChildGalleryPanel()
                 } else {
