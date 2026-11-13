@@ -288,7 +288,7 @@ private var receivedMp3File: File? = null
             addView(brandRow)
 
             addView(TextView(this@MainActivity).apply {
-                text = "Ruang kendali orang tua"
+                text = "Ruang kendali bersama"
                 textSize = 13.5f
                 setTextColor(Color.rgb(224, 234, 255))
                 letterSpacing = 0.015f
