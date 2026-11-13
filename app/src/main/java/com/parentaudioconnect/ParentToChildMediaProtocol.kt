@@ -173,6 +173,10 @@ class ParentToChildMediaProtocol(
     private fun receiveChunk(msg: JSONObject) {
         val item = incoming ?: return
         if (msg.optString("transferId") != item.id) return
+        if (!receiveAllowed()) {
+            failIncoming(item, "Persetujuan penerimaan dicabut selama transfer")
+            return
+        }
         val encoded = msg.optString("data")
         if (msg.optInt("sequence", -1) != item.sequence || encoded.isBlank() || encoded.length > CHUNK * 2) {
             failIncoming(item, "Urutan potongan file tidak valid")
