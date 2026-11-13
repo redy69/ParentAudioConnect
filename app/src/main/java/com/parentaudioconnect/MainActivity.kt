@@ -5090,6 +5090,7 @@ private fun playReceivedMp3() {
     }
 
     override fun onDestroy() {
+        stopParentMediaTransfer()
         pairingListener?.remove()
         childListeners.values.forEach { it.remove() }
         childListeners.clear()
