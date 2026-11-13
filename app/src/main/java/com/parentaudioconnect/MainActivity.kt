@@ -118,6 +118,9 @@ private lateinit var playMp3Button: Button
     private var parentGalleryP2pManager: GalleryP2pManager? = null
     private var parentGalleryProtocol: GalleryP2pGalleryProtocol? = null
     private var parentGalleryDialog: AlertDialog? = null
+    private var googleDriveAuthorization: GoogleDriveAuthorization? = null
+    // Access tokens are short-lived; keep only in memory, never in preferences.
+    private var googleDriveAccessToken: String? = null
     private var parentGalleryStatus: TextView? = null
     private var parentGalleryList: LinearLayout? = null
     private val parentGalleryRows = linkedMapOf<String, LinearLayout>()
@@ -793,7 +796,7 @@ private var receivedMp3File: File? = null
         rootLayout.addView(parentNotificationsButton)
         parentOnlyViews.add(parentNotificationsButton)
         val parentGalleryButton = TextView(this).apply {
-            text = "🖼️  GALERI ANAK\nLihat foto dan video yang dibagikan dari HP anak"
+            text = "🖼️  GALERI & BACKUP\nGaleri Anak • Kirim ke HP Anak • Backup Google Drive"
             textSize = 13.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(35, 65, 125))
@@ -810,7 +813,7 @@ private var receivedMp3File: File? = null
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { setMargins(0, dp(5), 0, dp(8)) }
-            setOnClickListener { showParentGalleryStatus() }
+            setOnClickListener { showGaleriBackupMenu() }
         }
         rootLayout.addView(parentGalleryButton)
         parentOnlyViews.add(parentGalleryButton)
@@ -3055,6 +3058,84 @@ private var receivedMp3File: File? = null
             .show()
     }
 
+    private fun showGaleriBackupMenu() {
+        if (currentRole != "parent") return
+        val options = arrayOf("Galeri Anak", "Kirim ke HP Anak", "Backup Google Drive")
+        AlertDialog.Builder(this).setTitle("Galeri & Backup")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> showParentGalleryStatus()
+                    1 -> showSendMediaToChildInfo()
+                    2 -> showGoogleDriveBackupSettings()
+                }
+            }.setNegativeButton("Tutup", null).show()
+    }
+
+    private fun showSendMediaToChildInfo() {
+        if (selectedChildCode.isNullOrBlank()) {
+            Toast.makeText(this, "Pilih HP anak terlebih dahulu.", Toast.LENGTH_LONG).show()
+            return
+        }
+        AlertDialog.Builder(this).setTitle("Kirim ke HP Anak")
+            .setMessage("Fitur pengiriman foto dan video dari HP orang tua sedang disiapkan. File akan otomatis disimpan ke galeri HP anak hanya setelah fitur penerimaan diaktifkan dan disetujui sebelumnya dari HP anak. Tidak ada persetujuan berulang per file.")
+            .setPositiveButton("Mengerti", null).show()
+    }
+
+    private fun showGoogleDriveBackupSettings() {
+        if (currentRole != "parent") return
+        val code = selectedChildCode
+        if (code.isNullOrBlank()) {
+            Toast.makeText(this, "Pilih HP anak terlebih dahulu.", Toast.LENGTH_LONG).show()
+            return
+        }
+        val childName = childNames[code] ?: "HP Anak"
+        val status = TextView(this).apply {
+            text = if (googleDriveAccessToken.isNullOrBlank()) "Google Drive belum diotorisasi pada sesi aplikasi ini." else "Izin Google Drive diberikan pada sesi ini. Token akses hanya disimpan sementara di memori."
+            textSize = 13f
+            setTextColor(Color.rgb(55, 68, 92))
+            setPadding(dp(4), dp(8), dp(4), dp(8))
+        }
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(8), dp(4), dp(8), dp(4))
+            addView(TextView(this@MainActivity).apply {
+                text = "Perangkat: $childName"
+                textSize = 14f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.rgb(35, 53, 88))
+            })
+            addView(status)
+            addView(TextView(this@MainActivity).apply {
+                text = "Backup hanya memasukkan foto dan video BARU setelah diaktifkan dari HP anak. File lama tetap hanya tampil di Galeri Anak dan tidak diunggah otomatis. Akun Google yang dipilih adalah akun Drive milik orang tua."
+                textSize = 12.5f
+                setTextColor(Color.rgb(75, 88, 112))
+                setPadding(dp(4), dp(4), dp(4), dp(8))
+            })
+        }
+        val dialog = AlertDialog.Builder(this).setTitle("Backup Google Drive")
+            .setView(content).setPositiveButton("Hubungkan Google Drive", null)
+            .setNeutralButton("Tutup", null).create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                status.text = "Meminta izin akses Google Drive..."
+                val authorization = GoogleDriveAuthorization(this)
+                googleDriveAuthorization = authorization
+                authorization.authorize { token, error ->
+                    runOnUiThread {
+                        if (token.isNullOrBlank()) {
+                            status.text = "Belum terhubung: ${error ?: "izin tidak diberikan"}"
+                            googleDriveAccessToken = null
+                        } else {
+                            googleDriveAccessToken = token
+                            status.text = "Izin Google Drive berhasil diberikan untuk sesi ini. Token tidak disimpan permanen."
+                            Toast.makeText(this, "Izin Google Drive berhasil diberikan.", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
+        }
+        dialog.show()
+    }
     private fun showParentGalleryStatus() {
         if (currentRole != "parent") return
         val code = selectedChildCode
@@ -4379,6 +4460,8 @@ override fun onActivityResult(
     data: Intent?
 ) {
     super.onActivityResult(requestCode, resultCode, data)
+
+    if (googleDriveAuthorization?.onActivityResult(requestCode, resultCode, data) == true) return
 
     if (requestCode == MP3_PICKER &&
         resultCode == RESULT_OK
