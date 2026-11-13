@@ -332,6 +332,7 @@ class ParentDriveBackupService : Service() {
         val nextIndex = childQueueIndex + 1
         if (nextIndex >= childQueue.size) {
             updateStatus("Putaran backup semua anak selesai • mengulang pemeriksaan dalam 1 menit")
+            stopP2pTransport()
             reconnectHandler.removeCallbacks(roundRestartRunnable)
             reconnectHandler.postDelayed(roundRestartRunnable, 60000L)
             return
