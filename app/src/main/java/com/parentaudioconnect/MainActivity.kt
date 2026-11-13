@@ -107,7 +107,7 @@ private lateinit var playMp3Button: Button
     private lateinit var cameraStandbyButton: Button
     private lateinit var additionalControlsHeading: TextView
     private lateinit var cameraLiveButton: LinearLayout
-    private lateinit var liveKitTestButton: Button
+    private lateinit var liveKitTestButton: LinearLayout
     private lateinit var childModePanel: TextView
     private lateinit var childLocationPanel: TextView
     private lateinit var childLocationMapView: ChildLocationMapView
@@ -523,8 +523,52 @@ private var receivedMp3File: File? = null
         cancelPairingButton = createButton("BATALKAN KODE")
         updateButton = createButton("PERIKSA PEMBARUAN")
         cameraStandbyButton = createButton("AKTIFKAN SIAGA KAMERA")
-        liveKitTestButton = createButton("PILIHAN SERVER")
-        listOf(playMp3Button, cameraStandbyButton, liveKitTestButton).forEach { button ->
+        liveKitTestButton = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(14), dp(10), dp(14), dp(10))
+            minHeight = dp(68)
+            background = roundedPanel(Color.WHITE, 17)
+            elevation = dp(2).toFloat()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(5), 0, dp(5)) }
+
+            addView(TextView(this@MainActivity).apply {
+                text = "🖧"
+                textSize = 23f
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(dp(42), ViewGroup.LayoutParams.WRAP_CONTENT)
+            })
+
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+
+                addView(TextView(this@MainActivity).apply {
+                    text = "Server & Failover"
+                    textSize = 13.5f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.rgb(35, 65, 125))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = "Atur server utama dan server cadangan"
+                    textSize = 11f
+                    setTextColor(Color.rgb(105, 119, 145))
+                    setPadding(0, dp(2), 0, 0)
+                })
+            })
+
+            addView(TextView(this@MainActivity).apply {
+                text = "›"
+                textSize = 27f
+                setTextColor(Color.rgb(91, 119, 170))
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(dp(24), ViewGroup.LayoutParams.WRAP_CONTENT)
+            })
+        }
+        listOf(playMp3Button, cameraStandbyButton).forEach { button ->
             button.textSize = 12.5f
             button.minHeight = dp(44)
             button.setPadding(dp(12), dp(5), dp(12), dp(5))
