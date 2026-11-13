@@ -790,8 +790,8 @@ private var receivedMp3File: File? = null
             textSize = 11.5f
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.105f
-            setPadding(dp(4), dp(7), dp(4), dp(8))
+            letterSpacing = 0.085f
+            setPadding(dp(4), dp(8), dp(4), dp(4))
         }
         rootLayout.addView(deviceSectionTitle)
         parentOnlyViews.add(deviceSectionTitle)
@@ -894,7 +894,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(35, 65, 125))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(14), dp(11), dp(14), dp(11))
+            setPadding(dp(14), dp(10), dp(14), dp(10))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(235, 243, 255))
@@ -904,7 +904,7 @@ private var receivedMp3File: File? = null
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(5)) }
+            ).apply { setMargins(0, dp(2), 0, dp(4)) }
             setOnClickListener { showParentAppBlockDialog() }
         }
         rootLayout.addView(parentAppBlockPanel)
@@ -916,7 +916,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(35, 65, 125))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(14), dp(11), dp(14), dp(11))
+            setPadding(dp(14), dp(10), dp(14), dp(10))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(235, 243, 255))
@@ -926,7 +926,7 @@ private var receivedMp3File: File? = null
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(5)) }
+            ).apply { setMargins(0, dp(2), 0, dp(4)) }
             setOnClickListener { showGaleriBackupMenu() }
         }
         rootLayout.addView(parentGalleryButton)
@@ -938,7 +938,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(35, 65, 125))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(14), dp(11), dp(14), dp(11))
+            setPadding(dp(14), dp(10), dp(14), dp(10))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(235, 243, 255))
@@ -949,7 +949,7 @@ private var receivedMp3File: File? = null
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(5)) }
+            ).apply { setMargins(0, dp(2), 0, dp(4)) }
             setOnClickListener { showMapsPage() }
         }
         rootLayout.addView(mapsButton)
