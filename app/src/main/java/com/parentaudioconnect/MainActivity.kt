@@ -642,18 +642,18 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(35, 53, 88))
             gravity = Gravity.CENTER
             setLineSpacing(dp(4).toFloat(), 1f)
-            setPadding(dp(22), dp(29), dp(22), dp(29))
+            setPadding(dp(18), dp(22), dp(18), dp(22))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(231, 239, 255))
             ).apply {
-                cornerRadius = dp(23).toFloat()
+                cornerRadius = dp(19).toFloat()
                 setStroke(dp(1), Color.rgb(207, 222, 248))
             }
             elevation = dp(3).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(12), 0, dp(14)) }
+            ).apply { setMargins(0, dp(8), 0, dp(10)) }
             visibility = View.GONE
         }
         childModePanel.setOnClickListener {
