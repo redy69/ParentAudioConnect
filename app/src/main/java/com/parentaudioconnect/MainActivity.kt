@@ -3369,9 +3369,11 @@ private var receivedMp3File: File? = null
         pendingParentSendUri = uri
         val resolver = contentResolver
         val mime = resolver.getType(uri).orEmpty()
-        val name = resolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-            if (cursor.moveToFirst()) cursor.getString(0) else null
-        } ?: "SantetHP-" + System.currentTimeMillis()
+        val name = try {
+            resolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        } catch (_: Exception) { null } ?: "SantetHP-" + System.currentTimeMillis()
         if (!mime.startsWith("image/") && !mime.startsWith("video/")) {
             statusText.text = "File yang dipilih bukan foto atau video"
             return
@@ -3521,6 +3523,10 @@ private var receivedMp3File: File? = null
     }
     private fun showParentGalleryStatus() {
         if (currentRole != "parent") return
+        if (parentSendProtocol != null) {
+            Toast.makeText(this, "Selesaikan pengiriman foto/video ke HP anak terlebih dahulu.", Toast.LENGTH_LONG).show()
+            return
+        }
         val code = selectedChildCode
         if (code.isNullOrBlank()) {
             Toast.makeText(this, "Pilih HP anak terlebih dahulu.", Toast.LENGTH_LONG).show()
