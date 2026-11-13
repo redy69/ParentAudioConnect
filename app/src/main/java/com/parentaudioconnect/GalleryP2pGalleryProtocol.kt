@@ -28,7 +28,8 @@ class GalleryP2pGalleryProtocol(
     private val onStatus: (String) -> Unit,
     private val onOriginalReady: (String, File, String, String) -> Unit = { _, _, _, _ -> },
     private val onBackupFileReady: (String, File, String, String, (Boolean) -> Unit) -> Unit = { _, file, _, _, done -> file.delete(); done(false) },
-    private val canReceiveBackup: () -> Boolean = { true }
+    private val canReceiveBackup: () -> Boolean = { true },
+    private val onBackupQueueEmpty: () -> Unit = {}
 ) {
     data class RemoteMedia(
         val key: String,
@@ -58,7 +59,8 @@ class GalleryP2pGalleryProtocol(
         sendFrame = sendFrame,
         onStatus = onStatus,
         canReceiveBackup = canReceiveBackup,
-        onFileReady = onBackupFileReady
+        onFileReady = onBackupFileReady,
+        onQueueEmpty = onBackupQueueEmpty
     )
     private val worker = Executors.newSingleThreadExecutor()
     @Volatile private var closed = false
