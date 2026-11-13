@@ -226,6 +226,11 @@ class GalleryP2pGalleryProtocol(
                 if (offset == 0 || childItems.isEmpty()) {
                     childItems = repository.listMedia(MAX_INDEX_ITEMS).associateBy { it.stableKey }
                 }
+                if (offset == 0) {
+                    // Gallery refresh is also a safe discovery point for newly added
+                    // files; the tracker ignores all media in the activation baseline.
+                    backupTracker.discoverNewMedia(childItems.values.toList())
+                }
                 val allItems = childItems.values.toList()
                 val safeOffset = offset.coerceIn(0, allItems.size)
                 val page = allItems.drop(safeOffset).take(INDEX_PAGE_SIZE)
