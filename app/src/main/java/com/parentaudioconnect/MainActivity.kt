@@ -1969,9 +1969,9 @@ private var receivedMp3File: File? = null
             val fresh = ageMs != null && ageMs in -60_000L..15 * 60 * 1000L
             val batteryLabel = if (battery in 0..100) "$battery%" else "--"
             val networkLabel = network.replace('_', ' ').take(15)
-            childQuickStatusText.text = "🔋 $batteryLabel   •   ᯤ $networkLabel · " +
-                (if (internet) "Internet aktif" else "Internet --") +
-                (if (fresh) "" else " · data lama")
+            childQuickStatusText.text = "🔋 $batteryLabel  •  ᯤ ${networkLabel.take(10)}  •  " +
+                (if (internet) "Net aktif" else "Net --") +
+                (if (fresh) "" else " · lama")
         }
         val conditionTitle = "KONDISI HP ${name?.takeIf { it.isNotBlank() } ?: "ANAK"}"
         childDeviceStatusText.text = childDeviceStatusText.text.toString()
