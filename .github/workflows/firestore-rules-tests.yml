@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - feature/device-health-monitoring
+      - feature/gallery-webrtc-p2p
     paths:
       - 'firestore.rules'
       - 'firebase.json'
