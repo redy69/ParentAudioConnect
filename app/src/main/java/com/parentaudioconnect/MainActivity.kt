@@ -982,10 +982,12 @@ private var receivedMp3File: File? = null
     private fun startChildGalleryP2pIfAllowed() {
         if (currentRole != "child") return
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
-        if (!prefs.getBoolean("child_gallery_sharing_enabled", false) ||
-            !prefs.getBoolean("child_gallery_server_consent_confirmed", false) ||
-            !hasGalleryMediaAccess()
-        ) return
+        val galleryConsent = prefs.getBoolean("child_gallery_sharing_enabled", false) &&
+            prefs.getBoolean("child_gallery_server_consent_confirmed", false)
+        val backupConsent = prefs.getBoolean("child_drive_backup_consent", false)
+        // Backup has its own explicit child consent. It may keep the transport
+        // ready without enabling parent browsing of the child's gallery.
+        if ((!galleryConsent && !backupConsent) || !hasGalleryMediaAccess()) return
         val code = prefs.getString("pair_code", null)
         if (code.isNullOrBlank()) return
 
@@ -3110,6 +3112,9 @@ private var receivedMp3File: File? = null
                     GalleryBackupTracker(this).disable()
                     WorkManager.getInstance(this).cancelUniqueWork("santethp_gallery_backup_discovery")
                     prefs.edit().putBoolean("child_drive_backup_consent", false).apply()
+                    if (!prefs.getBoolean("child_gallery_sharing_enabled", false)) {
+                        stopChildGalleryP2p()
+                    }
                     updateChildGalleryPanel()
                     Toast.makeText(this, "Persetujuan Backup Drive dicabut.", Toast.LENGTH_LONG).show()
                 } else if (!hasFullGalleryMediaAccessForBackup()) {
@@ -3124,6 +3129,9 @@ private var receivedMp3File: File? = null
                             }
                             prefs.edit().putBoolean("child_drive_backup_consent", true).apply()
                             GalleryBackupDiscoveryWorker.schedule(this@MainActivity)
+                            // Start the foreground P2P service under backup consent
+                            // without granting gallery-browsing consent.
+                            startChildGalleryP2pIfAllowed()
                             updateChildGalleryPanel()
                             Toast.makeText(this@MainActivity, "Persetujuan tersimpan. File lama dikecualikan dari antrean backup.", Toast.LENGTH_LONG).show()
                             showChildDriveBackupConsent()
