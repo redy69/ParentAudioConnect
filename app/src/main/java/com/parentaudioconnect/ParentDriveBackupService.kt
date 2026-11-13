@@ -236,7 +236,8 @@ class ParentDriveBackupService : Service() {
                                             android.text.format.Formatter.formatFileSize(this, sent) +
                                             " / " + android.text.format.Formatter.formatFileSize(this, total)
                                     )
-                                }
+                                },
+                                canContinue = { canUseBackupNetwork() }
                             )
                             file.delete()
                             val stats = getSharedPreferences("parent_audio", MODE_PRIVATE)
