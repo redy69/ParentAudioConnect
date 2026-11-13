@@ -64,10 +64,14 @@ class ChildGalleryP2pService : Service() {
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         val galleryEnabled = prefs.getBoolean("child_gallery_sharing_enabled", false) &&
             prefs.getBoolean("child_gallery_server_consent_confirmed", false)
-        val message = if (galleryEnabled) {
-            "Menjaga koneksi galeri P2P ke HP orang tua"
-        } else {
-            "Menjaga koneksi backup media baru yang telah disetujui"
+        val backupEnabled = prefs.getBoolean("child_drive_backup_consent", false)
+        val receiveEnabled = prefs.getBoolean("child_parent_media_receive_consent", false) &&
+            prefs.getBoolean("child_parent_media_server_confirmed", false)
+        val message = when {
+            galleryEnabled -> "Menjaga koneksi galeri P2P ke HP orang tua"
+            backupEnabled -> "Menjaga koneksi backup media baru yang telah disetujui"
+            receiveEnabled -> "Siap menerima foto/video dari HP orang tua sesuai persetujuan"
+            else -> "Layanan media menunggu persetujuan"
         }
         val notification = buildNotification(message)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -87,7 +91,7 @@ class ChildGalleryP2pService : Service() {
             .setContentTitle("SantetHP • Layanan media aktif")
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(
-                "$message. Berbagi hanya berlangsung selama persetujuan anak dan izin media tetap aktif."
+                "$message. Koneksi hanya aktif sesuai persetujuan yang telah diberikan dari HP anak."
             ))
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setOngoing(true)
