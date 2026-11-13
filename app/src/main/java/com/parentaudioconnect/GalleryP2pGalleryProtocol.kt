@@ -27,7 +27,8 @@ class GalleryP2pGalleryProtocol(
     private val onThumbnail: (String, ByteArray) -> Unit,
     private val onStatus: (String) -> Unit,
     private val onOriginalReady: (String, File, String, String) -> Unit = { _, _, _, _ -> },
-    private val onBackupFileReady: (String, File, String, String, (Boolean) -> Unit) -> Unit = { _, file, _, _, done -> file.delete(); done(false) }
+    private val onBackupFileReady: (String, File, String, String, (Boolean) -> Unit) -> Unit = { _, file, _, _, done -> file.delete(); done(false) },
+    private val canReceiveBackup: () -> Boolean = { true }
 ) {
     data class RemoteMedia(
         val key: String,
@@ -56,6 +57,7 @@ class GalleryP2pGalleryProtocol(
         role = role,
         sendFrame = sendFrame,
         onStatus = onStatus,
+        canReceiveBackup = canReceiveBackup,
         onFileReady = onBackupFileReady
     )
     private val worker = Executors.newSingleThreadExecutor()
@@ -114,6 +116,7 @@ class GalleryP2pGalleryProtocol(
                 if (backupDiscoveryAllowed()) {
                     if (repository.hasFullMediaAccess()) {
                         backupTracker.discoverNewMedia(repository.listMedia(limit = null))
+                        backupProtocol.notifyPending()
                     } else {
                         Log.w(TAG, "Antrean backup dijeda: izin akses penuh foto dan video tidak tersedia")
                     }
