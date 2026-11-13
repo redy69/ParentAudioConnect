@@ -62,6 +62,7 @@ class ParentDriveBackupService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        if (accessToken != token) folderId = null
         accessToken = token
         if (manager != null) {
             updateStatus("Izin Google Drive diperbarui • melanjutkan antrean backup")
@@ -191,14 +192,21 @@ class ParentDriveBackupService : Service() {
                         } catch (error: Exception) {
                             file.delete()
                             Log.e(TAG, "Upload Drive gagal", error)
+                            val authorizationFailure = error.message.orEmpty().contains("401") ||
+                                error.message.orEmpty().contains("403")
                             updateStatus(
-                                if (error.message.orEmpty().contains("401") || error.message.orEmpty().contains("403")) {
+                                if (authorizationFailure) {
                                     "Izin Google Drive kedaluwarsa/ditolak • buka SantetHP untuk otorisasi ulang"
                                 } else {
-                                    "Upload Drive gagal • file tetap dalam antrean dan akan dicoba lagi setelah koneksi pulih"
+                                    "Upload Drive gagal • file tetap dalam antrean; percobaan ulang dijadwalkan"
                                 }
                             )
                             complete(false)
+                            if (!authorizationFailure &&
+                                (error is java.io.IOException || error.message.orEmpty().contains("(5"))
+                            ) {
+                                reconnectHandler.postDelayed({ protocol?.requestNextBackup() }, 30000L)
+                            }
                         }
                     }.start()
                 }
