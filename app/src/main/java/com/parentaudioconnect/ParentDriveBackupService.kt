@@ -48,8 +48,13 @@ class ParentDriveBackupService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        if (manager != null) return START_STICKY
         accessToken = token
+        if (manager != null) {
+            updateStatus("Izin Google Drive diperbarui • melanjutkan antrean backup")
+            return START_STICKY
+        }
+        getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+            .putBoolean("parent_drive_backup_service_active", true).apply()
         startAsForeground("Menunggu koneksi HP anak untuk backup media baru")
         listenForConsent(code)
         startTransport(code)
@@ -171,6 +176,8 @@ class ParentDriveBackupService : Service() {
         manager = null
         accessToken = null
         folderId = null
+        getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+            .putBoolean("parent_drive_backup_service_active", false).apply()
     }
 
     override fun onDestroy() {
