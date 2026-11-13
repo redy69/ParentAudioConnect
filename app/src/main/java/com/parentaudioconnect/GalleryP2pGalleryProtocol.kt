@@ -63,7 +63,37 @@ class GalleryP2pGalleryProtocol(
         onQueueEmpty = onBackupQueueEmpty
     )
     private val worker = Executors.newSingleThreadExecutor()
+    @Volatile private var galleryMediaIndexListener: ((List<RemoteMedia>) -> Unit)? = null
+    @Volatile private var galleryThumbnailListener: ((String, ByteArray) -> Unit)? = null
+    @Volatile private var galleryStatusListener: ((String) -> Unit)? = null
+    @Volatile private var galleryOriginalReadyListener: ((String, File, String, String) -> Unit)? = null
     @Volatile private var closed = false
+
+    /** Attach Activity-owned UI callbacks without creating another P2P protocol/session. */
+    fun attachGalleryCallbacks(
+        onMediaIndex: (List<RemoteMedia>) -> Unit,
+        onThumbnail: (String, ByteArray) -> Unit,
+        onStatus: (String) -> Unit,
+        onOriginalReady: (String, File, String, String) -> Unit
+    ) {
+        galleryMediaIndexListener = onMediaIndex
+        galleryThumbnailListener = onThumbnail
+        galleryStatusListener = onStatus
+        galleryOriginalReadyListener = onOriginalReady
+    }
+
+    /** Detach UI callbacks only; the shared transport and backup protocol stay alive. */
+    fun detachGalleryCallbacks() {
+        galleryMediaIndexListener = null
+        galleryThumbnailListener = null
+        galleryStatusListener = null
+        galleryOriginalReadyListener = null
+    }
+
+    private fun reportStatus(message: String) {
+        onStatus(message)
+        galleryStatusListener?.invoke(message)
+    }
     @Volatile private var childItems = emptyMap<String, GalleryMediaRepository.MediaItem>()
     private val receivedIndex = linkedMapOf<String, RemoteMedia>()
     private val requestedTransfers = ConcurrentHashMap<String, String>()
@@ -143,7 +173,7 @@ class GalleryP2pGalleryProtocol(
     fun requestIndex(): Boolean {
         if (role != GalleryP2pManager.Role.PARENT) return false
         synchronized(receivedIndex) { receivedIndex.clear() }
-        onStatus("Meminta daftar foto dan video…")
+        reportStatus("Meminta daftar foto dan video…")
         return sendJson(JSONObject().put("type", "index_request").put("offset", 0))
     }
 
@@ -156,13 +186,13 @@ class GalleryP2pGalleryProtocol(
     fun requestOriginal(key: String): Boolean {
         if (role != GalleryP2pManager.Role.PARENT || key.isBlank() || key.length > 160) return false
         if (incomingTransfer != null || requestedTransfers.isNotEmpty()) {
-            onStatus("Selesaikan unduhan yang sedang berjalan terlebih dahulu")
+            reportStatus("Selesaikan unduhan yang sedang berjalan terlebih dahulu")
             return false
         }
         val id = UUID.randomUUID().toString()
         requestedTransfers[id] = key
         val sent = sendJson(JSONObject().put("type", "original_request").put("key", key).put("transferId", id))
-        if (!sent) requestedTransfers.remove(id) else onStatus("Meminta file asli dari HP anak…")
+        if (!sent) requestedTransfers.remove(id) else reportStatus("Meminta file asli dari HP anak…")
         return sent
     }
 
@@ -201,7 +231,7 @@ class GalleryP2pGalleryProtocol(
             }
             "index_response" -> if (role == GalleryP2pManager.Role.PARENT) receiveIndex(message)
             "index_error" -> if (role == GalleryP2pManager.Role.PARENT) {
-                onStatus(message.optString("message", "Daftar galeri tidak dapat dibaca di HP anak"))
+                reportStatus(message.optString("message", "Daftar galeri tidak dapat dibaca di HP anak"))
             }
             "thumbnail_request" -> if (role == GalleryP2pManager.Role.CHILD) {
                 sendThumbnail(message.optString("key"))
@@ -223,7 +253,7 @@ class GalleryP2pGalleryProtocol(
                     closeIncoming(it, true)
                     incomingTransfer = null
                 }
-                onStatus(message.optString("message", "File asli tidak dapat dikirim"))
+                reportStatus(message.optString("message", "File asli tidak dapat dikirim"))
             }
         }
     }
@@ -264,7 +294,7 @@ class GalleryP2pGalleryProtocol(
                 sendJson(JSONObject().put("type", "index_response").put("offset", offset)
                     .put("nextOffset", offset).put("hasMore", false).put("total", 0)
                     .put("items", JSONArray()))
-                onStatus("Berbagi galeri nonaktif atau izin media tidak tersedia di HP anak")
+                reportStatus("Berbagi galeri nonaktif atau izin media tidak tersedia di HP anak")
                 return@execute
             }
             try {
@@ -302,15 +332,15 @@ class GalleryP2pGalleryProtocol(
                         .put("items", array)
                 )
                 if (!sent) {
-                    onStatus("Halaman daftar galeri gagal dikirim; periksa koneksi P2P")
+                    reportStatus("Halaman daftar galeri gagal dikirim; periksa koneksi P2P")
                 } else {
-                    onStatus("Mengirim daftar galeri ${minOf(nextOffset, allItems.size)}/${allItems.size} • tanpa file asli")
+                    reportStatus("Mengirim daftar galeri ${minOf(nextOffset, allItems.size)}/${allItems.size} • tanpa file asli")
                 }
             } catch (error: Exception) {
                 Log.e(TAG, "Gagal membaca indeks media", error)
                 sendJson(JSONObject().put("type", "index_error")
                     .put("message", "Tidak dapat membaca daftar media. Periksa izin foto dan video di HP anak."))
-                onStatus("Tidak dapat membaca daftar media: " + (error.localizedMessage ?: "kesalahan"))
+                reportStatus("Tidak dapat membaca daftar media: " + (error.localizedMessage ?: "kesalahan"))
             }
         }
     }
@@ -345,12 +375,12 @@ class GalleryP2pGalleryProtocol(
             val nextOffset = message.optInt("nextOffset", offset + page.size)
             if (hasMore && nextOffset > offset && nextOffset <= MAX_INDEX_ITEMS) {
                 if (!sendJson(JSONObject().put("type", "index_request").put("offset", nextOffset))) {
-                    onStatus("Daftar diterima sebagian; ketuk muat ulang setelah koneksi stabil")
+                    reportStatus("Daftar diterima sebagian; ketuk muat ulang setelah koneksi stabil")
                 }
                 return
             }
-            onMediaIndex(receivedIndex.values.toList())
-            onStatus(
+            (galleryMediaIndexListener ?: onMediaIndex).invoke(receivedIndex.values.toList())
+            reportStatus(
                 if (message.optBoolean("truncated", false)) {
                     "Daftar menampilkan 1.000 media terbaru. Jika media lebih banyak, sebagian belum dimuat."
                 } else {
@@ -365,19 +395,19 @@ class GalleryP2pGalleryProtocol(
         worker.execute {
             if (!sharingAllowed()) {
                 sendJson(JSONObject().put("type", "thumbnail_response").put("key", key).put("error", true))
-                onStatus("Permintaan thumbnail ditolak: berbagi galeri tidak aktif")
+                reportStatus("Permintaan thumbnail ditolak: berbagi galeri tidak aktif")
                 return@execute
             }
             val item = childItems[key] ?: run {
                 sendJson(JSONObject().put("type", "thumbnail_response").put("key", key).put("error", true))
-                onStatus("Media sudah berubah; minta daftar galeri terbaru")
+                reportStatus("Media sudah berubah; minta daftar galeri terbaru")
                 return@execute
             }
             try {
                 val preview = repository.thumbnail(item, maxEdge = 240, quality = 60)
                 if (preview.size > MAX_THUMB_BYTES) {
                     sendJson(JSONObject().put("type", "thumbnail_response").put("key", key).put("error", true))
-                    onStatus("Thumbnail terlalu besar untuk koneksi ini")
+                    reportStatus("Thumbnail terlalu besar untuk koneksi ini")
                     return@execute
                 }
                 val message = JSONObject()
@@ -385,11 +415,11 @@ class GalleryP2pGalleryProtocol(
                     .put("key", key)
                     .put("mime", "image/jpeg")
                     .put("data", Base64.encodeToString(preview, Base64.NO_WRAP))
-                if (!sendJson(message)) onStatus("Thumbnail gagal dikirim; coba lagi")
+                if (!sendJson(message)) reportStatus("Thumbnail gagal dikirim; coba lagi")
             } catch (error: Exception) {
                 Log.e(TAG, "Thumbnail gagal dibuat", error)
                 sendJson(JSONObject().put("type", "thumbnail_response").put("key", key).put("error", true))
-                onStatus("Thumbnail tidak tersedia: " + (error.localizedMessage ?: "kesalahan"))
+                reportStatus("Thumbnail tidak tersedia: " + (error.localizedMessage ?: "kesalahan"))
             }
         }
     }
@@ -423,7 +453,7 @@ class GalleryP2pGalleryProtocol(
                     val buffer = ByteArray(ORIGINAL_CHUNK_BYTES)
                     while (true) {
                         if (closed || cancelledTransfers.contains(transferId)) {
-                            onStatus("Transfer file asli dibatalkan")
+                            reportStatus("Transfer file asli dibatalkan")
                             return@execute
                         }
                         val count = input.read(buffer)
@@ -437,7 +467,7 @@ class GalleryP2pGalleryProtocol(
                             .put("data", Base64.encodeToString(buffer, 0, count, Base64.NO_WRAP))
                         if (!sendJsonWithRetry(chunk, transferId)) return@execute
                         if (sentBytes % (1024L * 1024L) < count || sentBytes == item.sizeBytes) {
-                            onStatus("Mengirim file asli: " + android.text.format.Formatter.formatFileSize(appContext, sentBytes) +
+                            reportStatus("Mengirim file asli: " + android.text.format.Formatter.formatFileSize(appContext, sentBytes) +
                                 " / " + android.text.format.Formatter.formatFileSize(appContext, item.sizeBytes))
                         }
                     }
@@ -462,7 +492,7 @@ class GalleryP2pGalleryProtocol(
             if (sendJson(message)) return true
             try { Thread.sleep(100) } catch (_: InterruptedException) { return false }
         }
-        onStatus("Koneksi P2P terlalu sibuk; transfer dihentikan")
+        reportStatus("Koneksi P2P terlalu sibuk; transfer dihentikan")
         return false
     }
 
@@ -474,7 +504,7 @@ class GalleryP2pGalleryProtocol(
         if (expected <= 0 || expected > MAX_ORIGINAL_BYTES) {
             requestedTransfers.remove(id)
             sendJson(JSONObject().put("type", "original_cancel").put("transferId", id))
-            onStatus("Ukuran file tidak valid atau melebihi batas 200 MB")
+            reportStatus("Ukuran file tidak valid atau melebihi batas 200 MB")
             return
         }
         try {
@@ -486,10 +516,10 @@ class GalleryP2pGalleryProtocol(
                 expectedBytes = expected, file = file, output = FileOutputStream(file),
                 digest = MessageDigest.getInstance("SHA-256")
             )
-            onStatus("Menerima file asli: 0 / " + android.text.format.Formatter.formatFileSize(appContext, expected))
+            reportStatus("Menerima file asli: 0 / " + android.text.format.Formatter.formatFileSize(appContext, expected))
         } catch (error: Exception) {
             requestedTransfers.remove(id)
-            onStatus("Tidak dapat menyiapkan file sementara")
+            reportStatus("Tidak dapat menyiapkan file sementara")
         }
     }
 
@@ -515,7 +545,7 @@ class GalleryP2pGalleryProtocol(
             if (transfer.receivedBytes % (1024L * 1024L) < bytes.size ||
                 transfer.receivedBytes == transfer.expectedBytes
             ) {
-                onStatus("Menerima file asli: " + android.text.format.Formatter.formatFileSize(appContext, transfer.receivedBytes) +
+                reportStatus("Menerima file asli: " + android.text.format.Formatter.formatFileSize(appContext, transfer.receivedBytes) +
                     " / " + android.text.format.Formatter.formatFileSize(appContext, transfer.expectedBytes))
             }
         } catch (error: Exception) {
@@ -539,8 +569,8 @@ class GalleryP2pGalleryProtocol(
             }
             incomingTransfer = null
             requestedTransfers.remove(transfer.transferId)
-            onOriginalReady(transfer.key, transfer.file, transfer.name, transfer.mime)
-            onStatus("File asli diterima dan lolos verifikasi SHA-256")
+            (galleryOriginalReadyListener ?: onOriginalReady).invoke(transfer.key, transfer.file, transfer.name, transfer.mime)
+            reportStatus("File asli diterima dan lolos verifikasi SHA-256")
         } catch (error: Exception) {
             failIncoming(transfer, "Verifikasi file gagal")
         }
@@ -551,7 +581,7 @@ class GalleryP2pGalleryProtocol(
         if (incomingTransfer?.transferId == transfer.transferId) incomingTransfer = null
         requestedTransfers.remove(transfer.transferId)
         sendJson(JSONObject().put("type", "original_cancel").put("transferId", transfer.transferId))
-        onStatus(message)
+        reportStatus(message)
     }
 
     private fun closeIncoming(transfer: IncomingTransfer, deleteFile: Boolean) {
@@ -564,14 +594,14 @@ class GalleryP2pGalleryProtocol(
         val encoded = message.optString("data")
         if (key.isBlank() || key.length > 160) return
         if (message.optBoolean("error", false)) {
-            onThumbnail(key, ByteArray(0))
+            (galleryThumbnailListener ?: onThumbnail).invoke(key, ByteArray(0))
             return
         }
         if (encoded.isBlank() || encoded.length > MAX_THUMB_BYTES * 2) return
         try {
             val decoded = Base64.decode(encoded, Base64.DEFAULT)
             if (decoded.isNotEmpty() && decoded.size <= MAX_THUMB_BYTES) {
-                onThumbnail(key, decoded)
+                (galleryThumbnailListener ?: onThumbnail).invoke(key, decoded)
             }
         } catch (error: Exception) {
             Log.w(TAG, "Thumbnail diterima tidak valid", error)
