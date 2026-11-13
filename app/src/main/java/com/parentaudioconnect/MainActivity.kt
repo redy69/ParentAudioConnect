@@ -4503,7 +4503,7 @@ private var receivedMp3File: File? = null
     private fun createChildActivityCard(icon: String, title: String, content: LinearLayout): LinearLayout {
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(11), dp(12), dp(11))
+            setPadding(dp(12), dp(10), dp(12), dp(10))
             background = roundedPanel(Color.WHITE, 16)
             elevation = dp(1).toFloat()
             layoutParams = LinearLayout.LayoutParams(
@@ -4515,7 +4515,7 @@ private var receivedMp3File: File? = null
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 letterSpacing = 0.025f
                 setTextColor(Color.rgb(43, 76, 139))
-                setPadding(dp(1), dp(1), dp(1), dp(7))
+                setPadding(dp(1), dp(1), dp(1), dp(5))
             })
             addView(content)
         }
@@ -4527,14 +4527,14 @@ private var receivedMp3File: File? = null
             textSize = 11.5f
             setTextColor(if (muted) Color.rgb(112, 125, 148) else Color.rgb(48, 65, 96))
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(9), dp(8), dp(9), dp(8))
+            setPadding(dp(9), dp(6), dp(9), dp(6))
             background = GradientDrawable().apply {
                 setColor(if (muted) Color.rgb(247, 249, 253) else Color.rgb(244, 248, 255))
                 cornerRadius = dp(10).toFloat()
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(2), 0, dp(2)) }
+            ).apply { setMargins(0, dp(1), 0, dp(1)) }
         }
         container.addView(row)
     }
@@ -4543,14 +4543,14 @@ private var receivedMp3File: File? = null
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(9), dp(8), dp(9), dp(8))
+            setPadding(dp(9), dp(6), dp(9), dp(6))
             background = GradientDrawable().apply {
                 setColor(Color.rgb(244, 248, 255))
                 cornerRadius = dp(10).toFloat()
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(2), 0, dp(2)) }
+            ).apply { setMargins(0, dp(1), 0, dp(1)) }
         }
         row.addView(TextView(this).apply {
             text = label
