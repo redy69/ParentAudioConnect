@@ -45,9 +45,13 @@ class GoogleDriveUploader(private val accessToken: String) {
         displayName: String,
         mimeType: String,
         parentFolderId: String,
+        stableKey: String? = null,
         progress: ProgressListener = ProgressListener { _, _ -> }
     ): UploadedFile {
         require(file.isFile && file.canRead()) { "File backup tidak dapat dibaca." }
+        if (!stableKey.isNullOrBlank()) {
+            findExistingBackup(stableKey, parentFolderId)?.let { return it }
+        }
         require(parentFolderId.isNotBlank()) { "Folder backup Google Drive belum tersedia." }
         val total = file.length()
         require(total > 0L) { "File backup kosong." }
@@ -56,6 +60,9 @@ class GoogleDriveUploader(private val accessToken: String) {
             .put("name", displayName)
             .put("mimeType", mimeType)
             .put("parents", org.json.JSONArray().put(parentFolderId))
+        if (!stableKey.isNullOrBlank()) {
+            metadata.put("appProperties", JSONObject().put("santethpStableKey", stableKey))
+        }
         val init = open("POST", "$UPLOAD_API/files?uploadType=resumable&fields=id,name,mimeType,size",
             mapOf(
                 "Content-Type" to "application/json; charset=UTF-8",
@@ -107,6 +114,24 @@ class GoogleDriveUploader(private val accessToken: String) {
             }
         }
         throw IllegalStateException("Sesi upload Drive berakhir tanpa konfirmasi selesai.")
+    }
+
+    /** Finds a previous successful upload so a lost P2P acknowledgement cannot create duplicates. */
+    private fun findExistingBackup(stableKey: String, parentFolderId: String): UploadedFile? {
+        val query = "appProperties has { key='santethpStableKey' and value='\${stableKey.replace("'", "\\\\'")}' }" +
+            " and '$parentFolderId' in parents and trashed=false"
+        val url = "$API/files?q=\${encode(query)}&pageSize=5&fields=files(id,name,mimeType,size)"
+        val files = request("GET", url, null).optJSONArray("files") ?: return null
+        if (files.length() == 0) return null
+        val item = files.optJSONObject(0) ?: return null
+        val id = item.optString("id")
+        if (id.isBlank()) return null
+        return UploadedFile(
+            id,
+            item.optString("name"),
+            item.optString("mimeType"),
+            item.optString("size").toLongOrNull() ?: 0L
+        )
     }
 
     private fun request(method: String, url: String, body: ByteArray?): JSONObject {
