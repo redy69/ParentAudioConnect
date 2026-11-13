@@ -27,6 +27,7 @@ class ChildGalleryP2pService : Service() {
 
     private var manager: GalleryP2pManager? = null
     private var protocol: GalleryP2pGalleryProtocol? = null
+    private var parentReceiveProtocol: ParentToChildMediaProtocol? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -44,8 +45,10 @@ class ChildGalleryP2pService : Service() {
         val galleryConsent = prefs.getBoolean("child_gallery_sharing_enabled", false) &&
             prefs.getBoolean("child_gallery_server_consent_confirmed", false)
         val backupConsent = prefs.getBoolean("child_drive_backup_consent", false)
+        val parentReceiveConsent = prefs.getBoolean("child_parent_media_receive_consent", false) &&
+            prefs.getBoolean("child_parent_media_server_confirmed", false)
         val code = prefs.getString("pair_code", null)
-        if ((!galleryConsent && !backupConsent) || !hasGalleryMediaAccess() || code.isNullOrBlank()) {
+        if ((!galleryConsent && !backupConsent && !parentReceiveConsent) || code.isNullOrBlank()) {
             Log.i(TAG, "Service tidak dimulai: persetujuan, izin media, atau pairing belum tersedia")
             stopTransport()
             stopSelf()
@@ -116,7 +119,18 @@ class ChildGalleryP2pService : Service() {
                 Log.i(TAG, message)
                 updateNotification(message)
             },
-            onData = { bytes, binary -> activeProtocol.onFrame(bytes, binary) }
+            onData = { bytes, binary ->
+                if (parentReceiveProtocol?.onFrame(bytes, binary) != true) activeProtocol.onFrame(bytes, binary)
+            }
+        )
+        parentReceiveProtocol = ParentToChildMediaProtocol(
+            context = applicationContext,
+            role = GalleryP2pManager.Role.CHILD,
+            sendFrame = { bytes, binary -> activeManager.send(bytes, binary) },
+            onStatus = { message ->
+                Log.i(TAG, message)
+                updateNotification(message)
+            }
         )
         activeProtocol = GalleryP2pGalleryProtocol(
             context = applicationContext,
@@ -160,6 +174,8 @@ class ChildGalleryP2pService : Service() {
     }
 
     private fun stopTransport() {
+        parentReceiveProtocol?.close()
+        parentReceiveProtocol = null
         protocol?.close()
         protocol = null
         manager?.close()
