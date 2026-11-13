@@ -1024,6 +1024,9 @@ private var receivedMp3File: File? = null
                     putExtra(ParentDriveBackupService.EXTRA_PAIR_CODE, code)
                     putExtra(ParentDriveBackupService.EXTRA_ACCESS_TOKEN, token)
                     putExtra(ParentDriveBackupService.EXTRA_CHILD_NAME, prefs.getString("parent_drive_backup_child_name", "HP Anak") ?: "HP Anak")
+                    prefs.getString("parent_drive_backup_child_queue_json", null)?.let {
+                        putExtra(ParentDriveBackupService.EXTRA_CHILD_QUEUE_JSON, it)
+                    }
                 }
                 try {
                     ContextCompat.startForegroundService(this, intent)
@@ -4303,34 +4306,54 @@ private var receivedMp3File: File? = null
     }
 
     private fun maybeStartParentDriveBackupForChild(code: String, snapshot: DocumentSnapshot) {
-        if (currentRole != "parent" || selectedChildCode != code ||
-            snapshot.getBoolean("driveBackupEnabled") != true ||
-            googleDriveAccessToken.isNullOrBlank() ||
+        if (currentRole != "parent" || googleDriveAccessToken.isNullOrBlank() ||
             parentSendProtocol != null
         ) return
+
+        // Build a stable queue from every paired child whose own backup consent is active.
+        val queue = org.json.JSONArray()
+        childNames.keys.forEach { childCode ->
+            val childSnapshot = childSnapshots[childCode] ?: return@forEach
+            if (childSnapshot.getBoolean("driveBackupEnabled") == true) {
+                queue.put(org.json.JSONObject()
+                    .put("code", childCode)
+                    .put("name", childNames[childCode] ?: "HP Anak"))
+            }
+        }
+        if (queue.length() == 0) return
+
+        val queueJson = queue.toString()
+        val first = queue.optJSONObject(0) ?: return
+        val firstCode = first.optString("code")
+        val firstName = first.optString("name", "HP Anak")
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         if (prefs.getBoolean("parent_drive_backup_service_active", false) &&
-            prefs.getString("parent_drive_backup_pair_code", null) == code
+            prefs.getString("parent_drive_backup_child_queue_json", null) == queueJson
         ) return
+
         if (parentGalleryDialog?.isShowing == true) {
             parentGalleryDialog?.dismiss()
             stopParentGalleryP2p()
         }
         prefs.edit()
             .putLong("parent_drive_backup_authorized_at", System.currentTimeMillis())
-            .putString("parent_drive_backup_pair_code", code)
+            .putString("parent_drive_backup_pair_code", firstCode)
+            .putString("parent_drive_backup_child_name", firstName)
+            .putString("parent_drive_backup_child_queue_json", queueJson)
             .apply()
+
         val intent = Intent(this, ParentDriveBackupService::class.java).apply {
             action = ParentDriveBackupService.ACTION_START
-            putExtra(ParentDriveBackupService.EXTRA_PAIR_CODE, code)
+            putExtra(ParentDriveBackupService.EXTRA_PAIR_CODE, firstCode)
             putExtra(ParentDriveBackupService.EXTRA_ACCESS_TOKEN, googleDriveAccessToken)
-            putExtra(ParentDriveBackupService.EXTRA_CHILD_NAME, childNames[code] ?: "HP Anak")
+            putExtra(ParentDriveBackupService.EXTRA_CHILD_NAME, firstName)
+            putExtra(ParentDriveBackupService.EXTRA_CHILD_QUEUE_JSON, queueJson)
         }
         try {
             ContextCompat.startForegroundService(this, intent)
-            statusText.text = "Persetujuan backup HP anak aktif • layanan Google Drive mulai terhubung"
+            statusText.text = "Backup otomatis bergantian untuk ${queue.length()} perangkat anak dimulai"
         } catch (error: Exception) {
-            statusText.text = "Persetujuan aktif, tetapi layanan backup belum dapat dimulai: ${error.localizedMessage ?: "coba lagi"}"
+            statusText.text = "Persetujuan backup aktif, tetapi layanan belum dapat dimulai: ${error.localizedMessage ?: "coba lagi"}"
         }
     }
 
