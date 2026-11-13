@@ -503,7 +503,6 @@ private var receivedMp3File: File? = null
         firstActionRow.addView(microphoneSlot, LinearLayout.LayoutParams(actionParams))
         firstActionRow.addView(sendMp3Button, LinearLayout.LayoutParams(actionParams))
         secondActionRow.addView(cameraLiveButton, LinearLayout.LayoutParams(actionParams))
-        secondActionRow.addView(parentGalleryButton, LinearLayout.LayoutParams(actionParams))
         actionButtonsRow.addView(firstActionRow)
         actionButtonsRow.addView(secondActionRow)
         addChildButton = createButton("＋")
@@ -913,6 +912,7 @@ private var receivedMp3File: File? = null
         parentGalleryButton.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
             setMargins(dp(3), dp(3), dp(3), dp(3))
         }
+        secondActionRow.addView(parentGalleryButton, LinearLayout.LayoutParams(actionParams))
         val mapsButton = TextView(this).apply {
             text = "🗺️  MAPS & GEO-FENCE\nBuka peta lokasi perangkat anak"
             textSize = 13f
