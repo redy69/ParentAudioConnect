@@ -7,6 +7,8 @@ import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -30,6 +32,18 @@ class ParentDriveBackupService : Service() {
     private var consentListener: ListenerRegistration? = null
     private var folderId: String? = null
     private var accessToken: String? = null
+    private val reconnectHandler = Handler(Looper.getMainLooper())
+    @Volatile private var stopping = false
+    private var pairingCode: String? = null
+    private val reconnectRunnable = Runnable {
+        val code = pairingCode
+        if (!stopping && !code.isNullOrBlank() &&
+            getSharedPreferences("parent_audio", MODE_PRIVATE).getBoolean("parent_drive_backup_service_active", false)
+        ) {
+            stopP2pTransport()
+            startTransport(code)
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -57,6 +71,7 @@ class ParentDriveBackupService : Service() {
         getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
             .putBoolean("parent_drive_backup_service_active", true).apply()
         startAsForeground("Menunggu koneksi HP anak untuk backup media baru")
+        pairingCode = code
         listenForConsent(code)
         startTransport(code)
         return START_STICKY
@@ -119,6 +134,7 @@ class ParentDriveBackupService : Service() {
     }
 
     private fun startTransport(code: String) {
+        stopping = false
         lateinit var activeProtocol: GalleryP2pGalleryProtocol
         val activeManager = GalleryP2pManager(
             context = applicationContext,
@@ -127,7 +143,13 @@ class ParentDriveBackupService : Service() {
             onState = { message ->
                 Log.i(TAG, message)
                 updateStatus(message)
-                if (message.contains("P2P TERHUBUNG")) activeProtocol.requestNextBackup()
+                if (message.contains("P2P TERHUBUNG")) {
+                    reconnectHandler.removeCallbacks(reconnectRunnable)
+                    activeProtocol.requestNextBackup()
+                } else if (message.contains("terputus") || message.contains("gagal") || message.contains("ditutup")) {
+                    reconnectHandler.removeCallbacks(reconnectRunnable)
+                    reconnectHandler.postDelayed(reconnectRunnable, 30000L)
+                }
             },
             onData = { bytes, binary -> activeProtocol.onFrame(bytes, binary) }
         )
@@ -168,15 +190,22 @@ class ParentDriveBackupService : Service() {
         activeManager.start()
     }
 
-    private fun stopTransport() {
-        consentListener?.remove()
-        consentListener = null
+    private fun stopP2pTransport() {
+        stopping = true
+        reconnectHandler.removeCallbacks(reconnectRunnable)
         protocol?.close()
         protocol = null
         manager?.close()
         manager = null
+    }
+
+    private fun stopTransport() {
+        stopP2pTransport()
+        consentListener?.remove()
+        consentListener = null
         accessToken = null
         folderId = null
+        pairingCode = null
         getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
             .putBoolean("parent_drive_backup_service_active", false).apply()
     }
