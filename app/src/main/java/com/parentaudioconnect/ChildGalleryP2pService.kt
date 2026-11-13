@@ -12,9 +12,9 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 
 /**
- * Keeps the child's explicitly consented gallery P2P transport alive while the
- * Activity is not visible. The service never enables sharing by itself: both
- * local consent and Android media access must still be present.
+ * Keeps the child's explicitly consented media P2P transport alive while the
+ * Activity is not visible. Gallery browsing and Drive backup use separate
+ * consent flags; starting this service never grants gallery-browsing access.
  */
 class ChildGalleryP2pService : Service() {
     companion object {
