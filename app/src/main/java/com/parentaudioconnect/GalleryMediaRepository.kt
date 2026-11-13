@@ -31,8 +31,10 @@ class GalleryMediaRepository(private val context: Context) {
         val kind: Kind
     )
 
-    fun listMedia(limit: Int = 500): List<MediaItem> {
-        val safeLimit = limit.coerceIn(1, 1000)
+    fun listMedia(limit: Int? = 500): List<MediaItem> {
+        // A null limit is reserved for complete consent-time baseline scans.
+        // Normal gallery browsing keeps its existing 1,000-item safety cap.
+        val safeLimit = limit?.coerceIn(1, 1000)
         val collection = MediaStore.Files.getContentUri("external")
         val projection = arrayOf(
             MediaStore.Files.FileColumns._ID,
@@ -64,7 +66,7 @@ class GalleryMediaRepository(private val context: Context) {
             val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
             val modifiedCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
             val typeCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
-            while (cursor.moveToNext() && result.size < safeLimit) {
+            while (cursor.moveToNext() && (safeLimit == null || result.size < safeLimit)) {
                 val id = cursor.getLong(idCol)
                 val name = cursor.getString(nameCol) ?: "Media-$id"
                 val mime = cursor.getString(mimeCol) ?: continue
