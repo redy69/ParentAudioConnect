@@ -52,7 +52,7 @@ class ParentDriveBackupService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
-            stopTransport()
+            stopTransport(clearSavedState = true)
             stopSelf()
             return START_NOT_STICKY
         }
@@ -226,22 +226,26 @@ class ParentDriveBackupService : Service() {
         manager = null
     }
 
-    private fun stopTransport() {
+    private fun stopTransport(clearSavedState: Boolean = true) {
         stopP2pTransport()
         consentListener?.remove()
         consentListener = null
         accessToken = null
         folderId = null
         pairingCode = null
-        getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
-            .putBoolean("parent_drive_backup_service_active", false)
-            .remove("parent_drive_backup_pair_code")
-            .remove("parent_drive_backup_authorized_at")
-            .apply()
+        if (clearSavedState) {
+            getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                .putBoolean("parent_drive_backup_service_active", false)
+                .remove("parent_drive_backup_pair_code")
+                .remove("parent_drive_backup_authorized_at")
+                .apply()
+        }
     }
 
     override fun onDestroy() {
-        stopTransport()
+        // Preserve the user's requested backup state on an OS/process stop so
+        // MainActivity can obtain a fresh short-lived token when reopened.
+        stopTransport(clearSavedState = false)
         super.onDestroy()
     }
 
