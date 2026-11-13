@@ -3418,7 +3418,9 @@ private var receivedMp3File: File? = null
                             statusText.text = "Transfer belum dapat dimulai"
                             rootLayout.postDelayed({ stopParentMediaTransfer() }, 1000)
                         }
-                    } else if (message.contains("P2P gagal") || message.contains("gagal memulai")) {
+                    } else if (message.contains("P2P gagal") || message.contains("gagal memulai") ||
+                        message.contains("terputus") || message.contains("ditutup")
+                    ) {
                         rootLayout.postDelayed({ stopParentMediaTransfer() }, 1500)
                     }
                 }
