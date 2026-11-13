@@ -99,13 +99,8 @@ class ParentDriveBackupService : Service() {
         if (accessToken != token) folderId = null
         accessToken = token
         if (displayName.isNotBlank()) childDisplayName = displayName
-        if (manager != null && pairingCode == code && childQueue.isEmpty()) {
-            updateStatus("Izin Google Drive diperbarui • melanjutkan antrean backup")
-            protocol?.requestNextBackup()
-            return START_STICKY
-        }
-        if (manager != null && pairingCode != code) {
-            updateStatus("Beralih ke antrean backup perangkat anak yang dipilih")
+        if (manager != null) {
+            updateStatus("Memperbarui daftar antrean backup perangkat anak")
             stopP2pTransport()
             consentListener?.remove()
             consentListener = null
@@ -206,6 +201,7 @@ class ParentDriveBackupService : Service() {
                 ) {
                     reconnectHandler.removeCallbacks(reconnectRunnable)
                     reconnectHandler.postDelayed(reconnectRunnable, 30000L)
+                    if (childQueue.size > 1) scheduleChildRotationTimeout()
                 }
             },
             onData = { bytes, binary -> activeProtocol.onFrame(bytes, binary) }
