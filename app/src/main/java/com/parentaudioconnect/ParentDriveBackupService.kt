@@ -171,9 +171,14 @@ class ParentDriveBackupService : Service() {
                 getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
                     .putBoolean("drive_backup_wifi_only", wifiOnly).apply()
                 if (snapshot?.getBoolean("driveBackupEnabled") != true) {
-                    updateStatus("Persetujuan backup dari HP anak tidak aktif")
-                    stopTransport()
-                    stopSelf()
+                    if (childQueue.size > 1) {
+                        updateStatus("Izin backup $childDisplayName tidak aktif • lanjut ke perangkat anak berikutnya")
+                        advanceToNextChild("Izin backup tidak aktif")
+                    } else {
+                        updateStatus("Persetujuan backup dari HP anak tidak aktif")
+                        stopTransport()
+                        stopSelf()
+                    }
                 } else if (canUseBackupNetwork()) {
                     protocol?.requestNextBackup()
                 }
