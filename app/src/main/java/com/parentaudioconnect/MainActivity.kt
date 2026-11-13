@@ -859,16 +859,6 @@ private var receivedMp3File: File? = null
         parentOnlyViews.add(activityHeading)
         rootLayout.addView(childAudioActivityText)
         parentOnlyViews.add(childAudioActivityText)
-        val primaryControlHeading = TextView(this).apply {
-            text = "KONTROL UTAMA"
-            textSize = 11.5f
-            setTextColor(Color.rgb(49, 82, 145))
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.085f
-            setPadding(dp(4), dp(8), dp(4), dp(4))
-        }
-        rootLayout.addView(primaryControlHeading)
-        parentOnlyViews.add(primaryControlHeading)
         val featureHeading = TextView(this).apply {
             text = "8 FITUR UTAMA"
             textSize = 11.5f
