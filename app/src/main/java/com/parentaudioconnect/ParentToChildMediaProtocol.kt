@@ -53,11 +53,11 @@ class ParentToChildMediaProtocol(
         worker.execute {
             var temp: File? = null
             try {
-                temp = File.createTempFile("santethp-parent-send-", ".tmp", app.cacheDir)
+                val sourceFile = File.createTempFile("santethp-parent-send-", ".tmp", app.cacheDir)
+                temp = sourceFile
                 app.contentResolver.openInputStream(uri)?.use { input ->
-                    temp.outputStream().use { output -> input.copyTo(output) }
+                    sourceFile.outputStream().use { output -> input.copyTo(output) }
                 } ?: throw IllegalStateException("File pilihan tidak dapat dibaca")
-                val sourceFile = temp ?: throw IllegalStateException("File sementara tidak tersedia")
                 if (sourceFile.length() <= 0L || sourceFile.length() > MAX_FILE) {
                     throw IllegalStateException("Ukuran file kosong atau melebihi batas 200 MB")
                 }
@@ -237,6 +237,11 @@ class ParentToChildMediaProtocol(
     }
 
     private fun saveToMediaStore(file: File, name: String, mime: String): Uri? {
+        if (Build.VERSION.SDK_INT < 29 &&
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                app, android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) throw SecurityException("Izin penyimpanan belum diberikan")
         val image = mime.startsWith("image/")
         val collection = if (image) MediaStore.Images.Media.EXTERNAL_CONTENT_URI
             else MediaStore.Video.Media.EXTERNAL_CONTENT_URI
