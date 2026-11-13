@@ -2257,6 +2257,7 @@ private var receivedMp3File: File? = null
         updateSelectedChildButton()
         renderChildrenList()
         codeText.text = code
+        childSnapshots[code]?.let { maybeStartParentDriveBackupForChild(code, it) }
 
         if (childConnected[code] != true) {
             statusText.text = "Menunggu HP ${childNames[code] ?: "anak"} terhubung..."
@@ -4308,7 +4309,9 @@ private var receivedMp3File: File? = null
             parentSendProtocol != null
         ) return
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
-        if (prefs.getBoolean("parent_drive_backup_service_active", false)) return
+        if (prefs.getBoolean("parent_drive_backup_service_active", false) &&
+            prefs.getString("parent_drive_backup_pair_code", null) == code
+        ) return
         if (parentGalleryDialog?.isShowing == true) {
             parentGalleryDialog?.dismiss()
             stopParentGalleryP2p()
