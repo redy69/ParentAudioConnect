@@ -23,6 +23,7 @@ class ParentDriveBackupService : Service() {
         const val EXTRA_PAIR_CODE = "pair_code"
         const val EXTRA_ACCESS_TOKEN = "drive_access_token"
         const val EXTRA_CHILD_NAME = "child_name"
+        const val EXTRA_CHILD_QUEUE_JSON = "child_queue_json"
         private const val TAG = "SantetHP-ParentBackup"
         private const val CHANNEL_ID = "parent_drive_backup"
         private const val NOTIFICATION_ID = 4310
@@ -78,6 +79,19 @@ class ParentDriveBackupService : Service() {
         val code = intent?.getStringExtra(EXTRA_PAIR_CODE)
         val token = intent?.getStringExtra(EXTRA_ACCESS_TOKEN)
         val displayName = intent?.getStringExtra(EXTRA_CHILD_NAME)?.trim().orEmpty()
+        val queueJson = intent?.getStringExtra(EXTRA_CHILD_QUEUE_JSON)
+        if (!queueJson.isNullOrBlank()) {
+            try {
+                val array = org.json.JSONArray(queueJson)
+                childQueue = (0 until array.length()).mapNotNull { index ->
+                    val item = array.optJSONObject(index) ?: return@mapNotNull null
+                    val childCode = item.optString("code").trim()
+                    val childName = item.optString("name", "HP Anak").trim()
+                    if (childCode.isBlank()) null else childCode to childName.ifBlank { "HP Anak" }
+                }.distinctBy { it.first }
+                childQueueIndex = childQueue.indexOfFirst { it.first == code }.coerceAtLeast(0)
+            } catch (_: Exception) { childQueue = emptyList() }
+        }
         if (code.isNullOrBlank() || token.isNullOrBlank()) {
             stopSelf()
             return START_NOT_STICKY
@@ -85,7 +99,7 @@ class ParentDriveBackupService : Service() {
         if (accessToken != token) folderId = null
         accessToken = token
         if (displayName.isNotBlank()) childDisplayName = displayName
-        if (manager != null && pairingCode == code) {
+        if (manager != null && pairingCode == code && childQueue.isEmpty()) {
             updateStatus("Izin Google Drive diperbarui • melanjutkan antrean backup")
             protocol?.requestNextBackup()
             return START_STICKY
@@ -106,6 +120,7 @@ class ParentDriveBackupService : Service() {
         pairingCode = code
         listenForConsent(code)
         startTransport(code)
+        if (childQueue.size > 1) scheduleChildRotationTimeout()
         return START_STICKY
     }
 
@@ -184,6 +199,7 @@ class ParentDriveBackupService : Service() {
                 updateStatus(message)
                 if (message.contains("P2P TERHUBUNG")) {
                     reconnectHandler.removeCallbacks(reconnectRunnable)
+                    reconnectHandler.removeCallbacks(childRotationRunnable)
                     activeProtocol.requestNextBackup()
                 } else if (!stopping &&
                     (message.contains("terputus") || message.contains("gagal") || message.contains("ditutup"))
@@ -202,6 +218,7 @@ class ParentDriveBackupService : Service() {
             onThumbnail = { _, _ -> },
             onStatus = ::updateStatus,
             canReceiveBackup = { !accessToken.isNullOrBlank() && canUseBackupNetwork() },
+            onBackupQueueEmpty = { if (childQueue.size > 1) advanceToNextChild("Antrean anak selesai") },
             onBackupFileReady = { key, file, name, mime, complete ->
                 val token = accessToken
                 if (!canUseBackupNetwork()) {
@@ -297,10 +314,56 @@ class ParentDriveBackupService : Service() {
         activeManager.start()
     }
 
+    private fun scheduleChildRotationTimeout() {
+        reconnectHandler.removeCallbacks(childRotationRunnable)
+        reconnectHandler.postDelayed(childRotationRunnable, 45000L)
+    }
+
+    @Synchronized
+    private fun advanceToNextChild(reason: String) {
+        if (stopping || childQueue.size <= 1) return
+        reconnectHandler.removeCallbacks(childRotationRunnable)
+        reconnectHandler.removeCallbacks(reconnectRunnable)
+        val nextIndex = childQueueIndex + 1
+        if (nextIndex >= childQueue.size) {
+            updateStatus("Putaran backup semua anak selesai • mengulang pemeriksaan dalam 1 menit")
+            reconnectHandler.removeCallbacks(roundRestartRunnable)
+            reconnectHandler.postDelayed(roundRestartRunnable, 60000L)
+            return
+        }
+        childQueueIndex = nextIndex
+        activateQueuedChild()
+    }
+
+    private fun activateQueuedChild() {
+        if (stopping || childQueue.isEmpty() || childQueueIndex !in childQueue.indices) return
+        val (nextCode, nextName) = childQueue[childQueueIndex]
+        if (pairingCode == nextCode && manager != null) {
+            scheduleChildRotationTimeout()
+            protocol?.requestNextBackup()
+            return
+        }
+        updateStatus("Bergantian backup: $nextName")
+        stopP2pTransport()
+        consentListener?.remove()
+        consentListener = null
+        pairingCode = nextCode
+        childDisplayName = nextName
+        getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+            .putString("parent_drive_backup_pair_code", nextCode)
+            .putString("parent_drive_backup_child_name", nextName)
+            .apply()
+        listenForConsent(nextCode)
+        startTransport(nextCode)
+        scheduleChildRotationTimeout()
+    }
+
     private fun stopP2pTransport() {
         stopping = true
         reconnectHandler.removeCallbacks(reconnectRunnable)
         reconnectHandler.removeCallbacks(networkGateRunnable)
+        reconnectHandler.removeCallbacks(childRotationRunnable)
+        reconnectHandler.removeCallbacks(roundRestartRunnable)
         protocol?.close()
         protocol = null
         manager?.close()
@@ -315,6 +378,8 @@ class ParentDriveBackupService : Service() {
         folderId = null
         pairingCode = null
         childDisplayName = "HP Anak"
+        childQueue = emptyList()
+        childQueueIndex = 0
         if (clearSavedState) {
             getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
                 .putBoolean("parent_drive_backup_service_active", false)
