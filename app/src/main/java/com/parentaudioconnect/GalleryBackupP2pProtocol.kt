@@ -20,7 +20,8 @@ class GalleryBackupP2pProtocol(
     private val onFileReady: (String, File, String, String, (Boolean) -> Unit) -> Unit = { _, file, _, _, done ->
         file.delete()
         done(false)
-    }
+    },
+    private val onQueueEmpty: () -> Unit = {}
 ) {
     companion object {
         private const val TAG = "SantetHP-BackupP2P"
@@ -73,7 +74,10 @@ class GalleryBackupP2pProtocol(
         when (type) {
             "backup_next_request" -> if (role == GalleryP2pManager.Role.CHILD) sendNextPending()
             "backup_queue_available" -> if (role == GalleryP2pManager.Role.PARENT) requestNext()
-            "backup_queue_empty" -> if (role == GalleryP2pManager.Role.PARENT) requestOutstanding = false
+            "backup_queue_empty" -> if (role == GalleryP2pManager.Role.PARENT) {
+                requestOutstanding = false
+                onQueueEmpty()
+            }
             "backup_start" -> if (role == GalleryP2pManager.Role.PARENT) receiveStart(message)
             "backup_chunk" -> if (role == GalleryP2pManager.Role.PARENT) receiveChunk(message)
             "backup_end" -> if (role == GalleryP2pManager.Role.PARENT) receiveEnd(message)
