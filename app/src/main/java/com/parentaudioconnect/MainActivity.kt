@@ -384,8 +384,8 @@ private var receivedMp3File: File? = null
         childAudioActivityText = AudioVisualizerView().apply {
             contentDescription = "Aktivitas audio anak"
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(78)
-            ).apply { setMargins(0, dp(2), 0, dp(4)) }
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(48)
+            ).apply { setMargins(0, 0, 0, dp(8)) }
         }
 
         childUsageRowsContainer = LinearLayout(this).apply {
@@ -1849,21 +1849,14 @@ private var receivedMp3File: File? = null
             panelPaint.color = Color.rgb(218, 229, 246)
             canvas.drawRoundRect(dp(0.5f), dp(0.5f), w - dp(0.5f), h - dp(0.5f), radius, radius, panelPaint)
 
-            val left = dp(14).toFloat()
-            canvas.drawText("AKTIVITAS AUDIO ANAK", left, dp(27).toFloat(), titlePaint)
-            val maxTextWidth = (w * 0.58f - dp(18)).coerceAtLeast(dp(80).toFloat())
-            val shownStatus = android.text.TextUtils.ellipsize(
-                statusLabel, android.text.TextPaint(statusPaint), maxTextWidth,
-                android.text.TextUtils.TruncateAt.END
-            ).toString()
-            canvas.drawText(shownStatus, left, dp(49).toFloat(), statusPaint)
-
+            // Musik divisualisasikan hanya dengan batang equalizer; teks status
+            // tetap dipakai untuk aksesibilitas, tetapi tidak ditampilkan.
             val barCount = 15
             val gap = dp(3).toFloat()
             val barWidth = dp(3.5f).toFloat()
             val totalBarsWidth = barCount * barWidth + (barCount - 1) * gap
             val startX = (w - dp(14) - totalBarsWidth).coerceAtLeast(w * 0.62f)
-            val centerY = h * 0.53f
+            val centerY = h * 0.5f
             val now = android.os.SystemClock.uptimeMillis()
             for (i in 0 until barCount) {
                 val wave = if (audioActive) {
