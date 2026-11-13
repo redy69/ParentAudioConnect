@@ -118,20 +118,6 @@ private lateinit var playMp3Button: Button
     private var childGalleryProtocol: GalleryP2pGalleryProtocol? = null
     private var parentGalleryP2pManager: GalleryP2pManager? = null
     private var parentGalleryProtocol: GalleryP2pGalleryProtocol? = null
-    private var parentDriveBackupBinder: ParentDriveBackupService.LocalBinder? = null
-    private var parentDriveBackupBindRequested = false
-    private var parentGalleryUsingBackupService = false
-    private val parentDriveBackupConnection = object : android.content.ServiceConnection {
-        override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
-            parentDriveBackupBinder = service as? ParentDriveBackupService.LocalBinder
-            parentDriveBackupBindRequested = false
-            if (parentDriveBackupBinder != null) rootLayout.post { showParentGalleryStatus() }
-        }
-        override fun onServiceDisconnected(name: android.content.ComponentName?) {
-            parentDriveBackupBinder = null
-            parentDriveBackupBindRequested = false
-        }
-    }
     private var parentGalleryDialog: AlertDialog? = null
     private var googleDriveAuthorization: GoogleDriveAuthorization? = null
     // Access tokens are short-lived; keep only in memory, never in preferences.
@@ -3651,15 +3637,12 @@ private var receivedMp3File: File? = null
         }
         val backupServiceActive = getSharedPreferences("parent_audio", MODE_PRIVATE)
             .getBoolean("parent_drive_backup_service_active", false)
-        if (backupServiceActive && parentDriveBackupBinder == null) {
-            if (!parentDriveBackupBindRequested) {
-                parentDriveBackupBindRequested = bindService(
-                    Intent(this, ParentDriveBackupService::class.java),
-                    parentDriveBackupConnection,
-                    BIND_AUTO_CREATE
-                )
-            }
-            Toast.makeText(this, "Menghubungkan Galeri Anak ke layanan backup bersama…", Toast.LENGTH_SHORT).show()
+        if (backupServiceActive) {
+            AlertDialog.Builder(this)
+                .setTitle("Backup Google Drive sedang aktif")
+                .setMessage("Layanan backup sedang memakai koneksi P2P HP anak. Hentikan backup terlebih dahulu melalui menu Backup Google Drive sebelum membuka Galeri Anak agar kedua koneksi tidak saling memutus.")
+                .setPositiveButton("Mengerti", null)
+                .show()
             return
         }
         val enabled = childSnapshots[code]?.getBoolean("gallerySharingEnabled") == true
@@ -3712,7 +3695,7 @@ private var receivedMp3File: File? = null
                 parentGalleryMediaItems.clear()
                 parentGalleryThumbQueue.clear()
                 parentGalleryThumbInFlight = null
-                parentGalleryIndexRequested = parentDriveBackupBinder?.requestGalleryIndex() == true
+                parentGalleryIndexRequested = parentGalleryProtocol?.requestIndex() == true
                 if (parentGalleryIndexRequested) {
                     status.text = "Meminta daftar foto dan video terbaru…"
                 } else {
@@ -3723,19 +3706,239 @@ private var receivedMp3File: File? = null
             }
         }
         dialog.setOnDismissListener {
-            if (parentGalleryUsingBackupService) {
-                parentDriveBackupBinder?.closeGallery()
-                parentGalleryUsingBackupService = false
-            } else {
-                stopParentGalleryP2p()
-            }
+            stopParentGalleryP2p()
             parentGalleryDialog = null
             parentGalleryStatus = null
             parentGalleryList = null
         }
         dialog.show()
 
-
+        lateinit var manager: GalleryP2pManager
+        lateinit var protocol: GalleryP2pGalleryProtocol
+        protocol = GalleryP2pGalleryProtocol(
+            context = this,
+            role = GalleryP2pManager.Role.PARENT,
+            sendFrame = { bytes, binary -> parentGalleryP2pManager?.send(bytes, binary) ?: false },
+            onMediaIndex = { items ->
+                runOnUiThread {
+                    if (parentGalleryDialog?.isShowing != true) return@runOnUiThread
+                    list.removeAllViews()
+                    parentGalleryRows.clear()
+                    parentGalleryMediaItems.clear()
+                    parentGalleryThumbQueue.clear()
+                    parentGalleryThumbInFlight = null
+                    parentGalleryIndexRequested = true
+                    items.forEach { parentGalleryMediaItems[it.key] = it }
+                    if (items.isEmpty()) {
+                        list.addView(TextView(this).apply {
+                            text = "Belum ada foto atau video yang dapat dibagikan."
+                            textSize = 13f
+                            setPadding(dp(12), dp(24), dp(12), dp(24))
+                        })
+                    } else {
+                        items.forEach { item ->
+                            val row = LinearLayout(this).apply {
+                                orientation = LinearLayout.HORIZONTAL
+                                gravity = Gravity.CENTER_VERTICAL
+                                setPadding(dp(7), dp(7), dp(7), dp(7))
+                                background = GradientDrawable().apply {
+                                    setColor(Color.WHITE)
+                                    cornerRadius = dp(12).toFloat()
+                                    setStroke(dp(1), Color.rgb(226, 233, 243))
+                                }
+                                layoutParams = LinearLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT, dp(82)
+                                ).apply { setMargins(0, 0, 0, dp(7)) }
+                            }
+                            val image = ImageView(this).apply {
+                                scaleType = ImageView.ScaleType.CENTER_CROP
+                                setBackgroundColor(Color.rgb(235, 240, 247))
+                                layoutParams = LinearLayout.LayoutParams(dp(66), dp(66))
+                            }
+                            val info = TextView(this).apply {
+                                text = (if (item.kind == "VIDEO") "▶  " else "▣  ") +
+                                    item.name + "\n" +
+                                    android.text.format.Formatter.formatFileSize(this@MainActivity, item.sizeBytes)
+                                textSize = 12f
+                                setTextColor(Color.rgb(39, 53, 78))
+                                setPadding(dp(10), 0, dp(4), 0)
+                                maxLines = 2
+                                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                            }
+                            row.addView(image)
+                            row.addView(info)
+                            row.setOnClickListener {
+                                AlertDialog.Builder(this)
+                                    .setTitle(item.name)
+                                    .setMessage(
+                                        "Ukuran asli: " + android.text.format.Formatter.formatFileSize(this, item.sizeBytes) +
+                                            "\nFile asli hanya akan diminta setelah Anda memilih tombol unduh. Transfer dibatasi 200 MB dan diverifikasi dengan SHA-256."
+                                    )
+                                    .setNegativeButton("Batal", null)
+                                    .setPositiveButton("Unduh HD & simpan") { _, _ ->
+                                        if (Build.VERSION.SDK_INT < 29) {
+                                            Toast.makeText(this, "Simpan langsung ke galeri memerlukan Android 10 atau lebih baru.", Toast.LENGTH_LONG).show()
+                                        } else if (item.sizeBytes <= 0 || item.sizeBytes > 200L * 1024L * 1024L) {
+                                            Toast.makeText(this, "File kosong atau lebih besar dari batas transfer 200 MB.", Toast.LENGTH_LONG).show()
+                                        } else {
+                                            val savedPrefs = getSharedPreferences("parent_gallery_cache", MODE_PRIVATE)
+                                            val prefKey = gallerySavedUriPreferenceKey(item.key)
+                                            val savedUriText = savedPrefs.getString(prefKey, null)
+                                            val savedUri = savedUriText?.let { Uri.parse(it) }
+                                            val cachedFileExists = if (savedUri != null) {
+                                                try {
+                                                    contentResolver.openFileDescriptor(savedUri, "r")?.use { true } ?: false
+                                                } catch (_: Exception) { false }
+                                            } else false
+                                            if (cachedFileExists && savedUri != null) {
+                                                openSavedGalleryMedia(savedUri, item.mime)
+                                            } else {
+                                                if (savedUriText != null) savedPrefs.edit().remove(prefKey).apply()
+                                                if (parentGalleryProtocol?.requestOriginal(item.key) != true) {
+                                                    Toast.makeText(this, "Permintaan unduh belum terkirim. Periksa koneksi P2P.", Toast.LENGTH_LONG).show()
+                                                } else {
+                                                    status.text = "Meminta file asli: " + item.name
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .show()
+                            }
+                            list.addView(row)
+                            parentGalleryRows[item.key] = row
+                            val cachedThumb = galleryThumbnailCacheFile(item.key)
+                            if (cachedThumb.isFile && cachedThumb.length() > 0) {
+                                val cachedBitmap = BitmapFactory.decodeFile(cachedThumb.absolutePath)
+                                if (cachedBitmap != null) image.setImageBitmap(cachedBitmap)
+                                else parentGalleryThumbQueue.addLast(item.key)
+                            } else {
+                                parentGalleryThumbQueue.addLast(item.key)
+                            }
+                        }
+                        requestNextParentGalleryThumbnail()
+                    }
+                    status.text = "Daftar diterima: " + items.size +
+                        " media • mengambil thumbnail satu per satu"
+                }
+            },
+            onThumbnail = { key, bytes ->
+                runOnUiThread {
+                    if (parentGalleryDialog?.isShowing != true) return@runOnUiThread
+                    if (bytes.isNotEmpty()) {
+                        val cachedThumb = galleryThumbnailCacheFile(key)
+                        try {
+                            cachedThumb.parentFile?.mkdirs()
+                            cachedThumb.writeBytes(bytes)
+                            trimGalleryThumbnailCache()
+                        } catch (_: Exception) {
+                            // Keep the in-memory preview even if the local cache is full.
+                        }
+                        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        val row = parentGalleryRows[key]
+                        val image = row?.getChildAt(0) as? ImageView
+                        if (bitmap != null) image?.setImageBitmap(bitmap)
+                    }
+                    if (parentGalleryThumbInFlight == key) parentGalleryThumbInFlight = null
+                    requestNextParentGalleryThumbnail()
+                }
+            },
+            onStatus = { message ->
+                runOnUiThread {
+                    if (parentGalleryDialog?.isShowing == true) status.text = message
+                }
+            },
+            canReceiveBackup = { !googleDriveAccessToken.isNullOrBlank() },
+            onBackupFileReady = { key, file, fileName, mime, complete ->
+                val accessToken = googleDriveAccessToken
+                if (accessToken.isNullOrBlank()) {
+                    file.delete()
+                    runOnUiThread {
+                        status.text = "File baru sudah diterima, tetapi akun Google Drive belum dihubungkan. Antrean anak tetap menunggu."
+                        complete(false)
+                    }
+                } else {
+                    Thread {
+                        try {
+                            val uploader = GoogleDriveUploader(accessToken)
+                            val folderId = googleDriveBackupFolderId ?: uploader.ensureBackupFolder().also {
+                                googleDriveBackupFolderId = it
+                            }
+                            uploader.uploadFile(
+                                file, fileName, mime, folderId, stableKey = key,
+                                progress = GoogleDriveUploader.ProgressListener { sent, total ->
+                                    runOnUiThread {
+                                        if (parentGalleryDialog?.isShowing == true) {
+                                            status.text = "Mengunggah ke Google Drive: " +
+                                                android.text.format.Formatter.formatFileSize(this, sent) +
+                                                " / " + android.text.format.Formatter.formatFileSize(this, total)
+                                        }
+                                    }
+                                }
+                            )
+                            file.delete()
+                            runOnUiThread {
+                                status.text = "Backup berhasil diunggah ke Google Drive: $fileName"
+                                complete(true)
+                            }
+                        } catch (error: Exception) {
+                            file.delete()
+                            runOnUiThread {
+                                status.text = "Upload Drive gagal: ${error.localizedMessage ?: "coba hubungkan ulang akun Google"}"
+                                complete(false)
+                            }
+                        }
+                    }.start()
+                }
+            },
+            onOriginalReady = { key, file, fileName, mime ->
+                runOnUiThread {
+                    try {
+                        val uri = saveGalleryOriginalToDevice(file, fileName, mime)
+                        if (uri != null) {
+                            getSharedPreferences("parent_gallery_cache", MODE_PRIVATE).edit()
+                                .putString(gallerySavedUriPreferenceKey(key), uri.toString()).apply()
+                            status.text = "File asli tersimpan di galeri HP orang tua."
+                            if (!openSavedGalleryMedia(uri, mime)) {
+                                Toast.makeText(this, "File tersimpan di galeri, tetapi tidak ada aplikasi untuk membukanya.", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    } catch (error: Exception) {
+                        file.delete()
+                        status.text = "Gagal menyimpan file: " + (error.localizedMessage ?: "kesalahan")
+                        Toast.makeText(this, status.text, Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        )
+        parentGalleryProtocol = protocol
+        manager = GalleryP2pManager(
+            context = this,
+            pairingCode = code,
+            localRole = GalleryP2pManager.Role.PARENT,
+            onState = { message ->
+                runOnUiThread {
+                    if (parentGalleryDialog?.isShowing == true) status.text = message
+                    if (message.contains("P2P TERHUBUNG")) {
+                        if (childSnapshots[code]?.getBoolean("gallerySharingEnabled") == true &&
+                            !parentGalleryIndexRequested
+                        ) {
+                            parentGalleryIndexRequested = protocol.requestIndex()
+                        }
+                        if (childSnapshots[code]?.getBoolean("driveBackupEnabled") == true &&
+                            !googleDriveAccessToken.isNullOrBlank()
+                        ) {
+                            protocol.requestNextBackup()
+                        }
+                    }
+                    if (message.contains("terputus") || message.contains("ditutup") || message.contains("gagal")) {
+                        protocol.cancelOriginal()
+                    }
+                }
+            },
+            onData = { bytes, binary -> protocol.onFrame(bytes, binary) }
+        )
+        parentGalleryP2pManager = manager
+        manager.start()
     }
 
     private fun requestNextParentGalleryThumbnail() {
