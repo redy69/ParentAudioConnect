@@ -2993,7 +2993,12 @@ private var receivedMp3File: File? = null
             !serverConfirmed -> "BERBAGI GALERI: MENUNGGU KONFIRMASI SERVER"
             else -> "BERBAGI GALERI: AKTIF"
         }
-        val backupStatus = if (backupEnabled) "BACKUP DRIVE: PERSETUJUAN AKTIF • hanya file baru" else "BACKUP DRIVE: BELUM DISETUJUI"
+        val pendingBackupCount = if (backupEnabled) GalleryBackupTracker(this).pendingItems().size else 0
+        val backupStatus = if (backupEnabled) {
+            "BACKUP DRIVE: PERSETUJUAN AKTIF • hanya file baru\nAntrean lokal: $pendingBackupCount file menunggu integrasi transfer"
+        } else {
+            "BACKUP DRIVE: BELUM DISETUJUI"
+        }
         childGalleryPanel.text = "🖼️  GALERI & BACKUP HP INI\n$galleryStatus\n$backupStatus\nKetuk untuk mengatur persetujuan masing-masing fitur."
         childGalleryPanel.setTextColor(
             if (enabled && mediaAccess && serverConfirmed) Color.rgb(28, 132, 86) else Color.rgb(35, 53, 88)
