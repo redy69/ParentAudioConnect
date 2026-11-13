@@ -105,6 +105,7 @@ private lateinit var playMp3Button: Button
     private lateinit var cancelPairingButton: Button
     private lateinit var updateButton: Button
     private lateinit var cameraStandbyButton: Button
+    private lateinit var additionalControlsHeading: TextView
     private lateinit var cameraLiveButton: LinearLayout
     private lateinit var liveKitTestButton: Button
     private lateinit var childModePanel: TextView
@@ -523,6 +524,14 @@ private var receivedMp3File: File? = null
         updateButton = createButton("PERIKSA PEMBARUAN")
         cameraStandbyButton = createButton("AKTIFKAN SIAGA KAMERA")
         liveKitTestButton = createButton("PILIHAN SERVER")
+        listOf(playMp3Button, cameraStandbyButton, liveKitTestButton).forEach { button ->
+            button.textSize = 12.5f
+            button.minHeight = dp(44)
+            button.setPadding(dp(12), dp(5), dp(12), dp(5))
+            button.layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(4), 0, dp(4)) }
+        }
         liveKitTestButton.setOnClickListener { showLiveKitServerTestDialog() }
         childrenContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -788,6 +797,16 @@ private var receivedMp3File: File? = null
         parentOnlyViews.add(activityHeading)
         rootLayout.addView(childAudioActivityText)
         parentOnlyViews.add(childAudioActivityText)
+        val primaryControlHeading = TextView(this).apply {
+            text = "KONTROL UTAMA"
+            textSize = 11.5f
+            setTextColor(Color.rgb(49, 82, 145))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            letterSpacing = 0.105f
+            setPadding(dp(4), dp(10), dp(4), dp(5))
+        }
+        rootLayout.addView(primaryControlHeading)
+        parentOnlyViews.add(primaryControlHeading)
         // Keep the four primary parent actions directly below the child's activity card.
         rootLayout.addView(actionButtonsRow)
         rootLayout.addView(liveKitTestButton)
@@ -871,17 +890,16 @@ private var receivedMp3File: File? = null
         rootLayout.addView(mapsButton)
         parentOnlyViews.add(mapsButton)
         rootLayout.addView(cancelPairingButton)
-        val controlHeading = TextView(this).apply {
-            text = "KONTROL UTAMA"
+        additionalControlsHeading = TextView(this).apply {
+            text = "KONTROL TAMBAHAN"
             textSize = 11.5f
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.105f
-            setPadding(dp(4), dp(11), dp(4), dp(7))
+            setPadding(dp(4), dp(11), dp(4), dp(5))
+            visibility = View.GONE
         }
-        controlHeading.text = "KONTROL TAMBAHAN"
-        rootLayout.addView(controlHeading)
-        parentOnlyViews.add(controlHeading)
+        rootLayout.addView(additionalControlsHeading)
         rootLayout.addView(playMp3Button)
         rootLayout.addView(cameraStandbyButton)
 
@@ -1177,6 +1195,7 @@ private var receivedMp3File: File? = null
         childNotificationPanel.visibility = View.GONE
         childGalleryPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
+        additionalControlsHeading.visibility = View.GONE
         actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.VISIBLE
         childButton.visibility = View.VISIBLE
@@ -1207,6 +1226,7 @@ private var receivedMp3File: File? = null
         childNotificationPanel.visibility = View.GONE
         childGalleryPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
+        additionalControlsHeading.visibility = View.GONE
         actionButtonsRow.visibility = View.GONE
         parentButton.visibility = View.GONE
         childButton.visibility = View.GONE
@@ -1557,6 +1577,7 @@ private var receivedMp3File: File? = null
         childGalleryPanel.visibility = View.GONE
         childAppActivityPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.VISIBLE }
+        additionalControlsHeading.visibility = View.GONE
         updateButton.visibility = View.VISIBLE
         actionButtonsRow.visibility = View.VISIBLE
         parentButton.visibility = View.GONE
@@ -1585,6 +1606,7 @@ private var receivedMp3File: File? = null
     private fun showChildConnectedScreen() {
         roleIntroText.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
+        additionalControlsHeading.visibility = View.VISIBLE
         childModePanel.visibility = View.VISIBLE
         childLocationPanel.visibility = View.VISIBLE
         childAppBlockPanel.visibility = View.VISIBLE
