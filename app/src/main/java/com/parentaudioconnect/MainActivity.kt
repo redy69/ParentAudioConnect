@@ -4195,6 +4195,35 @@ private var receivedMp3File: File? = null
         }
     }
 
+    private fun maybeStartParentDriveBackupForChild(code: String, snapshot: DocumentSnapshot) {
+        if (currentRole != "parent" || selectedChildCode != code ||
+            snapshot.getBoolean("driveBackupEnabled") != true ||
+            googleDriveAccessToken.isNullOrBlank() ||
+            parentSendProtocol != null
+        ) return
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        if (prefs.getBoolean("parent_drive_backup_service_active", false)) return
+        if (parentGalleryDialog?.isShowing == true) {
+            parentGalleryDialog?.dismiss()
+            stopParentGalleryP2p()
+        }
+        prefs.edit()
+            .putLong("parent_drive_backup_authorized_at", System.currentTimeMillis())
+            .putString("parent_drive_backup_pair_code", code)
+            .apply()
+        val intent = Intent(this, ParentDriveBackupService::class.java).apply {
+            action = ParentDriveBackupService.ACTION_START
+            putExtra(ParentDriveBackupService.EXTRA_PAIR_CODE, code)
+            putExtra(ParentDriveBackupService.EXTRA_ACCESS_TOKEN, googleDriveAccessToken)
+        }
+        try {
+            ContextCompat.startForegroundService(this, intent)
+            statusText.text = "Persetujuan backup HP anak aktif • layanan Google Drive mulai terhubung"
+        } catch (error: Exception) {
+            statusText.text = "Persetujuan aktif, tetapi layanan backup belum dapat dimulai: ${error.localizedMessage ?: "coba lagi"}"
+        }
+    }
+
     private fun listenForChild(code: String) {
         childListeners[code]?.remove()
 
@@ -4209,6 +4238,7 @@ private var receivedMp3File: File? = null
 
                 if (snapshot != null && snapshot.exists()) {
                     childSnapshots[code] = snapshot
+                    maybeStartParentDriveBackupForChild(code, snapshot)
                     val childUid = snapshot.getString("childUid")
                     val connected = !childUid.isNullOrEmpty()
                     childConnected[code] = connected
