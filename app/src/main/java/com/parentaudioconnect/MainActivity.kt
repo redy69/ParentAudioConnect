@@ -503,7 +503,7 @@ private var receivedMp3File: File? = null
         firstActionRow.addView(microphoneSlot, LinearLayout.LayoutParams(actionParams))
         firstActionRow.addView(sendMp3Button, LinearLayout.LayoutParams(actionParams))
         secondActionRow.addView(cameraLiveButton, LinearLayout.LayoutParams(actionParams))
-        secondActionRow.addView(liveKitTestButton, LinearLayout.LayoutParams(actionParams))
+        secondActionRow.addView(parentGalleryButton, LinearLayout.LayoutParams(actionParams))
         actionButtonsRow.addView(firstActionRow)
         actionButtonsRow.addView(secondActionRow)
         addChildButton = createButton("＋")
@@ -949,13 +949,13 @@ private var receivedMp3File: File? = null
         adminWhatsAppButton.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
             setMargins(dp(3), dp(3), dp(3), dp(3))
         }
-        firstFeatureRow.addView(adminWhatsAppButton)
+        firstFeatureRow.addView(liveKitTestButton)
         val secondFeatureRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
         secondFeatureRow.addView(mapsButton)
-        secondFeatureRow.addView(parentGalleryButton)
+        secondFeatureRow.addView(adminWhatsAppButton)
 
         val featureGroupCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
