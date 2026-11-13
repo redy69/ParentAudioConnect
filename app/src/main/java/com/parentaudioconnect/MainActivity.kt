@@ -964,6 +964,12 @@ private var receivedMp3File: File? = null
             ) {
                 // Retry a consent write that may have been skipped or failed previously.
                 updateGalleryConsentOnServer(true) { startChildGalleryP2pIfAllowed() }
+            } else if (
+                childPrefs.getBoolean("child_parent_media_receive_consent", false) &&
+                !childPrefs.getBoolean("child_parent_media_server_confirmed", false)
+            ) {
+                updateParentMediaReceiveConsentOnServer(true)
+                startChildGalleryP2pIfAllowed()
             } else {
                 startChildGalleryP2pIfAllowed()
             }
@@ -3350,6 +3356,14 @@ private var receivedMp3File: File? = null
             statusText.text = "Penerimaan dari orang tua sudah tidak aktif di HP anak"
             return
         }
+        if (getSharedPreferences("parent_audio", MODE_PRIVATE)
+                .getBoolean("parent_drive_backup_service_active", false)
+        ) {
+            statusText.text = "Hentikan Backup Google Drive terlebih dahulu"
+            return
+        }
+        parentGalleryDialog?.dismiss()
+        stopParentGalleryP2p()
         stopParentMediaTransfer()
         parentSendStarted = false
         pendingParentSendUri = uri
