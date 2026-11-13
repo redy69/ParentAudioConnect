@@ -442,3 +442,91 @@ test("parent cannot save an unknown LiveKit server ID", async () => {
     cameraLiveKitServerId: "unknown"
   }));
 });
+
+
+// Media-consent and P2P signaling coverage for Galeri Anak, Drive backup,
+// and parent-to-child media receiving. These tests use the Firestore emulator.
+test("child can update the three independent media consent flags", async () => {
+  const db = testEnv.authenticatedContext("child-user").firestore();
+  await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    gallerySharingEnabled: true,
+    gallerySharingUpdatedAt: Timestamp.now(),
+    driveBackupEnabled: true,
+    driveBackupUpdatedAt: Timestamp.now(),
+    parentMediaReceiveEnabled: true,
+    parentMediaReceiveUpdatedAt: Timestamp.now()
+  }));
+});
+
+test("parent cannot change child-controlled media consent flags", async () => {
+  const db = testEnv.authenticatedContext("parent-user").firestore();
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    driveBackupEnabled: true,
+    driveBackupUpdatedAt: Timestamp.now()
+  }));
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    parentMediaReceiveEnabled: true,
+    parentMediaReceiveUpdatedAt: Timestamp.now()
+  }));
+});
+
+for (const [consentField, label] of [
+  ["gallerySharingEnabled", "gallery sharing"],
+  ["driveBackupEnabled", "Drive backup"],
+  ["parentMediaReceiveEnabled", "parent-to-child media receiving"]
+]) {
+  test(`paired parent and child can exchange P2P signaling when ${label} consent is enabled`, async () => {
+    await seedPairing({
+      [consentField]: true,
+      galleryP2pSessionId: "media-session-123"
+    });
+
+    const parentDb = testEnv.authenticatedContext("parent-user").firestore();
+    const childDb = testEnv.authenticatedContext("child-user").firestore();
+    const offer = doc(parentDb, "pairings", PAIR_CODE, "gallerySignals", "offer-1");
+    await assertSucceeds(setDoc(offer, {
+      kind: "offer",
+      senderUid: "parent-user",
+      sessionId: "media-session-123",
+      sdp: "valid-test-sdp",
+      createdAt: Timestamp.now()
+    }));
+
+    await assertSucceeds(getDoc(doc(childDb, "pairings", PAIR_CODE, "gallerySignals", "offer-1")));
+
+    const answer = doc(childDb, "pairings", PAIR_CODE, "gallerySignals", "answer-1");
+    await assertSucceeds(setDoc(answer, {
+      kind: "answer",
+      senderUid: "child-user",
+      sessionId: "media-session-123",
+      sdp: "valid-test-answer",
+      createdAt: Timestamp.now()
+    }));
+  });
+}
+
+test("P2P signaling is denied when all three media consents are disabled", async () => {
+  await seedPairing({
+    gallerySharingEnabled: false,
+    driveBackupEnabled: false,
+    parentMediaReceiveEnabled: false,
+    galleryP2pSessionId: "media-session-123"
+  });
+  const parentDb = testEnv.authenticatedContext("parent-user").firestore();
+  await assertFails(setDoc(doc(parentDb, "pairings", PAIR_CODE, "gallerySignals", "blocked-offer"), {
+    kind: "offer",
+    senderUid: "parent-user",
+    sessionId: "media-session-123",
+    sdp: "should-be-denied",
+    createdAt: Timestamp.now()
+  }));
+});
+
+test("unpaired user cannot read P2P signaling even when media consent is enabled", async () => {
+  await seedPairing({
+    driveBackupEnabled: true,
+    galleryP2pSessionId: "media-session-123"
+  });
+  const outsiderDb = testEnv.authenticatedContext("unrelated-user").firestore();
+  await assertFails(getDoc(doc(outsiderDb, "pairings", PAIR_CODE, "gallerySignals", "offer-1")));
+});
