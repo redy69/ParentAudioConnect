@@ -12,6 +12,7 @@ on:
       - feature/livekit-multi-server-failover
       - recovery/full-features-2026-11-12
       - ui/liquid-glass-child-status
+      - ui/dark-emerald-glass-dashboard
 
 permissions:
   contents: write
