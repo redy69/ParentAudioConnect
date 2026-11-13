@@ -872,7 +872,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(35, 65, 125))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(18), dp(15), dp(18), dp(15))
+            setPadding(dp(16), dp(13), dp(16), dp(13))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(235, 243, 255))
@@ -894,7 +894,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(35, 65, 125))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(18), dp(17), dp(18), dp(17))
+            setPadding(dp(16), dp(14), dp(16), dp(14))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(235, 243, 255))
@@ -915,7 +915,7 @@ private var receivedMp3File: File? = null
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(35, 65, 125))
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(18), dp(17), dp(18), dp(17))
+            setPadding(dp(16), dp(14), dp(16), dp(14))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(235, 243, 255))
@@ -1834,7 +1834,8 @@ private var receivedMp3File: File? = null
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(5), dp(4), dp(5), dp(4))
+            setPadding(dp(6), dp(5), dp(6), dp(5))
+            minHeight = dp(56)
             background = roundedPanel(Color.argb(205, 255, 255, 255), 14)
             elevation = dp(3).toFloat()
             isClickable = true
@@ -1854,7 +1855,7 @@ private var receivedMp3File: File? = null
                 setStroke(dp(1), Color.argb(115, 255, 255, 255))
             }
             elevation = dp(1).toFloat()
-            layoutParams = LinearLayout.LayoutParams(dp(29), dp(29)).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(28), dp(28)).apply {
                 rightMargin = dp(5)
             }
         }
