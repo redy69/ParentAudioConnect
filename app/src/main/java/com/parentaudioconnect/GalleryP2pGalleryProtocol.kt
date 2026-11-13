@@ -59,9 +59,11 @@ class GalleryP2pGalleryProtocol(
     @Volatile private var incomingTransfer: IncomingTransfer? = null
     private val observerHandler = Handler(Looper.getMainLooper())
     private val mediaRefreshRunnable = Runnable {
-        if (!closed && role == GalleryP2pManager.Role.CHILD && sharingAllowed()) {
+        if (!closed && role == GalleryP2pManager.Role.CHILD &&
+            (sharingAllowed() || backupDiscoveryAllowed())
+        ) {
             refreshChildMediaIndex()
-            sendIndex(0)
+            if (sharingAllowed()) sendIndex(0)
         }
     }
     private var mediaObserver: ContentObserver? = null
@@ -84,7 +86,7 @@ class GalleryP2pGalleryProtocol(
     }
 
     private fun scheduleMediaRefresh() {
-        if (closed || !sharingAllowed()) return
+        if (closed || (!sharingAllowed() && !backupDiscoveryAllowed())) return
         observerHandler.removeCallbacks(mediaRefreshRunnable)
         observerHandler.postDelayed(mediaRefreshRunnable, 2000)
     }
@@ -94,19 +96,25 @@ class GalleryP2pGalleryProtocol(
      * the user-enabled backup baseline. Existing gallery browsing is unchanged.
      */
     private fun refreshChildMediaIndex() {
-        if (role != GalleryP2pManager.Role.CHILD || !sharingAllowed()) return
+        if (role != GalleryP2pManager.Role.CHILD ||
+            (!sharingAllowed() && !backupDiscoveryAllowed())
+        ) return
         worker.execute {
             try {
-                // Scan the complete MediaStore collection for backup discovery.
-                // Keep the existing gallery browser cache capped so its behavior
-                // and memory use remain unchanged.
-                val allItems = repository.listMedia(limit = null)
-                if (repository.hasFullMediaAccess()) {
-                    backupTracker.discoverNewMedia(allItems)
-                } else {
-                    Log.w(TAG, "Antrean backup dijeda: izin akses penuh foto dan video tidak tersedia")
+                // Backup discovery has its own consent and is deliberately
+                // independent from the gallery-browsing consent.
+                if (backupDiscoveryAllowed()) {
+                    if (repository.hasFullMediaAccess()) {
+                        backupTracker.discoverNewMedia(repository.listMedia(limit = null))
+                    } else {
+                        Log.w(TAG, "Antrean backup dijeda: izin akses penuh foto dan video tidak tersedia")
+                    }
                 }
-                childItems = repository.listMedia(MAX_INDEX_ITEMS).associateBy { it.stableKey }
+                // Only populate the remotely browsable cache when gallery
+                // browsing was separately approved.
+                if (sharingAllowed()) {
+                    childItems = repository.listMedia(MAX_INDEX_ITEMS).associateBy { it.stableKey }
+                }
             } catch (error: Exception) {
                 Log.w(TAG, "Pemindaian media baru untuk antrean backup gagal", error)
             }
@@ -196,6 +204,12 @@ class GalleryP2pGalleryProtocol(
         }
     }
 
+    private fun backupDiscoveryAllowed(): Boolean {
+        return role == GalleryP2pManager.Role.CHILD &&
+            backupTracker.isEnabled() &&
+            repository.hasFullMediaAccess()
+    }
+
     private fun sharingAllowed(): Boolean {
         if (!appContext.getSharedPreferences("parent_audio", Context.MODE_PRIVATE)
                 .getBoolean("child_gallery_sharing_enabled", false)
@@ -231,15 +245,9 @@ class GalleryP2pGalleryProtocol(
             }
             try {
                 if (offset == 0 || childItems.isEmpty()) {
-                    // Keep backup discovery independent from the 1,000-item
-                    // gallery browsing cap. A parent refresh also discovers
-                    // newly added media, but does not transfer or upload it.
-                    val completeMediaSet = repository.listMedia(limit = null)
-                    if (repository.hasFullMediaAccess()) {
-                        backupTracker.discoverNewMedia(completeMediaSet)
-                    } else {
-                        Log.w(TAG, "Antrean backup dijeda: izin akses penuh foto dan video tidak tersedia")
-                    }
+                    // Gallery index requests only serve gallery-consented
+                    // browsing. Backup discovery is handled independently by
+                    // its own consent-gated worker and MediaStore observer.
                     childItems = repository.listMedia(MAX_INDEX_ITEMS).associateBy { it.stableKey }
                 }
                 val allItems = childItems.values.toList()
