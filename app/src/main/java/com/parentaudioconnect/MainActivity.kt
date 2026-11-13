@@ -231,24 +231,24 @@ private var receivedMp3File: File? = null
         connectionStatusText = TextView(this).apply {
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             text = "○ OFFLINE"
-            textSize = 11f
+            textSize = 10.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.025f
+            letterSpacing = 0.02f
             setTextColor(Color.rgb(105, 116, 137))
             gravity = Gravity.CENTER
-            setPadding(dp(8), dp(4), dp(8), dp(4))
+            setPadding(dp(7), dp(5), dp(7), dp(5))
             background = GradientDrawable().apply {
                 setColor(Color.rgb(239, 243, 249))
                 cornerRadius = dp(14).toFloat()
                 setStroke(dp(1), Color.rgb(215, 223, 235))
             }
-            minWidth = dp(76)
-            minHeight = dp(34)
+            minWidth = dp(72)
+            minHeight = dp(36)
             maxLines = 2
             setLineSpacing(dp(1).toFloat(), 1f)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(dp(4), 0, dp(4), 0) }
+            ).apply { setMargins(dp(3), 0, dp(3), 0) }
         }
 
         updateInfoText = TextView(this).apply {
@@ -272,15 +272,15 @@ private var receivedMp3File: File? = null
 
         childAudioActivityText = TextView(this).apply {
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
-            text = "STATUS AUDIO HP ANAK\nTidak sedang memutar audio"
+            text = "○ Tidak sedang memutar audio"
             textSize = 13f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.012f
             setTextColor(Color.rgb(32, 55, 92))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(12), dp(7), dp(12), dp(7))
-            minHeight = dp(50)
+            setPadding(dp(12), dp(6), dp(12), dp(6))
+            minHeight = dp(46)
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(237, 245, 255))
@@ -1769,13 +1769,13 @@ private var receivedMp3File: File? = null
 
         childAudioActivityText.text = when {
             liveAudioActive && mp3AudioActive ->
-                "STATUS AUDIO HP ANAK\nMP3 dan audio live sedang aktif"
+                "● MP3 dan audio live sedang aktif"
             liveAudioActive ->
-                "STATUS AUDIO HP ANAK\nAudio langsung sedang diputar"
+                "● Audio langsung sedang diputar"
             mp3AudioActive ->
-                "STATUS AUDIO HP ANAK\nMP3 sedang diputar"
+                "● MP3 sedang diputar"
             else ->
-                "STATUS AUDIO HP ANAK\nTidak sedang memutar audio"
+                "○ Tidak sedang memutar audio"
         }
         val audioIsActive = liveAudioActive || mp3AudioActive
         childAudioActivityText.setTextColor(
