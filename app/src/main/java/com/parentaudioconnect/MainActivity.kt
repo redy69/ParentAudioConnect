@@ -86,6 +86,7 @@ class MainActivity : Activity(), LifecycleOwner {
     private lateinit var updateInfoText: TextView
     private lateinit var childAudioActivityText: TextView
     private lateinit var childDeviceStatusText: TextView
+    private lateinit var childAppActivityStatusText: TextView
     private lateinit var codeText: TextView
     private lateinit var pairingInstructionText: TextView
     private lateinit var roleIntroText: TextView
@@ -374,18 +375,31 @@ private var receivedMp3File: File? = null
         }
 
         childDeviceStatusText = TextView(this).apply {
-            text = "RIWAYAT PENGGUNAAN & AKTIVITAS APLIKASI\nMenunggu data dari perangkat anak..."
-            textSize = 12.5f
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(104, 117, 140))
+            text = "RIWAYAT PENGGUNAAN APLIKASI\nMenunggu data dari perangkat anak..."
+            textSize = 12f
+            setTextColor(Color.rgb(65, 83, 116))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(14), dp(12), dp(14), dp(12))
-            background = roundedPanel(Color.argb(195, 246, 250, 255), 20)
-            elevation = dp(2).toFloat()
+            setPadding(dp(13), dp(11), dp(13), dp(11))
+            background = roundedPanel(Color.WHITE, 16)
+            elevation = dp(1).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(4), 0, dp(6)) }
+            ).apply { setMargins(0, dp(3), 0, dp(4)) }
+        }
+
+        childAppActivityStatusText = TextView(this).apply {
+            text = "PEMANTAUAN APLIKASI AKTIF\nMenunggu data dari perangkat anak..."
+            textSize = 12f
+            setTextColor(Color.rgb(65, 83, 116))
+            gravity = Gravity.CENTER_VERTICAL
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(dp(13), dp(11), dp(13), dp(11))
+            background = roundedPanel(Color.WHITE, 16)
+            elevation = dp(1).toFloat()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(3), 0, dp(6)) }
         }
 
         childLocationMapView = ChildLocationMapView(this)
@@ -857,7 +871,9 @@ private var receivedMp3File: File? = null
         // Keep the four primary parent actions directly below the child's activity card.
         rootLayout.addView(actionButtonsRow)
         rootLayout.addView(childDeviceStatusText)
+        rootLayout.addView(childAppActivityStatusText)
         parentOnlyViews.add(childDeviceStatusText)
+        parentOnlyViews.add(childAppActivityStatusText)
         val featureHeading = TextView(this).apply {
             text = "FITUR & PEMANTAUAN"
             textSize = 11.5f
@@ -2398,7 +2414,8 @@ private var receivedMp3File: File? = null
             latestPairingSnapshot = null
             childAudioActivityText.removeCallbacks(staleStatusRunnable)
             childAudioActivityText.text = "AKTIVITAS HP ANAK\nMenunggu data perangkat yang dipilih..."
-            childDeviceStatusText.text = "RIWAYAT PENGGUNAAN & AKTIVITAS APLIKASI\nMenunggu data dari perangkat ini..."
+            childDeviceStatusText.text = "RIWAYAT PENGGUNAAN APLIKASI\nMenunggu data dari perangkat ini..."
+            childAppActivityStatusText.text = "PEMANTAUAN APLIKASI AKTIF\nMenunggu data dari perangkat ini..."
             childLocationMapView.showUnavailable(false)
         }
 
@@ -4479,33 +4496,37 @@ private var receivedMp3File: File? = null
 
     private fun renderChildDeviceStatus(snapshot: DocumentSnapshot) {
         childDeviceStatusText.text = buildString {
-            append("RIWAYAT PENGGUNAAN APLIKASI (24 JAM)")
+            append("📊  RIWAYAT PENGGUNAAN APLIKASI (24 JAM)")
             val permissionGranted = snapshot.getBoolean("appUsagePermissionGranted") == true
             val usageAt = snapshot.getTimestamp("appUsageAt")
             val usageAge = usageAt?.toDate()?.time?.let { System.currentTimeMillis() - it }
             val usageFresh = usageAge != null && usageAge in -60_000L..30 * 60 * 1000L
             val usageEnabled = snapshot.getBoolean("appUsageEnabled") == true
             if (!usageEnabled) {
-                append("\nRiwayat penggunaan belum diaktifkan dari HP anak")
+                append("\n\nRiwayat penggunaan belum diaktifkan dari HP anak")
             } else if (!permissionGranted) {
-                append("\nMenunggu izin Usage Access dari HP anak")
+                append("\n\nMenunggu izin Usage Access dari HP anak")
             } else {
                 val apps = snapshot.get("appUsageSummary") as? List<*>
                 if (apps.isNullOrEmpty()) {
-                    append("\nBelum ada data penggunaan yang tercatat")
+                    append("\n\nBelum ada data penggunaan yang tercatat")
                 } else {
                     apps.take(8).forEach { item ->
                         val app = item as? Map<*, *> ?: return@forEach
                         val name = app["appName"] as? String ?: "Aplikasi"
                         val minutes = (app["foregroundMinutes"] as? Number)?.toInt() ?: 0
-                        append("\n" + name + ": " + (minutes / 60) + " jam " + (minutes % 60) + " menit")
+                        append("\n$name  •  " + (minutes / 60) + " jam " + (minutes % 60) + " menit")
                     }
                 }
-                append(if (usageFresh) "\nData penggunaan diperbarui" else "\nData penggunaan mungkin sudah lama")
+                append("\n\n" + if (usageFresh) "✓ Data penggunaan diperbarui" else "ⓘ Data penggunaan mungkin sudah lama")
             }
-            append("\n\nPEMANTAUAN APLIKASI AKTIF")
+        }
+        childDeviceStatusText.setTextColor(Color.rgb(38, 59, 99))
+
+        childAppActivityStatusText.text = buildString {
+            append("📱  PEMANTAUAN APLIKASI AKTIF")
             if (snapshot.getBoolean("appActivityConsent") != true) {
-                append("\nBelum diaktifkan dari HP anak")
+                append("\n\nPemantauan belum diaktifkan dari HP anak")
             } else {
                 val history = (snapshot.get("appActivityHistory") as? List<*>)
                     .orEmpty()
@@ -4521,28 +4542,27 @@ private var receivedMp3File: File? = null
                     val activeName = snapshot.getString("appActivityName")
                     val activityAt = snapshot.getTimestamp("appActivityAt")
                     if (activeName.isNullOrBlank()) {
-                        append("\nMenunggu pergantian aplikasi pertama")
+                        append("\n\nMenunggu pergantian aplikasi pertama")
                     } else {
                         val activityTime = activityAt?.let {
                             android.text.format.DateFormat.getTimeFormat(this@MainActivity).format(it.toDate())
                         }
-                        append("\nTerakhir terdeteksi: $activeName")
+                        append("\n\nTerakhir terdeteksi: $activeName")
                         if (activityTime != null) append(" • $activityTime")
                     }
                 } else {
-                    append("\n10 aplikasi terakhir dibuka:")
+                    append("\n\n10 aplikasi terakhir dibuka")
                     history.forEachIndexed { index, entry ->
                         val time = entry.second?.let {
                             android.text.format.DateFormat.getTimeFormat(this@MainActivity).format(it.toDate())
                         } ?: "waktu tidak tersedia"
-                        append("\n${index + 1}. ${entry.first} • $time")
+                        append("\n${index + 1}. ${entry.first}  •  $time")
                     }
-                    append("\nDiurutkan dari yang paling baru")
+                    append("\n\nDiurutkan dari yang paling baru")
                 }
             }
         }
-        childDeviceStatusText.setTextColor(Color.rgb(38, 59, 99))
-
+        childAppActivityStatusText.setTextColor(Color.rgb(38, 59, 99))
 
         val blockConsent = snapshot.getBoolean("appBlockConsent") == true
         val nowForBlocks = System.currentTimeMillis()
