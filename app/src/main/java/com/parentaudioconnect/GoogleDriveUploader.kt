@@ -192,8 +192,8 @@ class GoogleDriveUploader(private val accessToken: String) {
         val item = if (files != null && files.length() > 0) {
             files.optJSONObject(0)
         } else {
-            // v337 stored successful files directly in the root folder. Search
-            // globally by stable key before creating a second copy in a subfolder.
+            // Search globally by the child-scoped stable key before creating
+            // a second copy if an earlier upload was placed in another folder.
             val globalQuery = "appProperties has { key='santethpStableKey' and value='${stableKey.replace("'", "\\\\'")}' } and trashed=false"
             val globalUrl = "$API/files?q=${encode(globalQuery)}&pageSize=5&fields=files(id,name,mimeType,size)"
             request("GET", globalUrl, null).optJSONArray("files")?.optJSONObject(0)
