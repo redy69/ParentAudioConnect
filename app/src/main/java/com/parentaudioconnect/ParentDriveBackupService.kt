@@ -17,6 +17,30 @@ import com.google.firebase.firestore.ListenerRegistration
 
 /** Parent-side foreground transport for the child's separately consented Drive backup queue. */
 class ParentDriveBackupService : Service() {
+    inner class LocalBinder : android.os.Binder() {
+        fun openGallery(code: String, name: String): Boolean = openGalleryForChild(code, name)
+        fun attachGalleryCallbacks(
+            onMediaIndex: (List<GalleryP2pGalleryProtocol.RemoteMedia>) -> Unit,
+            onThumbnail: (String, ByteArray) -> Unit,
+            onStatus: (String) -> Unit,
+            onOriginalReady: (String, java.io.File, String, String) -> Unit,
+            onState: (String) -> Unit
+        ) {
+            galleryStateListener = onState
+            protocol?.attachGalleryCallbacks(onMediaIndex, onThumbnail, onStatus, onOriginalReady)
+        }
+        fun requestGalleryIndex(): Boolean = protocol?.requestIndex() == true
+        fun requestGalleryThumbnail(key: String): Boolean = protocol?.requestThumbnail(key) == true
+        fun requestGalleryOriginal(key: String): Boolean = protocol?.requestOriginal(key) == true
+        fun closeGallery() = releaseGalleryForChild()
+    }
+
+    private val binder = LocalBinder()
+    @Volatile private var galleryStateListener: ((String) -> Unit)? = null
+    private var galleryPinned = false
+    private var preGalleryPairingCode: String? = null
+    private var preGalleryQueueIndex: Int = 0
+
     companion object {
         const val ACTION_START = "com.santethp.action.START_PARENT_DRIVE_BACKUP"
         const val ACTION_STOP = "com.santethp.action.STOP_PARENT_DRIVE_BACKUP"
@@ -78,6 +102,60 @@ class ParentDriveBackupService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+    }
+
+    override fun onBind(intent: Intent?): IBinder = binder
+
+    @Synchronized
+    private fun openGalleryForChild(code: String, name: String): Boolean {
+        if (code.isBlank() || stopping || accessToken.isNullOrBlank()) return false
+        if (!galleryPinned) {
+            preGalleryPairingCode = pairingCode
+            preGalleryQueueIndex = childQueueIndex
+        }
+        galleryPinned = true
+        reconnectHandler.removeCallbacks(childRotationRunnable)
+        reconnectHandler.removeCallbacks(roundRestartRunnable)
+        if (pairingCode != code || manager == null) {
+            updateStatus("Membuka Galeri Anak: $name")
+            stopP2pTransport()
+            consentListener?.remove()
+            consentListener = null
+            pairingCode = code
+            childDisplayName = name.ifBlank { "HP Anak" }
+            listenForConsent(code)
+            startTransport(code)
+        } else {
+            updateStatus("Galeri Anak aktif • backup tetap berjalan sesuai aturan Wi-Fi")
+        }
+        return true
+    }
+
+    @Synchronized
+    private fun releaseGalleryForChild() {
+        protocol?.detachGalleryCallbacks()
+        galleryStateListener = null
+        if (!galleryPinned) return
+        galleryPinned = false
+        val restoreCode = preGalleryPairingCode
+        val restoreIndex = preGalleryQueueIndex
+        preGalleryPairingCode = null
+        if (!restoreCode.isNullOrBlank() && restoreCode != pairingCode) {
+            val target = childQueue.firstOrNull { it.first == restoreCode }
+            childQueueIndex = if (restoreIndex in childQueue.indices) restoreIndex
+                else childQueue.indexOfFirst { it.first == restoreCode }.coerceAtLeast(0)
+            updateStatus("Galeri ditutup • melanjutkan antrean backup")
+            stopP2pTransport()
+            consentListener?.remove()
+            consentListener = null
+            pairingCode = target?.first ?: restoreCode
+            childDisplayName = target?.second ?: "HP Anak"
+            listenForConsent(pairingCode!!)
+            startTransport(pairingCode!!)
+        } else if (childQueue.size > 1) {
+            scheduleChildRotationTimeout()
+            if (canUseBackupNetwork()) protocol?.requestNextBackup()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -210,8 +288,13 @@ class ParentDriveBackupService : Service() {
                 if (message.contains("P2P TERHUBUNG")) {
                     reconnectHandler.removeCallbacks(reconnectRunnable)
                     reconnectHandler.removeCallbacks(childRotationRunnable)
-                    activeProtocol.requestNextBackup()
-                } else if (!stopping &&
+                    galleryStateListener?.invoke(message)
+                    if (!galleryPinned && childQueue.size > 1) scheduleChildRotationTimeout()
+                    if (canUseBackupNetwork()) activeProtocol.requestNextBackup()
+                } else {
+                    galleryStateListener?.invoke(message)
+                }
+                if (!stopping && !galleryPinned &&
                     (message.contains("terputus") || message.contains("gagal") || message.contains("ditutup"))
                 ) {
                     reconnectHandler.removeCallbacks(reconnectRunnable)
@@ -229,7 +312,7 @@ class ParentDriveBackupService : Service() {
             onThumbnail = { _, _ -> },
             onStatus = ::updateStatus,
             canReceiveBackup = { !accessToken.isNullOrBlank() && canUseBackupNetwork() },
-            onBackupQueueEmpty = { if (childQueue.size > 1) advanceToNextChild("Antrean anak selesai") },
+            onBackupQueueEmpty = { if (!galleryPinned && childQueue.size > 1) advanceToNextChild("Antrean anak selesai") },
             onBackupFileReady = { key, file, name, mime, complete ->
                 val token = accessToken
                 if (!canUseBackupNetwork()) {
@@ -336,7 +419,7 @@ class ParentDriveBackupService : Service() {
 
     @Synchronized
     private fun advanceToNextChild(reason: String) {
-        if (stopping || childQueue.size <= 1) return
+        if (stopping || galleryPinned || childQueue.size <= 1) return
         reconnectHandler.removeCallbacks(childRotationRunnable)
         reconnectHandler.removeCallbacks(reconnectRunnable)
         val nextIndex = childQueueIndex + 1
@@ -352,7 +435,7 @@ class ParentDriveBackupService : Service() {
     }
 
     private fun activateQueuedChild() {
-        if (stopping || childQueue.isEmpty() || childQueueIndex !in childQueue.indices) return
+        if (stopping || galleryPinned || childQueue.isEmpty() || childQueueIndex !in childQueue.indices) return
         val (nextCode, nextName) = childQueue[childQueueIndex]
         if (pairingCode == nextCode && manager != null) {
             scheduleChildRotationTimeout()
@@ -396,6 +479,9 @@ class ParentDriveBackupService : Service() {
         childDisplayName = "HP Anak"
         childQueue = emptyList()
         childQueueIndex = 0
+        galleryPinned = false
+        preGalleryPairingCode = null
+        galleryStateListener = null
         if (clearSavedState) {
             getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
                 .putBoolean("parent_drive_backup_service_active", false)
