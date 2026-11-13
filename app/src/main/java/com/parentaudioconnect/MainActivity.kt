@@ -3448,11 +3448,26 @@ private var receivedMp3File: File? = null
             return
         }
         val childName = childNames[code] ?: "HP Anak"
+        val backupPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         val status = TextView(this).apply {
             text = if (googleDriveAccessToken.isNullOrBlank()) "Google Drive belum diotorisasi pada sesi aplikasi ini." else "Izin Google Drive diberikan pada sesi ini. Token akses hanya disimpan sementara di memori."
             textSize = 13f
             setTextColor(Color.rgb(55, 68, 92))
             setPadding(dp(4), dp(8), dp(4), dp(8))
+        }
+        val statsView = TextView(this).apply {
+            textSize = 13f
+            setTextColor(Color.rgb(35, 53, 88))
+            setPadding(dp(4), dp(4), dp(4), dp(8))
+        }
+        fun refreshBackupStats() {
+            val successful = backupPrefs.getInt("parent_drive_backup_success_count", 0)
+            val failed = backupPrefs.getInt("parent_drive_backup_failed_count", 0)
+            val active = backupPrefs.getBoolean("parent_drive_backup_service_active", false)
+            val last = backupPrefs.getString("parent_drive_backup_last_result", null)
+            statsView.text = "RINGKASAN BACKUP\\nBerhasil: $successful file   •   Gagal: $failed file\\nLayanan: " +
+                (if (active) "AKTIF" else "TIDAK AKTIF") +
+                (last?.let { "\\nTerakhir: $it" } ?: "")
         }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -3464,6 +3479,7 @@ private var receivedMp3File: File? = null
                 setTextColor(Color.rgb(35, 53, 88))
             })
             addView(status)
+            addView(statsView)
             addView(TextView(this@MainActivity).apply {
                 text = "Backup hanya memasukkan foto dan video BARU setelah diaktifkan dan disetujui dari HP anak. File lama tetap hanya tampil di Galeri Anak dan tidak diunggah otomatis. Akun Google yang dipilih adalah akun Drive milik orang tua.\n\nSetelah akun terhubung, layanan backup berjalan di latar depan. Jika token Google kedaluwarsa, hubungkan ulang akun untuk melanjutkan antrean."
                 textSize = 12.5f
@@ -3475,7 +3491,17 @@ private var receivedMp3File: File? = null
             .setView(content).setPositiveButton("Hubungkan Google Drive", null)
             .setNegativeButton("Hentikan backup", null)
             .setNeutralButton("Tutup", null).create()
+        val statsRefresh = object : Runnable {
+            override fun run() {
+                if (!dialog.isShowing) return
+                refreshBackupStats()
+                rootLayout.postDelayed(this, 1500L)
+            }
+        }
         dialog.setOnShowListener {
+            refreshBackupStats()
+            rootLayout.post(statsRefresh)
+            dialog.setOnDismissListener { rootLayout.removeCallbacks(statsRefresh) }
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
                 startService(Intent(this, ParentDriveBackupService::class.java).setAction(ParentDriveBackupService.ACTION_STOP))
                 googleDriveAccessToken = null
