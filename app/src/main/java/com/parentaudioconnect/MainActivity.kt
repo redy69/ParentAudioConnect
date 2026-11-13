@@ -3123,9 +3123,9 @@ private var receivedMp3File: File? = null
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         val enabled = prefs.getBoolean("child_drive_backup_consent", false)
         val message = if (enabled) {
-            "Persetujuan backup foto dan video baru sedang aktif. File yang sudah ada sebelum persetujuan tidak dimasukkan ke antrean. Pengiriman dan upload otomatis belum berjalan sampai integrasi Drive selesai. Anda dapat mencabut persetujuan kapan saja."
+            "Persetujuan backup foto dan video baru sedang aktif. File yang sudah ada sebelum persetujuan tidak dimasukkan ke antrean. File baru akan dikirim saat HP orang tua terhubung dan Google Drive telah diotorisasi. Anda dapat mencabut persetujuan kapan saja."
         } else {
-            "Jika disetujui, hanya foto dan video yang ditambahkan SETELAH persetujuan ini yang akan dipersiapkan untuk backup ke Google Drive orang tua. Semua file lama tetap hanya tampil di Galeri Anak dan tidak akan diunggah. Persetujuan ini terpisah dari Berbagi Galeri dan dapat dicabut kapan saja. Saat ini integrasi pengiriman/upload otomatis masih dalam pengerjaan."
+            "Jika disetujui, hanya foto dan video yang ditambahkan SETELAH persetujuan ini yang akan dipersiapkan untuk backup ke Google Drive orang tua. Semua file lama tetap hanya tampil di Galeri Anak dan tidak akan diunggah. Persetujuan ini terpisah dari Berbagi Galeri dan dapat dicabut kapan saja. Pengiriman dilakukan melalui koneksi P2P dan hanya diunggah setelah akun Google Drive orang tua diotorisasi."
         }
         AlertDialog.Builder(this)
             .setTitle(if (enabled) "Persetujuan Backup Drive aktif" else "Persetujuan Backup Google Drive")
@@ -3219,7 +3219,7 @@ private var receivedMp3File: File? = null
             })
             addView(status)
             addView(TextView(this@MainActivity).apply {
-                text = "Rancangan backup hanya memasukkan foto dan video BARU setelah diaktifkan dan disetujui dari HP anak. File lama tetap hanya tampil di Galeri Anak dan tidak diunggah otomatis. Akun Google yang dipilih adalah akun Drive milik orang tua.\n\nCatatan: tahap ini menyiapkan dan menguji izin akun Google. Pengiriman P2P otomatis dan antrean upload masih dalam proses integrasi."
+                text = "Rancangan backup hanya memasukkan foto dan video BARU setelah diaktifkan dan disetujui dari HP anak. File lama tetap hanya tampil di Galeri Anak dan tidak diunggah otomatis. Akun Google yang dipilih adalah akun Drive milik orang tua.\n\nSetelah akun terhubung, layanan backup berjalan di latar depan. Jika token Google kedaluwarsa, hubungkan ulang akun untuk melanjutkan antrean."
                 textSize = 12.5f
                 setTextColor(Color.rgb(75, 88, 112))
                 setPadding(dp(4), dp(4), dp(4), dp(8))
@@ -3490,7 +3490,7 @@ private var receivedMp3File: File? = null
                             val folderId = googleDriveBackupFolderId ?: uploader.ensureBackupFolder().also {
                                 googleDriveBackupFolderId = it
                             }
-                            uploader.uploadFile(file, fileName, mime, folderId)
+                            uploader.uploadFile(file, fileName, mime, folderId, stableKey = key)
                             file.delete()
                             runOnUiThread {
                                 status.text = "Backup berhasil diunggah ke Google Drive: $fileName"
