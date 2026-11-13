@@ -97,9 +97,12 @@ class GalleryP2pGalleryProtocol(
         if (role != GalleryP2pManager.Role.CHILD || !sharingAllowed()) return
         worker.execute {
             try {
-                val items = repository.listMedia(MAX_INDEX_ITEMS)
-                childItems = items.associateBy { it.stableKey }
-                backupTracker.discoverNewMedia(items)
+                // Scan the complete MediaStore collection for backup discovery.
+                // Keep the existing gallery browser cache capped so its behavior
+                // and memory use remain unchanged.
+                val allItems = repository.listMedia(limit = null)
+                backupTracker.discoverNewMedia(allItems)
+                childItems = repository.listMedia(MAX_INDEX_ITEMS).associateBy { it.stableKey }
             } catch (error: Exception) {
                 Log.w(TAG, "Pemindaian media baru untuk antrean backup gagal", error)
             }
@@ -225,11 +228,6 @@ class GalleryP2pGalleryProtocol(
             try {
                 if (offset == 0 || childItems.isEmpty()) {
                     childItems = repository.listMedia(MAX_INDEX_ITEMS).associateBy { it.stableKey }
-                }
-                if (offset == 0) {
-                    // Gallery refresh is also a safe discovery point for newly added
-                    // files; the tracker ignores all media in the activation baseline.
-                    backupTracker.discoverNewMedia(childItems.values.toList())
                 }
                 val allItems = childItems.values.toList()
                 val safeOffset = offset.coerceIn(0, allItems.size)
