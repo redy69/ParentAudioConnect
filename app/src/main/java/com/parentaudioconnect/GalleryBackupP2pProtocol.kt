@@ -237,14 +237,15 @@ class GalleryBackupP2pProtocol(
         val id = message.optString("transferId")
         if (id.isBlank() || id != sendingId) return
         val key = message.optString("key")
-        if (message.optBoolean("success", false)) {
+        val uploaded = message.optBoolean("success", false)
+        if (uploaded) {
             tracker.markUploaded(key)
             onStatus("Backup Google Drive berhasil • " + tracker.pendingItems().size + " file masih dalam antrean")
         } else {
             onStatus("Upload Google Drive belum berhasil • file tetap dalam antrean untuk dicoba lagi")
         }
         sendingId = null
-        send(JSONObject().put("type", "backup_ack_received").put("key", key))
+        if (uploaded) send(JSONObject().put("type", "backup_ack_received").put("key", key))
     }
 
     private fun failIncoming(transfer: Incoming, message: String) {
