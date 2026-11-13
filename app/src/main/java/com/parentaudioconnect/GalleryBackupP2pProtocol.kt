@@ -145,7 +145,7 @@ class GalleryBackupP2pProtocol(
                 val start = JSONObject().put("type", "backup_start").put("transferId", transferId)
                     .put("key", item.stableKey).put("name", item.displayName.take(180))
                     .put("mime", item.mimeType.take(120)).put("size", item.sizeBytes)
-                if (!sendWithRetry(start, transferId, wifiOnly)) throw IllegalStateException("Koneksi P2P tidak siap")
+                if (!sendWithRetry(start, transferId)) throw IllegalStateException("Koneksi P2P tidak siap")
                 val digest = MessageDigest.getInstance("SHA-256")
                 var sent = 0L
                 var sequence = 0
@@ -155,7 +155,9 @@ class GalleryBackupP2pProtocol(
                         if (closed || sendingId != transferId || !tracker.isEnabled()) {
                             throw InterruptedException("Persetujuan backup dicabut atau koneksi ditutup")
                         }
-                        if (!BackupNetworkPolicy.canUseBackupNetwork(app, wifiOnly)) {
+                        val currentWifiOnly = app.getSharedPreferences("parent_audio", Context.MODE_PRIVATE)
+                            .getBoolean("drive_backup_wifi_only", true)
+                        if (!BackupNetworkPolicy.canUseBackupNetwork(app, currentWifiOnly)) {
                             throw InterruptedException("Wi-Fi terputus • file tetap dalam antrean backup")
                         }
                         val count = input.read(buffer)
@@ -167,7 +169,7 @@ class GalleryBackupP2pProtocol(
                         val chunk = JSONObject().put("type", "backup_chunk").put("transferId", transferId)
                             .put("sequence", sequence++)
                             .put("data", Base64.encodeToString(buffer, 0, count, Base64.NO_WRAP))
-                        if (!sendWithRetry(chunk, transferId, wifiOnly)) throw IllegalStateException("Pengiriman potongan terputus")
+                        if (!sendWithRetry(chunk, transferId)) throw IllegalStateException("Pengiriman potongan terputus")
                         if (sent % (1024L * 1024L) < count || sent == item.sizeBytes) {
                             onStatus("Mengirim backup: " +
                                 android.text.format.Formatter.formatFileSize(app, sent) + " / " +
@@ -178,7 +180,7 @@ class GalleryBackupP2pProtocol(
                 if (sent != item.sizeBytes) throw IllegalStateException("Ukuran file tidak cocok")
                 val hash = digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
                 if (!sendWithRetry(JSONObject().put("type", "backup_end").put("transferId", transferId)
-                        .put("totalBytes", sent).put("sha256", hash), transferId, wifiOnly)) {
+                        .put("totalBytes", sent).put("sha256", hash), transferId)) {
                     throw IllegalStateException("Konfirmasi akhir transfer gagal dikirim")
                 }
                 onStatus("File terkirim ke HP orang tua • menunggu konfirmasi upload Google Drive")
@@ -312,8 +314,10 @@ class GalleryBackupP2pProtocol(
         onStatus(message)
     }
 
-    private fun sendWithRetry(message: JSONObject, id: String, wifiOnly: Boolean): Boolean {
+    private fun sendWithRetry(message: JSONObject, id: String): Boolean {
         repeat(100) {
+            val wifiOnly = app.getSharedPreferences("parent_audio", Context.MODE_PRIVATE)
+                .getBoolean("drive_backup_wifi_only", true)
             if (closed || sendingId != id || !tracker.isEnabled() ||
                 !BackupNetworkPolicy.canUseBackupNetwork(app, wifiOnly)
             ) return false
