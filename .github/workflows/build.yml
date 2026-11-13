@@ -68,7 +68,9 @@ jobs:
           test -n "$ANDROID_KEYSTORE_PASSWORD"
           test -n "$ANDROID_KEY_ALIAS"
           test -n "$ANDROID_KEY_PASSWORD"
-          gradle assembleRelease -PversionCode=${{ github.run_number + 5 }}
+          VERSION_CODE=$((GITHUB_RUN_NUMBER + 5))
+          echo "Building SantetHP with versionCode=$VERSION_CODE"
+          gradle assembleRelease -PversionCode="$VERSION_CODE"
 
       - name: Publish APK to GitHub Releases
         uses: softprops/action-gh-release@v2
