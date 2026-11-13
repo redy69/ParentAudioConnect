@@ -26,7 +26,8 @@ class GalleryP2pGalleryProtocol(
     private val onMediaIndex: (List<RemoteMedia>) -> Unit,
     private val onThumbnail: (String, ByteArray) -> Unit,
     private val onStatus: (String) -> Unit,
-    private val onOriginalReady: (String, File, String, String) -> Unit = { _, _, _, _ -> }
+    private val onOriginalReady: (String, File, String, String) -> Unit = { _, _, _, _ -> },
+    private val onBackupFileReady: (String, File, String, String, (Boolean) -> Unit) -> Unit = { _, file, _, _, done -> file.delete(); done(false) }
 ) {
     data class RemoteMedia(
         val key: String,
@@ -50,6 +51,13 @@ class GalleryP2pGalleryProtocol(
     private val appContext = context.applicationContext
     private val repository = GalleryMediaRepository(appContext)
     private val backupTracker = GalleryBackupTracker(appContext)
+    private val backupProtocol = GalleryBackupP2pProtocol(
+        context = appContext,
+        role = role,
+        sendFrame = sendFrame,
+        onStatus = onStatus,
+        onFileReady = onBackupFileReady
+    )
     private val worker = Executors.newSingleThreadExecutor()
     @Volatile private var closed = false
     @Volatile private var childItems = emptyMap<String, GalleryMediaRepository.MediaItem>()
@@ -153,6 +161,10 @@ class GalleryP2pGalleryProtocol(
         return sent
     }
 
+    /** Parent requests one queued new-media file after Drive authorization is ready. */
+    fun requestNextBackup(): Boolean =
+        role == GalleryP2pManager.Role.PARENT && backupProtocol.requestNext()
+
     fun cancelOriginal() {
         if (role != GalleryP2pManager.Role.PARENT) return
         requestedTransfers.keys.toList().forEach { id ->
@@ -164,7 +176,9 @@ class GalleryP2pGalleryProtocol(
     }
 
     fun onFrame(bytes: ByteArray, binary: Boolean) {
-        if (closed || binary || bytes.isEmpty() || bytes.size > MAX_FRAME_BYTES) return
+        if (closed) return
+        if (backupProtocol.onFrame(bytes, binary)) return
+        if (binary || bytes.isEmpty() || bytes.size > MAX_FRAME_BYTES) return
         val message = try {
             JSONObject(bytes.toString(Charsets.UTF_8))
         } catch (error: Exception) {
@@ -569,6 +583,7 @@ class GalleryP2pGalleryProtocol(
         }
         mediaObserver = null
         worker.shutdownNow()
+        backupProtocol.close()
         incomingTransfer?.let { closeIncoming(it, true) }
         incomingTransfer = null
         requestedTransfers.clear()
