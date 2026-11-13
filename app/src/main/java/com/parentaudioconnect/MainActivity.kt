@@ -330,18 +330,11 @@ private var receivedMp3File: File? = null
             textSize = 11f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.005f
-            setTextColor(Color.WHITE)
+            setTextColor(Color.rgb(65, 83, 116))
             gravity = Gravity.CENTER_VERTICAL
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(dp(10), dp(6), dp(10), dp(6))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.argb(105, 255, 255, 255), Color.argb(58, 205, 224, 255))
-            ).apply {
-                cornerRadius = dp(13).toFloat()
-                setStroke(dp(1), Color.argb(105, 255, 255, 255))
-            }
+            setPadding(dp(8), dp(3), dp(8), dp(3))
         }
 
         updateInfoText = TextView(this).apply {
@@ -513,14 +506,12 @@ private var receivedMp3File: File? = null
         selectedChildButton = createButton("Pilih anak  ▾")
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
         selectedChildButton.setOnClickListener { toggleChildrenPanel() }
-        selectedChildButton.setTextColor(Color.WHITE)
+        selectedChildButton.setTextColor(Color.rgb(35, 65, 125))
         selectedChildButton.textSize = 16f
         selectedChildButton.contentDescription = "Pilih perangkat anak"
-        selectedChildButton.background = GradientDrawable().apply {
-            setColor(Color.TRANSPARENT)
-        }
-        selectedChildButton.setPadding(dp(4), dp(3), dp(4), dp(3))
-        selectedChildButton.elevation = 0f
+        selectedChildButton.background = roundedPanel(Color.WHITE, 12)
+        selectedChildButton.setPadding(dp(8), dp(3), dp(8), dp(3))
+        selectedChildButton.elevation = dp(1).toFloat()
         selectedChildButton.setTypeface(null, android.graphics.Typeface.BOLD)
         addChildButton.setTextColor(Color.WHITE)
         addChildButton.background = GradientDrawable(
@@ -739,27 +730,29 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        val childIdentityGlass = LinearLayout(this).apply {
+        val childIdentityColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(9), dp(5), dp(9), dp(7))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.rgb(48, 78, 211), Color.rgb(42, 96, 205), Color.rgb(73, 126, 226))
-            ).apply {
-                cornerRadius = dp(19).toFloat()
-                setStroke(dp(1), Color.argb(100, 255, 255, 255))
-            }
-            elevation = dp(3).toFloat()
         }
-        childIdentityGlass.addView(selectedChildButton, LinearLayout.LayoutParams(
+        childIdentityColumn.addView(selectedChildButton, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(34)
         ))
-        childIdentityGlass.addView(childQuickStatusText, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(30)
+        childIdentityColumn.addView(childQuickStatusText, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(22)
         ))
-        childHeaderRow.addView(childIdentityGlass, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        childHeaderRow.addView(childIdentityColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         childHeaderRow.addView(connectionStatusText)
+        val notificationsBellButton = createButton("🔔")
+        notificationsBellButton.textSize = 19f
+        notificationsBellButton.contentDescription = "Lihat notifikasi HP anak"
+        notificationsBellButton.setTextColor(Color.rgb(42, 76, 145))
+        notificationsBellButton.background = roundedPanel(Color.WHITE, 14)
+        notificationsBellButton.layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
+            setMargins(dp(3), dp(5), dp(3), dp(5))
+        }
+        notificationsBellButton.setOnClickListener { showChildNotificationsDialog() }
+        childHeaderRow.addView(notificationsBellButton)
+        parentOnlyViews.add(notificationsBellButton)
         childHeaderRow.addView(addChildButton)
         rootLayout.addView(childHeaderRow)
         parentOnlyViews.add(childHeaderRow)
