@@ -969,7 +969,6 @@ private var receivedMp3File: File? = null
     }
 
     override fun onPause() {
-        stopChildGalleryP2p()
         if (currentRole == "parent" && parentGalleryDialog?.isShowing == true) {
             parentGalleryDialog?.dismiss()
         }
@@ -977,52 +976,38 @@ private var receivedMp3File: File? = null
     }
 
     private fun startChildGalleryP2pIfAllowed() {
-        if (currentRole != "child" || childGalleryP2pManager != null) return
+        if (currentRole != "child") return
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         if (!prefs.getBoolean("child_gallery_sharing_enabled", false) ||
             !prefs.getBoolean("child_gallery_server_consent_confirmed", false) ||
             !hasGalleryMediaAccess()
         ) return
-        val code = prefs.getString("pair_code", null) ?: return
+        val code = prefs.getString("pair_code", null)
+        if (code.isNullOrBlank()) return
 
-        lateinit var protocol: GalleryP2pGalleryProtocol
-        val manager = GalleryP2pManager(
-            context = this,
-            pairingCode = code,
-            localRole = GalleryP2pManager.Role.CHILD,
-            onState = { message ->
-                runOnUiThread {
-                    if (this::childGalleryPanel.isInitialized && currentRole == "child") {
-                        childGalleryPanel.text = "🖼️  BERBAGI GALERI AKTIF\n$message"
-                    }
-                }
-            },
-            onData = { bytes, binary -> protocol.onFrame(bytes, binary) }
-        )
-        protocol = GalleryP2pGalleryProtocol(
-            context = this,
-            role = GalleryP2pManager.Role.CHILD,
-            sendFrame = { bytes, binary -> manager.send(bytes, binary) },
-            onMediaIndex = { },
-            onThumbnail = { _, _ -> },
-            onStatus = { message ->
-                runOnUiThread {
-                    if (this::childGalleryPanel.isInitialized && currentRole == "child") {
-                        childGalleryPanel.text = "🖼️  BERBAGI GALERI AKTIF\n$message"
-                    }
-                }
-            }
-        )
-        childGalleryProtocol = protocol
-        childGalleryP2pManager = manager
-        manager.start()
+        // The foreground service owns WebRTC and the media observer. It survives
+        // Activity.onPause(), so switching apps or locking the screen won't close P2P.
+        val serviceIntent = Intent(this, ChildGalleryP2pService::class.java)
+            .setAction(ChildGalleryP2pService.ACTION_START)
+        try {
+            ContextCompat.startForegroundService(this, serviceIntent)
+        } catch (error: Exception) {
+            Toast.makeText(
+                this,
+                "Layanan galeri tidak dapat dimulai: ${error.localizedMessage ?: "periksa izin notifikasi dan pengaturan baterai"}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 
     private fun stopChildGalleryP2p() {
-        childGalleryProtocol?.close()
-        childGalleryProtocol = null
-        childGalleryP2pManager?.close()
-        childGalleryP2pManager = null
+        val serviceIntent = Intent(this, ChildGalleryP2pService::class.java)
+            .setAction(ChildGalleryP2pService.ACTION_STOP)
+        try {
+            startService(serviceIntent)
+        } catch (_: Exception) {
+            stopService(Intent(this, ChildGalleryP2pService::class.java))
+        }
     }
 
     private fun updateChildUsageAccessPanel() {
