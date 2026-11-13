@@ -3459,7 +3459,7 @@ private var receivedMp3File: File? = null
             })
             addView(status)
             addView(TextView(this@MainActivity).apply {
-                text = "Rancangan backup hanya memasukkan foto dan video BARU setelah diaktifkan dan disetujui dari HP anak. File lama tetap hanya tampil di Galeri Anak dan tidak diunggah otomatis. Akun Google yang dipilih adalah akun Drive milik orang tua.\n\nSetelah akun terhubung, layanan backup berjalan di latar depan. Jika token Google kedaluwarsa, hubungkan ulang akun untuk melanjutkan antrean."
+                text = "Backup hanya memasukkan foto dan video BARU setelah diaktifkan dan disetujui dari HP anak. File lama tetap hanya tampil di Galeri Anak dan tidak diunggah otomatis. Akun Google yang dipilih adalah akun Drive milik orang tua.\n\nSetelah akun terhubung, layanan backup berjalan di latar depan. Jika token Google kedaluwarsa, hubungkan ulang akun untuk melanjutkan antrean."
                 textSize = 12.5f
                 setTextColor(Color.rgb(75, 88, 112))
                 setPadding(dp(4), dp(4), dp(4), dp(8))
@@ -3471,8 +3471,9 @@ private var receivedMp3File: File? = null
             .setNeutralButton("Tutup", null).create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
-                stopService(Intent(this, ParentDriveBackupService::class.java).setAction(ParentDriveBackupService.ACTION_STOP))
-                status.text = "Perintah menghentikan layanan backup telah dikirim."
+                startService(Intent(this, ParentDriveBackupService::class.java).setAction(ParentDriveBackupService.ACTION_STOP))
+                googleDriveAccessToken = null
+                status.text = "Layanan backup dihentikan. Persetujuan di HP anak tetap tersimpan dan dapat dihubungkan kembali kapan saja."
             }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 status.text = "Meminta izin akses Google Drive..."
