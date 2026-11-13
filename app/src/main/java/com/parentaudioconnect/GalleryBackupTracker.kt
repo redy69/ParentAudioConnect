@@ -51,6 +51,17 @@ class GalleryBackupTracker(context: Context) {
             .apply()
     }
 
+    /**
+     * Preferred activation path: enumerate the complete MediaStore collection.
+     * The gallery UI intentionally caps browsing at 1,000 items, but that cap
+     * must never be reused for the backup baseline or older media could be
+     * misclassified later if the visible index changes.
+     */
+    @Synchronized
+    fun enableWithCompleteBaseline(repository: GalleryMediaRepository) {
+        enableWithBaseline(repository.listMedia(limit = null))
+    }
+
     @Synchronized
     fun disable() {
         prefs.edit().putBoolean(KEY_ENABLED, false).apply()
