@@ -120,15 +120,18 @@ private lateinit var playMp3Button: Button
     private var parentGalleryProtocol: GalleryP2pGalleryProtocol? = null
     private var parentDriveBackupBinder: ParentDriveBackupService.LocalBinder? = null
     private var parentDriveBackupBindRequested = false
+    private var parentDriveBackupBound = false
     private var parentGalleryUsingBackupService = false
     private val parentDriveBackupConnection = object : android.content.ServiceConnection {
         override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
             parentDriveBackupBinder = service as? ParentDriveBackupService.LocalBinder
+            parentDriveBackupBound = parentDriveBackupBinder != null
             parentDriveBackupBindRequested = false
             if (parentDriveBackupBinder != null) rootLayout.post { showParentGalleryStatus() }
         }
         override fun onServiceDisconnected(name: android.content.ComponentName?) {
             parentDriveBackupBinder = null
+            parentDriveBackupBound = false
             parentDriveBackupBindRequested = false
         }
     }
@@ -5471,6 +5474,11 @@ private fun playReceivedMp3() {
 
         activityScope.cancel()
 
+        if (parentDriveBackupBound) {
+            try { unbindService(parentDriveBackupConnection) } catch (_: Exception) { }
+            parentDriveBackupBound = false
+        }
+        parentDriveBackupBinder = null
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
 
         super.onDestroy()
