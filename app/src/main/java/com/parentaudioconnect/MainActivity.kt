@@ -942,6 +942,13 @@ private var receivedMp3File: File? = null
                     .putBoolean("child_gallery_server_consent_confirmed", false)
                     .apply()
                 updateGalleryConsentOnServer(false)
+            } else if (
+                childPrefs.getBoolean("child_gallery_sharing_enabled", false) &&
+                hasGalleryMediaAccess() &&
+                !childPrefs.getBoolean("child_gallery_server_consent_confirmed", false)
+            ) {
+                // Retry a consent write that may have been skipped or failed previously.
+                updateGalleryConsentOnServer(true) { startChildGalleryP2pIfAllowed() }
             } else {
                 startChildGalleryP2pIfAllowed()
             }
@@ -3010,7 +3017,13 @@ private var receivedMp3File: File? = null
 
     private fun updateGalleryConsentOnServer(enabled: Boolean, onSaved: (() -> Unit)? = null) {
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
-        val code = prefs.getString("pair_code", null) ?: return
+        val code = prefs.getString("pair_code", null)
+        if (code.isNullOrBlank()) {
+            prefs.edit().putBoolean("child_gallery_server_consent_confirmed", false).apply()
+            updateChildGalleryPanel()
+            Toast.makeText(this, "Kode pairing tidak ditemukan. Periksa status pasangan perangkat.", Toast.LENGTH_LONG).show()
+            return
+        }
         if (!enabled) {
             prefs.edit().putBoolean("child_gallery_server_consent_confirmed", false).apply()
             stopChildGalleryP2p()
@@ -3046,8 +3059,18 @@ private var receivedMp3File: File? = null
                     updateGalleryConsentOnServer(false)
                     updateChildGalleryPanel()
                 } else {
-                    prefs.edit().putBoolean("child_gallery_sharing_enabled", true).apply()
-                    requestPermissions(galleryMediaPermissions(), GALLERY_MEDIA_PERMISSION)
+                    prefs.edit()
+                        .putBoolean("child_gallery_sharing_enabled", true)
+                        .putBoolean("child_gallery_server_consent_confirmed", false)
+                        .apply()
+                    updateChildGalleryPanel()
+                    // If Android permissions were already granted, do not wait for a
+                    // permission callback that may not arrive; save consent immediately.
+                    if (hasGalleryMediaAccess()) {
+                        updateGalleryConsentOnServer(true) { startChildGalleryP2pIfAllowed() }
+                    } else {
+                        requestPermissions(galleryMediaPermissions(), GALLERY_MEDIA_PERMISSION)
+                    }
                 }
             }
             .show()
