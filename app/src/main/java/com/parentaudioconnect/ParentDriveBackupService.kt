@@ -187,7 +187,14 @@ class ParentDriveBackupService : Service() {
                                 }
                             )
                             file.delete()
-                            updateStatus("Backup Google Drive berhasil: $name")
+                            val stats = getSharedPreferences("parent_audio", MODE_PRIVATE)
+                            val successCount = stats.getInt("parent_drive_backup_success_count", 0) + 1
+                            stats.edit()
+                                .putInt("parent_drive_backup_success_count", successCount)
+                                .putString("parent_drive_backup_last_result", "Berhasil: $name")
+                                .putLong("parent_drive_backup_last_result_at", System.currentTimeMillis())
+                                .apply()
+                            updateStatus("Backup berhasil: $name • total $successCount file")
                             complete(true)
                         } catch (error: Exception) {
                             file.delete()
@@ -198,11 +205,18 @@ class ParentDriveBackupService : Service() {
                                 getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
                                     .putBoolean("parent_drive_backup_reauth_required", true).apply()
                             }
+                            val stats = getSharedPreferences("parent_audio", MODE_PRIVATE)
+                            val failedCount = stats.getInt("parent_drive_backup_failed_count", 0) + 1
+                            stats.edit()
+                                .putInt("parent_drive_backup_failed_count", failedCount)
+                                .putString("parent_drive_backup_last_result", "Gagal: $name")
+                                .putLong("parent_drive_backup_last_result_at", System.currentTimeMillis())
+                                .apply()
                             updateStatus(
                                 if (authorizationFailure) {
                                     "Izin Google Drive kedaluwarsa/ditolak • buka SantetHP untuk otorisasi ulang"
                                 } else {
-                                    "Upload Drive gagal • file tetap dalam antrean; percobaan ulang dijadwalkan"
+                                    "Upload gagal: $name • file tetap di antrean • total gagal $failedCount"
                                 }
                             )
                             complete(false)
