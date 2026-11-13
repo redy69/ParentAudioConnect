@@ -33,6 +33,7 @@ import android.widget.TextView
 import android.widget.ScrollView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.work.WorkManager
 
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -3102,6 +3103,7 @@ private var receivedMp3File: File? = null
             .setPositiveButton(if (enabled) "Cabut persetujuan" else "Saya setuju • Catat file lama sebagai awal") { _, _ ->
                 if (enabled) {
                     GalleryBackupTracker(this).disable()
+                    WorkManager.getInstance(this).cancelUniqueWork("santethp_gallery_backup_discovery")
                     prefs.edit().putBoolean("child_drive_backup_consent", false).apply()
                     updateChildGalleryPanel()
                     Toast.makeText(this, "Persetujuan Backup Drive dicabut.", Toast.LENGTH_LONG).show()
@@ -3116,6 +3118,7 @@ private var receivedMp3File: File? = null
                                 GalleryBackupTracker(this@MainActivity).enableWithCompleteBaseline(repository)
                             }
                             prefs.edit().putBoolean("child_drive_backup_consent", true).apply()
+                            GalleryBackupDiscoveryWorker.schedule(this@MainActivity)
                             updateChildGalleryPanel()
                             Toast.makeText(this@MainActivity, "Persetujuan tersimpan. File lama dikecualikan dari antrean backup.", Toast.LENGTH_LONG).show()
                             showChildDriveBackupConsent()
