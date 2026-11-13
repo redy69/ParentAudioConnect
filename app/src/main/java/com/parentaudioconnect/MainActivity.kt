@@ -2981,17 +2981,19 @@ private var receivedMp3File: File? = null
 
     private fun updateChildGalleryPanel() {
         if (!this::childGalleryPanel.isInitialized || currentRole != "child") return
-        val enabled = getSharedPreferences("parent_audio", MODE_PRIVATE)
-            .getBoolean("child_gallery_sharing_enabled", false)
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        val enabled = prefs.getBoolean("child_gallery_sharing_enabled", false)
+        val backupEnabled = prefs.getBoolean("child_drive_backup_consent", false)
         val mediaAccess = hasGalleryMediaAccess()
-        val serverConfirmed = getSharedPreferences("parent_audio", MODE_PRIVATE)
-            .getBoolean("child_gallery_server_consent_confirmed", false)
-        childGalleryPanel.text = when {
-            !enabled -> "🖼️  BERBAGI GALERI HP INI\nNonaktif • Ketuk untuk membaca penjelasan dan memilih media yang boleh dibagikan"
-            !mediaAccess -> "🖼️  BERBAGI GALERI BELUM SIAP\nIzin foto/video Android belum tersedia. Ketuk untuk mengatur."
-            !serverConfirmed -> "🖼️  MENUNGGU KONFIRMASI\nPersetujuan lokal aktif, tetapi status server belum tersimpan. Periksa koneksi internet."
-            else -> "🖼️  BERBAGI GALERI AKTIF\nIzin media dan persetujuan server tersedia. File asli tidak dikirim otomatis. Ketuk untuk menghentikan."
+        val serverConfirmed = prefs.getBoolean("child_gallery_server_consent_confirmed", false)
+        val galleryStatus = when {
+            !enabled -> "BERBAGI GALERI: NONAKTIF"
+            !mediaAccess -> "BERBAGI GALERI: IZIN FOTO/VIDEO BELUM TERSEDIA"
+            !serverConfirmed -> "BERBAGI GALERI: MENUNGGU KONFIRMASI SERVER"
+            else -> "BERBAGI GALERI: AKTIF"
         }
+        val backupStatus = if (backupEnabled) "BACKUP DRIVE: PERSETUJUAN AKTIF • hanya file baru" else "BACKUP DRIVE: BELUM DISETUJUI"
+        childGalleryPanel.text = "🖼️  GALERI & BACKUP HP INI\n$galleryStatus\n$backupStatus\nKetuk untuk mengatur persetujuan masing-masing fitur."
         childGalleryPanel.setTextColor(
             if (enabled && mediaAccess && serverConfirmed) Color.rgb(28, 132, 86) else Color.rgb(35, 53, 88)
         )
@@ -3087,6 +3089,7 @@ private var receivedMp3File: File? = null
                 if (enabled) {
                     GalleryBackupTracker(this).disable()
                     prefs.edit().putBoolean("child_drive_backup_consent", false).apply()
+                    updateChildGalleryPanel()
                     Toast.makeText(this, "Persetujuan Backup Drive dicabut.", Toast.LENGTH_LONG).show()
                 } else if (!hasGalleryMediaAccess()) {
                     Toast.makeText(this, "Aktifkan izin foto dan video terlebih dahulu melalui Berbagi Galeri.", Toast.LENGTH_LONG).show()
@@ -3099,6 +3102,7 @@ private var receivedMp3File: File? = null
                                 GalleryBackupTracker(this@MainActivity).enableWithCompleteBaseline(repository)
                             }
                             prefs.edit().putBoolean("child_drive_backup_consent", true).apply()
+                            updateChildGalleryPanel()
                             Toast.makeText(this@MainActivity, "Persetujuan tersimpan. File lama dikecualikan dari antrean backup.", Toast.LENGTH_LONG).show()
                             showChildDriveBackupConsent()
                         } catch (error: Exception) {
