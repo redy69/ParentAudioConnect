@@ -3249,6 +3249,11 @@ private var receivedMp3File: File? = null
                             status.text = "Izin Google Drive berhasil diberikan untuk sesi ini. Token tidak disimpan permanen."
                             Toast.makeText(this, "Izin Google Drive berhasil diberikan.", Toast.LENGTH_LONG).show()
                             if (childSnapshots[code]?.getBoolean("driveBackupEnabled") == true) {
+                                // The gallery dialog owns a separate parent P2P session.
+                                // Close it before the backup foreground service takes over.
+                                if (parentGalleryDialog?.isShowing == true) {
+                                    parentGalleryDialog?.dismiss()
+                                }
                                 val serviceIntent = Intent(this, ParentDriveBackupService::class.java).apply {
                                     action = ParentDriveBackupService.ACTION_START
                                     putExtra(ParentDriveBackupService.EXTRA_PAIR_CODE, code)
