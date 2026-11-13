@@ -55,6 +55,16 @@ class ParentDriveBackupService : Service() {
     @Volatile private var stopping = false
     private var pairingCode: String? = null
     private var childDisplayName: String = "HP Anak"
+    private var childQueue: List<Pair<String, String>> = emptyList()
+    private var childQueueIndex: Int = 0
+    private val childRotationRunnable = Runnable {
+        advanceToNextChild("Batas waktu giliran anak tercapai")
+    }
+    private val roundRestartRunnable = Runnable {
+        stopping = false
+        childQueueIndex = 0
+        activateQueuedChild()
+    }
     private val reconnectRunnable = Runnable {
         val code = pairingCode
         if (!stopping && !code.isNullOrBlank() &&
