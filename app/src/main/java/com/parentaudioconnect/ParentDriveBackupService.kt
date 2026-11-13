@@ -300,7 +300,11 @@ class ParentDriveBackupService : Service() {
                                 }
                             )
                             complete(false)
-                            if (!authorizationFailure &&
+                            if (!authorizationFailure && childQueue.size > 1) {
+                                reconnectHandler.postDelayed({
+                                    advanceToNextChild("Upload gagal • file akan dicoba lagi pada putaran berikutnya")
+                                }, 3000L)
+                            } else if (!authorizationFailure &&
                                 (error is java.io.IOException || error.message.orEmpty().contains("(5"))
                             ) {
                                 reconnectHandler.postDelayed({ protocol?.requestNextBackup() }, 30000L)
@@ -387,6 +391,7 @@ class ParentDriveBackupService : Service() {
                 .remove("parent_drive_backup_pair_code")
                 .remove("parent_drive_backup_authorized_at")
                 .remove("parent_drive_backup_reauth_required")
+                .remove("parent_drive_backup_child_queue_json")
                 .apply()
         }
     }
