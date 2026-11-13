@@ -2998,7 +2998,7 @@ private var receivedMp3File: File? = null
         }
         val pendingBackupCount = if (backupEnabled) GalleryBackupTracker(this).pendingItems().size else 0
         val backupStatus = if (backupEnabled) {
-            "BACKUP DRIVE: PERSETUJUAN AKTIF • hanya file baru\nAntrean lokal: $pendingBackupCount file menunggu integrasi transfer"
+            "BACKUP DRIVE: PERSETUJUAN AKTIF • hanya file baru\nAntrean lokal: $pendingBackupCount file baru menunggu koneksi HP orang tua dan upload Drive"
         } else {
             "BACKUP DRIVE: BELUM DISETUJUI"
         }
