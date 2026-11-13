@@ -38,7 +38,7 @@ class ParentDriveBackupService : Service() {
     private val binder = LocalBinder()
     @Volatile private var galleryStateListener: ((String) -> Unit)? = null
     @Volatile private var transportConnected = false
-    private var galleryPinned = false
+    @Volatile private var galleryPinned = false
     private var preGalleryPairingCode: String? = null
     private var preGalleryQueueIndex: Int = 0
 
@@ -135,6 +135,7 @@ class ParentDriveBackupService : Service() {
 
     @Synchronized
     private fun releaseGalleryForChild() {
+        protocol?.cancelOriginal()
         protocol?.detachGalleryCallbacks()
         galleryStateListener = null
         if (!galleryPinned) return
@@ -280,6 +281,7 @@ class ParentDriveBackupService : Service() {
     }
 
     private fun startTransport(code: String) {
+        val transportChildName = childDisplayName
         stopping = false
         reconnectHandler.removeCallbacks(networkGateRunnable)
         reconnectHandler.post(networkGateRunnable)
@@ -338,18 +340,18 @@ class ParentDriveBackupService : Service() {
                             val uploader = GoogleDriveUploader(token)
                             val rootFolder = folderId ?: uploader.ensureBackupFolder().also { folderId = it }
                             val childKey = java.security.MessageDigest.getInstance("SHA-256")
-                                .digest((pairingCode ?: "unknown-child").toByteArray(Charsets.UTF_8))
+                                .digest(code.toByteArray(Charsets.UTF_8))
                                 .joinToString("") { "%02x".format(it.toInt() and 0xff) }
                             val backupPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
                             val customFolderName = backupPrefs.getString("parent_drive_child_folder_name_$childKey", null)
                             val childFolder = uploader.ensureChildFolder(
-                                childKey, customFolderName?.takeIf { it.isNotBlank() } ?: childDisplayName, rootFolder
+                                childKey, customFolderName?.takeIf { it.isNotBlank() } ?: transportChildName, rootFolder
                             )
                             backupPrefs.edit().putString("parent_drive_child_folder_id_$childKey", childFolder).apply()
                             if (backupPrefs.getBoolean("parent_drive_child_folder_rename_pending_$childKey", false)) {
                                 uploader.renameFolder(
                                     childFolder,
-                                    customFolderName?.takeIf { it.isNotBlank() } ?: childDisplayName
+                                    customFolderName?.takeIf { it.isNotBlank() } ?: transportChildName
                                 )
                                 backupPrefs.edit().putBoolean("parent_drive_child_folder_rename_pending_$childKey", false).apply()
                             }
