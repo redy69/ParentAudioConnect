@@ -1398,10 +1398,6 @@ private var receivedMp3File: File? = null
             .setView(form).setNegativeButton("Batal", null)
             .setPositiveButton("Simpan", null).create()
         dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
-                stopService(Intent(this, ParentDriveBackupService::class.java).setAction(ParentDriveBackupService.ACTION_STOP))
-                status.text = "Perintah menghentikan layanan backup telah dikirim."
-            }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val name = nameInput.text.toString().trim()
                 val radius = radiusInput.text.toString().toIntOrNull()
@@ -3234,6 +3230,10 @@ private var receivedMp3File: File? = null
             .setNegativeButton("Hentikan backup", null)
             .setNeutralButton("Tutup", null).create()
         dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
+                stopService(Intent(this, ParentDriveBackupService::class.java).setAction(ParentDriveBackupService.ACTION_STOP))
+                status.text = "Perintah menghentikan layanan backup telah dikirim."
+            }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 status.text = "Meminta izin akses Google Drive..."
                 val authorization = GoogleDriveAuthorization(this)
