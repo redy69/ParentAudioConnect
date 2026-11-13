@@ -27,7 +27,7 @@ class ParentDriveBackupService : Service() {
             onState: (String) -> Unit
         ) {
             galleryStateListener = onState
-            protocol?.attachGalleryCallbacks(onMediaIndex, onThumbnail, onStatus, onOriginalReady)
+            setGalleryCallbacks(onMediaIndex, onThumbnail, onStatus, onOriginalReady)
         }
         fun requestGalleryIndex(): Boolean = protocol?.requestIndex() == true
         fun requestGalleryThumbnail(key: String): Boolean = protocol?.requestThumbnail(key) == true
@@ -37,6 +37,10 @@ class ParentDriveBackupService : Service() {
 
     private val binder = LocalBinder()
     @Volatile private var galleryStateListener: ((String) -> Unit)? = null
+    @Volatile private var galleryMediaIndexCallback: ((List<GalleryP2pGalleryProtocol.RemoteMedia>) -> Unit)? = null
+    @Volatile private var galleryThumbnailCallback: ((String, ByteArray) -> Unit)? = null
+    @Volatile private var galleryStatusCallback: ((String) -> Unit)? = null
+    @Volatile private var galleryOriginalReadyCallback: ((String, java.io.File, String, String) -> Unit)? = null
     @Volatile private var transportConnected = false
     @Volatile private var galleryPinned = false
     private var preGalleryPairingCode: String? = null
@@ -107,6 +111,19 @@ class ParentDriveBackupService : Service() {
 
     override fun onBind(intent: Intent?): IBinder = binder
 
+    private fun setGalleryCallbacks(
+        onMediaIndex: (List<GalleryP2pGalleryProtocol.RemoteMedia>) -> Unit,
+        onThumbnail: (String, ByteArray) -> Unit,
+        onStatus: (String) -> Unit,
+        onOriginalReady: (String, java.io.File, String, String) -> Unit
+    ) {
+        galleryMediaIndexCallback = onMediaIndex
+        galleryThumbnailCallback = onThumbnail
+        galleryStatusCallback = onStatus
+        galleryOriginalReadyCallback = onOriginalReady
+        protocol?.attachGalleryCallbacks(onMediaIndex, onThumbnail, onStatus, onOriginalReady)
+    }
+
     @Synchronized
     private fun openGalleryForChild(code: String, name: String): Boolean {
         if (code.isBlank() || stopping || accessToken.isNullOrBlank()) return false
@@ -137,6 +154,10 @@ class ParentDriveBackupService : Service() {
     private fun releaseGalleryForChild() {
         protocol?.cancelOriginal()
         protocol?.detachGalleryCallbacks()
+        galleryMediaIndexCallback = null
+        galleryThumbnailCallback = null
+        galleryStatusCallback = null
+        galleryOriginalReadyCallback = null
         galleryStateListener = null
         if (!galleryPinned) return
         galleryPinned = false
@@ -421,6 +442,17 @@ class ParentDriveBackupService : Service() {
         )
         protocol = activeProtocol
         manager = activeManager
+        val mediaIndexCallback = galleryMediaIndexCallback
+        val thumbnailCallback = galleryThumbnailCallback
+        val statusCallback = galleryStatusCallback
+        val originalReadyCallback = galleryOriginalReadyCallback
+        if (mediaIndexCallback != null && thumbnailCallback != null &&
+            statusCallback != null && originalReadyCallback != null
+        ) {
+            activeProtocol.attachGalleryCallbacks(
+                mediaIndexCallback, thumbnailCallback, statusCallback, originalReadyCallback
+            )
+        }
         activeManager.start()
     }
 
