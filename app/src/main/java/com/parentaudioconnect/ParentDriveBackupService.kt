@@ -146,7 +146,9 @@ class ParentDriveBackupService : Service() {
                 if (message.contains("P2P TERHUBUNG")) {
                     reconnectHandler.removeCallbacks(reconnectRunnable)
                     activeProtocol.requestNextBackup()
-                } else if (message.contains("terputus") || message.contains("gagal") || message.contains("ditutup")) {
+                } else if (!stopping &&
+                    (message.contains("terputus") || message.contains("gagal") || message.contains("ditutup"))
+                ) {
                     reconnectHandler.removeCallbacks(reconnectRunnable)
                     reconnectHandler.postDelayed(reconnectRunnable, 30000L)
                 }
