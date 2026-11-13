@@ -123,6 +123,7 @@ private lateinit var playMp3Button: Button
     // Access tokens are short-lived; keep only in memory, never in preferences.
     private var googleDriveAccessToken: String? = null
     private var googleDriveBackupFolderId: String? = null
+    private var driveReauthInProgress = false
     private var parentSendP2pManager: GalleryP2pManager? = null
     private var parentSendProtocol: ParentToChildMediaProtocol? = null
     private var parentSendStarted = false
@@ -946,6 +947,7 @@ private var receivedMp3File: File? = null
     override fun onResume() {
         super.onResume()
         AppUpdateManager.resumePendingInstall(this)
+        reauthorizeParentDriveBackupIfNeeded()
         // Retry registration whenever the child app returns to foreground.
         val childPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         if (childPrefs.getString("pair_role", null) == "child") {
@@ -986,6 +988,42 @@ private var receivedMp3File: File? = null
             parentGalleryDialog?.dismiss()
         }
         super.onPause()
+    }
+
+    private fun reauthorizeParentDriveBackupIfNeeded() {
+        if (currentRole != "parent" || driveReauthInProgress) return
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        if (!prefs.getBoolean("parent_drive_backup_service_active", false)) return
+        val lastAuthorized = prefs.getLong("parent_drive_backup_authorized_at", 0L)
+        val needsToken = googleDriveAccessToken.isNullOrBlank() ||
+            System.currentTimeMillis() - lastAuthorized >= 45L * 60L * 1000L
+        if (!needsToken) return
+        val code = prefs.getString("parent_drive_backup_pair_code", null) ?: return
+        driveReauthInProgress = true
+        val authorization = GoogleDriveAuthorization(this)
+        googleDriveAuthorization = authorization
+        authorization.authorize { token, error ->
+            runOnUiThread {
+                driveReauthInProgress = false
+                if (token.isNullOrBlank()) {
+                    statusText.text = "Backup Drive menunggu otorisasi ulang: ${error ?: "buka menu Backup Google Drive"}"
+                    return@runOnUiThread
+                }
+                googleDriveAccessToken = token
+                prefs.edit().putLong("parent_drive_backup_authorized_at", System.currentTimeMillis()).apply()
+                val intent = Intent(this, ParentDriveBackupService::class.java).apply {
+                    action = ParentDriveBackupService.ACTION_START
+                    putExtra(ParentDriveBackupService.EXTRA_PAIR_CODE, code)
+                    putExtra(ParentDriveBackupService.EXTRA_ACCESS_TOKEN, token)
+                }
+                try {
+                    ContextCompat.startForegroundService(this, intent)
+                    statusText.text = "Izin Google Drive diperbarui • backup dilanjutkan"
+                } catch (exception: Exception) {
+                    statusText.text = "Izin Drive diperbarui, tetapi layanan belum dapat dilanjutkan: ${exception.localizedMessage ?: "coba lagi"}"
+                }
+            }
+        }
     }
 
     private fun startChildGalleryP2pIfAllowed() {
@@ -3433,6 +3471,9 @@ private var receivedMp3File: File? = null
                             googleDriveAccessToken = null
                         } else {
                             googleDriveAccessToken = token
+                            getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                                .putLong("parent_drive_backup_authorized_at", System.currentTimeMillis())
+                                .putString("parent_drive_backup_pair_code", code).apply()
                             googleDriveBackupFolderId = null
                             status.text = "Izin Google Drive berhasil diberikan untuk sesi ini. Token tidak disimpan permanen."
                             Toast.makeText(this, "Izin Google Drive berhasil diberikan.", Toast.LENGTH_LONG).show()
