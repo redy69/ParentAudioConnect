@@ -17,6 +17,7 @@ import org.json.JSONObject
 class GalleryBackupTracker(context: Context) {
     data class PendingMedia(
         val stableKey: String,
+        val contentUri: String,
         val displayName: String,
         val mimeType: String,
         val sizeBytes: Long,
@@ -93,6 +94,7 @@ class GalleryBackupTracker(context: Context) {
             if (known.add(item.stableKey)) {
                 pending[item.stableKey] = PendingMedia(
                     stableKey = item.stableKey,
+                    contentUri = item.contentUri,
                     displayName = item.displayName,
                     mimeType = item.mimeType,
                     sizeBytes = item.sizeBytes,
@@ -149,6 +151,7 @@ class GalleryBackupTracker(context: Context) {
                     add(
                         PendingMedia(
                             stableKey = key,
+                            contentUri = item.optString("uri"),
                             displayName = item.optString("name"),
                             mimeType = item.optString("mime"),
                             sizeBytes = item.optLong("size").coerceAtLeast(0L),
@@ -168,6 +171,7 @@ class GalleryBackupTracker(context: Context) {
             array.put(
                 JSONObject()
                     .put("key", item.stableKey)
+                    .put("uri", item.contentUri)
                     .put("name", item.displayName)
                     .put("mime", item.mimeType)
                     .put("size", item.sizeBytes)
