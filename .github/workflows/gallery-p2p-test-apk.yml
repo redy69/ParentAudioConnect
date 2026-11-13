@@ -61,7 +61,7 @@ jobs:
           test -n "$ANDROID_KEYSTORE_PASSWORD"
           test -n "$ANDROID_KEY_ALIAS"
           test -n "$ANDROID_KEY_PASSWORD"
-          gradle assembleRelease -PversionCode=337
+          gradle assembleRelease -PversionCode=338
 
       - name: Upload signed test APK only
         uses: actions/upload-artifact@v4
