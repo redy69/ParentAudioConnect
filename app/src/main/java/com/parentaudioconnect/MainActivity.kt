@@ -539,7 +539,7 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(12), dp(9), dp(12), dp(9))
-            minHeight = dp(58)
+            minimumHeight = dp(58)
             background = GradientDrawable().apply {
                 setColor(Color.WHITE)
                 cornerRadius = dp(15).toFloat()
@@ -1858,7 +1858,7 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(6), dp(4), dp(6), dp(4))
-            minHeight = dp(54)
+            minimumHeight = dp(54)
             background = roundedPanel(Color.argb(205, 255, 255, 255), 14)
             elevation = dp(2).toFloat()
             isClickable = true
