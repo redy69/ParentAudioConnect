@@ -123,6 +123,9 @@ private lateinit var playMp3Button: Button
     // Access tokens are short-lived; keep only in memory, never in preferences.
     private var googleDriveAccessToken: String? = null
     private var googleDriveBackupFolderId: String? = null
+    private var parentSendP2pManager: GalleryP2pManager? = null
+    private var parentSendProtocol: ParentToChildMediaProtocol? = null
+    private var parentSendStarted = false
     private var parentGalleryStatus: TextView? = null
     private var parentGalleryList: LinearLayout? = null
     private val parentGalleryRows = linkedMapOf<String, LinearLayout>()
@@ -184,6 +187,8 @@ private var receivedMp3File: File? = null
     private const val OPERATOR_PERMISSION = 1007
     private const val SAFE_ZONE_NOTIFICATION_PERMISSION = 1008
     private const val GALLERY_MEDIA_PERMISSION = 1009
+    private const val PARENT_MEDIA_WRITE_PERMISSION = 1010
+    private const val PARENT_MEDIA_PICKER = 1011
 }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -697,7 +702,7 @@ private var receivedMp3File: File? = null
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { setMargins(0, dp(3), 0, dp(12)) }
             visibility = View.GONE
-            setOnClickListener { showChildGalleryConsent() }
+            setOnClickListener { showChildMediaSettingsMenu() }
         }
         rootLayout.addView(childGalleryPanel)
         val deviceSectionTitle = TextView(this).apply {
@@ -988,7 +993,9 @@ private var receivedMp3File: File? = null
         val backupConsent = prefs.getBoolean("child_drive_backup_consent", false)
         // Backup has its own explicit child consent. It may keep the transport
         // ready without enabling parent browsing of the child's gallery.
-        if ((!galleryConsent && !backupConsent) || !hasGalleryMediaAccess()) return
+        val receiveConsent = prefs.getBoolean("child_parent_media_receive_consent", false) &&
+            prefs.getBoolean("child_parent_media_server_confirmed", false)
+        if (!galleryConsent && !backupConsent && !receiveConsent) return
         val code = prefs.getString("pair_code", null)
         if (code.isNullOrBlank()) return
 
@@ -2997,12 +3004,19 @@ private var receivedMp3File: File? = null
             else -> "BERBAGI GALERI: AKTIF"
         }
         val pendingBackupCount = if (backupEnabled) GalleryBackupTracker(this).pendingItems().size else 0
+        val receiveEnabled = prefs.getBoolean("child_parent_media_receive_consent", false) &&
+            prefs.getBoolean("child_parent_media_server_confirmed", false)
+        val receiveStatus = if (receiveEnabled) {
+            "PENERIMAAN DARI ORANG TUA: AKTIF • foto/video tersimpan otomatis setelah diterima"
+        } else {
+            "PENERIMAAN DARI ORANG TUA: NONAKTIF"
+        }
         val backupStatus = if (backupEnabled) {
             "BACKUP DRIVE: PERSETUJUAN AKTIF • hanya file baru\nAntrean lokal: $pendingBackupCount file baru menunggu koneksi HP orang tua dan upload Drive"
         } else {
             "BACKUP DRIVE: BELUM DISETUJUI"
         }
-        childGalleryPanel.text = "🖼️  GALERI & BACKUP HP INI\n$galleryStatus\n$backupStatus\nKetuk untuk mengatur persetujuan masing-masing fitur."
+        childGalleryPanel.text = "🖼️  GALERI & BACKUP HP INI\n$galleryStatus\n$receiveStatus\n$backupStatus\nKetuk untuk mengatur persetujuan masing-masing fitur."
         childGalleryPanel.setTextColor(
             if (enabled && mediaAccess && serverConfirmed) Color.rgb(28, 132, 86) else Color.rgb(35, 53, 88)
         )
@@ -3038,6 +3052,79 @@ private var receivedMp3File: File? = null
                 "Status berbagi galeri belum tersimpan: ${error.localizedMessage ?: "periksa koneksi"}",
                 Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun showChildMediaSettingsMenu() {
+        if (currentRole != "child") return
+        AlertDialog.Builder(this)
+            .setTitle("Pengaturan Galeri & Backup")
+            .setItems(arrayOf("Berbagi Galeri Anak", "Penerimaan dari HP Orang Tua", "Backup Google Drive")) { _, which ->
+                when (which) {
+                    0 -> showChildGalleryConsent()
+                    1 -> showChildParentMediaReceiveConsent()
+                    2 -> showChildDriveBackupConsent()
+                }
+            }
+            .setNegativeButton("Tutup", null)
+            .show()
+    }
+
+    private fun updateParentMediaReceiveConsentOnServer(enabled: Boolean) {
+        val code = getSharedPreferences("parent_audio", MODE_PRIVATE).getString("pair_code", null)
+        if (code.isNullOrBlank()) return
+        db.collection("pairings").document(code).update(
+            "parentMediaReceiveEnabled", enabled,
+            "parentMediaReceiveUpdatedAt", Timestamp.now()
+        ).addOnSuccessListener {
+            val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            prefs.edit().putBoolean("child_parent_media_server_confirmed", enabled).apply()
+            updateChildGalleryPanel()
+            if (enabled) startChildGalleryP2pIfAllowed()
+        }.addOnFailureListener { error ->
+            getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                .putBoolean("child_parent_media_server_confirmed", false)
+                .putBoolean("child_parent_media_receive_consent", false).apply()
+            updateChildGalleryPanel()
+            Toast.makeText(this,
+                "Persetujuan penerimaan belum tersimpan di server: ${error.localizedMessage ?: "periksa koneksi"}",
+                Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun showChildParentMediaReceiveConsent() {
+        if (currentRole != "child") return
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        val enabled = prefs.getBoolean("child_parent_media_receive_consent", false)
+        val message = if (enabled) {
+            "Penerimaan foto dan video dari HP orang tua sedang aktif. File yang dikirim melalui perangkat yang sudah dipasangkan akan otomatis disimpan ke galeri HP ini tanpa persetujuan per file. Persetujuan dapat dicabut kapan saja."
+        } else {
+            "Jika diaktifkan, HP orang tua yang sudah dipasangkan dapat mengirim foto dan video ke HP ini. File akan otomatis disimpan ke Galeri setelah transfer selesai dan lolos pemeriksaan. Tidak ada persetujuan berulang per file. Anda dapat menonaktifkannya kapan saja."
+        }
+        AlertDialog.Builder(this)
+            .setTitle(if (enabled) "Penerimaan foto/video aktif" else "Izinkan penerimaan foto/video")
+            .setMessage(message)
+            .setNegativeButton("Tutup", null)
+            .setPositiveButton(if (enabled) "Cabut persetujuan" else "Saya setuju • Aktifkan") { _, _ ->
+                if (enabled) {
+                    prefs.edit().putBoolean("child_parent_media_receive_consent", false)
+                        .putBoolean("child_parent_media_server_confirmed", false).apply()
+                    updateParentMediaReceiveConsentOnServer(false)
+                    if (!prefs.getBoolean("child_gallery_sharing_enabled", false) &&
+                        !prefs.getBoolean("child_drive_backup_consent", false)
+                    ) stopChildGalleryP2p()
+                    updateChildGalleryPanel()
+                    Toast.makeText(this, "Persetujuan penerimaan dari orang tua dicabut.", Toast.LENGTH_LONG).show()
+                } else if (Build.VERSION.SDK_INT < 29 &&
+                    ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    requestPermissions(arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), PARENT_MEDIA_WRITE_PERMISSION)
+                } else {
+                    prefs.edit().putBoolean("child_parent_media_receive_consent", true)
+                        .putBoolean("child_parent_media_server_confirmed", false).apply()
+                    updateParentMediaReceiveConsentOnServer(true)
+                    Toast.makeText(this, "Mengaktifkan penerimaan foto/video dari HP orang tua…", Toast.LENGTH_LONG).show()
+                }
+            }.show()
     }
 
     private fun showChildGalleryConsent() {
@@ -4745,6 +4832,14 @@ private fun playReceivedMp3() {
             permissions,
             grantResults
         )
+
+        if (requestCode == PARENT_MEDIA_WRITE_PERMISSION) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                showChildParentMediaReceiveConsent()
+            } else {
+                Toast.makeText(this, "Izin penyimpanan diperlukan agar file dapat masuk ke galeri pada Android lama.", Toast.LENGTH_LONG).show()
+            }
+        }
 
         if (requestCode == GALLERY_MEDIA_PERMISSION) {
             val granted = hasGalleryMediaAccess()
