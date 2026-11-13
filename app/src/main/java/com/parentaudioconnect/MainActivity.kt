@@ -853,8 +853,6 @@ private var receivedMp3File: File? = null
         parentOnlyViews.add(primaryControlHeading)
         // Keep the four primary parent actions directly below the child's activity card.
         rootLayout.addView(actionButtonsRow)
-        rootLayout.addView(liveKitTestButton)
-        parentOnlyViews.add(liveKitTestButton)
         rootLayout.addView(childDeviceStatusText)
         parentOnlyViews.add(childDeviceStatusText)
         val featureHeading = TextView(this).apply {
@@ -946,6 +944,18 @@ private var receivedMp3File: File? = null
         rootLayout.addView(additionalControlsHeading)
         rootLayout.addView(playMp3Button)
         rootLayout.addView(cameraStandbyButton)
+        val connectionSettingsHeading = TextView(this).apply {
+            text = "PENGATURAN KONEKSI"
+            textSize = 11.5f
+            setTextColor(Color.rgb(49, 82, 145))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            letterSpacing = 0.105f
+            setPadding(dp(4), dp(11), dp(4), dp(5))
+        }
+        rootLayout.addView(connectionSettingsHeading)
+        parentOnlyViews.add(connectionSettingsHeading)
+        rootLayout.addView(liveKitTestButton)
+        parentOnlyViews.add(liveKitTestButton)
 
         val mapsPage = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
