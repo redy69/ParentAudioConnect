@@ -3244,8 +3244,19 @@ private var receivedMp3File: File? = null
                             status.text = "Izin Google Drive berhasil diberikan untuk sesi ini. Token tidak disimpan permanen."
                             Toast.makeText(this, "Izin Google Drive berhasil diberikan.", Toast.LENGTH_LONG).show()
                             if (childSnapshots[code]?.getBoolean("driveBackupEnabled") == true) {
-                                dialog.dismiss()
-                                rootLayout.post { showParentGalleryStatus() }
+                                val serviceIntent = Intent(this, ParentDriveBackupService::class.java).apply {
+                                    action = ParentDriveBackupService.ACTION_START
+                                    putExtra(ParentDriveBackupService.EXTRA_PAIR_CODE, code)
+                                    putExtra(ParentDriveBackupService.EXTRA_ACCESS_TOKEN, token)
+                                }
+                                try {
+                                    ContextCompat.startForegroundService(this, serviceIntent)
+                                    status.text = "Google Drive terhubung. Layanan backup aktif; hanya file baru dari HP anak yang disetujui akan dikirim."
+                                } catch (_: Exception) {
+                                    status.text = "Izin Drive berhasil, tetapi layanan backup tidak dapat dimulai. Periksa izin notifikasi dan coba lagi."
+                                }
+                            } else {
+                                status.text = "Google Drive terhubung. Persetujuan backup belum aktif dari HP anak."
                             }
                         }
                     }
