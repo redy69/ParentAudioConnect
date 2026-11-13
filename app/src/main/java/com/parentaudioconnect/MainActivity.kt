@@ -1001,7 +1001,8 @@ private var receivedMp3File: File? = null
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         if (!prefs.getBoolean("parent_drive_backup_service_active", false)) return
         val lastAuthorized = prefs.getLong("parent_drive_backup_authorized_at", 0L)
-        val needsToken = googleDriveAccessToken.isNullOrBlank() ||
+        val needsToken = prefs.getBoolean("parent_drive_backup_reauth_required", false) ||
+            googleDriveAccessToken.isNullOrBlank() ||
             System.currentTimeMillis() - lastAuthorized >= 45L * 60L * 1000L
         if (!needsToken) return
         val code = prefs.getString("parent_drive_backup_pair_code", null) ?: return
@@ -1016,7 +1017,8 @@ private var receivedMp3File: File? = null
                     return@runOnUiThread
                 }
                 googleDriveAccessToken = token
-                prefs.edit().putLong("parent_drive_backup_authorized_at", System.currentTimeMillis()).apply()
+                prefs.edit().putLong("parent_drive_backup_authorized_at", System.currentTimeMillis())
+                    .putBoolean("parent_drive_backup_reauth_required", false).apply()
                 val intent = Intent(this, ParentDriveBackupService::class.java).apply {
                     action = ParentDriveBackupService.ACTION_START
                     putExtra(ParentDriveBackupService.EXTRA_PAIR_CODE, code)
@@ -3490,6 +3492,7 @@ private var receivedMp3File: File? = null
                             googleDriveAccessToken = token
                             getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
                                 .putLong("parent_drive_backup_authorized_at", System.currentTimeMillis())
+                                .putBoolean("parent_drive_backup_reauth_required", false)
                                 .putString("parent_drive_backup_pair_code", code).apply()
                             googleDriveBackupFolderId = null
                             status.text = "Izin Google Drive berhasil diberikan untuk sesi ini. Token tidak disimpan permanen."
