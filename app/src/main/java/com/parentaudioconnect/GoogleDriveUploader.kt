@@ -39,6 +39,71 @@ class GoogleDriveUploader(private val accessToken: String) {
             ?: throw IllegalStateException("Google Drive tidak mengembalikan ID folder backup.")
     }
 
+    /**
+     * Creates or reuses a child-specific folder using an immutable app property key.
+     * The display name may be changed by the parent without changing this folder identity.
+     */
+    fun ensureChildFolder(childKey: String, displayName: String, rootFolderId: String): String {
+        require(childKey.isNotBlank()) { "Identitas perangkat anak kosong." }
+        require(rootFolderId.isNotBlank()) { "Folder utama backup belum tersedia." }
+        val stableKey = childKey.replace("'", "\\\\'")
+        val query = "appProperties has { key='santethpChildKey' and value='$stableKey' }" +
+            " and '$rootFolderId' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        val listUrl = "$API/files?q=${encode(query)}&pageSize=10&fields=files(id,name)"
+        val files = request("GET", listUrl, null).optJSONArray("files")
+        if (files != null && files.length() > 0) {
+            val id = files.optJSONObject(0)?.optString("id").orEmpty()
+            if (id.isNotBlank()) return id
+        }
+        val metadata = JSONObject()
+            .put("name", displayName.trim().ifBlank { "HP Anak" })
+            .put("mimeType", "application/vnd.google-apps.folder")
+            .put("parents", org.json.JSONArray().put(rootFolderId))
+            .put("appProperties", JSONObject().put("santethpChildKey", childKey))
+        val created = request("POST", "$API/files?fields=id,name", metadata.toString().toByteArray(StandardCharsets.UTF_8))
+        return created.optString("id").takeIf { it.isNotBlank() }
+            ?: throw IllegalStateException("Google Drive tidak mengembalikan ID folder anak.")
+    }
+
+    /** Creates or reuses the Foto/Video subfolder under one child's folder. */
+    fun ensureMediaFolder(childKey: String, mediaType: String, childFolderId: String): String {
+        require(mediaType == "photo" || mediaType == "video") { "Jenis folder media tidak valid." }
+        require(childKey.isNotBlank() && childFolderId.isNotBlank()) { "Identitas/folder anak tidak valid." }
+        val stableKey = "${childKey}_$mediaType"
+        val escapedKey = stableKey.replace("'", "\\\\'")
+        val query = "appProperties has { key='santethpMediaFolderKey' and value='$escapedKey' }" +
+            " and '$childFolderId' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        val listUrl = "$API/files?q=${encode(query)}&pageSize=10&fields=files(id,name)"
+        val files = request("GET", listUrl, null).optJSONArray("files")
+        if (files != null && files.length() > 0) {
+            val id = files.optJSONObject(0)?.optString("id").orEmpty()
+            if (id.isNotBlank()) return id
+        }
+        val folderName = if (mediaType == "photo") "Foto" else "Video"
+        val metadata = JSONObject()
+            .put("name", folderName)
+            .put("mimeType", "application/vnd.google-apps.folder")
+            .put("parents", org.json.JSONArray().put(childFolderId))
+            .put("appProperties", JSONObject().put("santethpMediaFolderKey", stableKey))
+        val created = request("POST", "$API/files?fields=id,name", metadata.toString().toByteArray(StandardCharsets.UTF_8))
+        return created.optString("id").takeIf { it.isNotBlank() }
+            ?: throw IllegalStateException("Google Drive tidak mengembalikan ID folder $folderName.")
+    }
+
+    /** Renames an app-created folder by ID; its stable identity and contents remain unchanged. */
+    fun renameFolder(folderId: String, newName: String): String {
+        require(folderId.isNotBlank()) { "ID folder tidak tersedia." }
+        val safeName = newName.trim()
+        require(safeName.isNotBlank() && safeName.length <= 80) { "Nama folder harus 1–80 karakter." }
+        val body = JSONObject().put("name", safeName)
+        val updated = request(
+            "PATCH",
+            "$API/files/${encodePath(folderId)}?fields=id,name",
+            body.toString().toByteArray(StandardCharsets.UTF_8)
+        )
+        return updated.optString("name", safeName)
+    }
+
     /** Uploads one file with Drive resumable upload and reports byte progress. */
     fun uploadFile(
         file: File,
@@ -169,4 +234,5 @@ class GoogleDriveUploader(private val accessToken: String) {
     } catch (_: Exception) { "Respons server tidak dapat dibaca." }
 
     private fun encode(value: String): String = URLEncoder.encode(value, "UTF-8")
+    private fun encodePath(value: String): String = URLEncoder.encode(value, "UTF-8").replace("+", "%20")
 }
