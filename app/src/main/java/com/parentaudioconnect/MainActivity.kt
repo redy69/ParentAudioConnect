@@ -3475,6 +3475,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(35, 53, 88))
             textSize = 13f
         }
+        var restoringWifiCheck = false
         fun refreshBackupStats() {
             val successful = backupPrefs.getInt("parent_drive_backup_success_count", 0)
             val failed = backupPrefs.getInt("parent_drive_backup_failed_count", 0)
@@ -3525,6 +3526,7 @@ private var receivedMp3File: File? = null
             rootLayout.post(statsRefresh)
             dialog.setOnDismissListener { rootLayout.removeCallbacks(statsRefresh) }
             wifiOnlyCheckBox.setOnCheckedChangeListener { _, enabled ->
+                if (restoringWifiCheck) return@setOnCheckedChangeListener
                 val previous = !enabled
                 backupPrefs.edit().putBoolean("drive_backup_wifi_only", enabled).apply()
                 db.collection("pairings").document(code)
@@ -3537,12 +3539,10 @@ private var receivedMp3File: File? = null
                         }
                     }
                     .addOnFailureListener { error ->
-                        wifiOnlyCheckBox.setOnCheckedChangeListener(null)
+                        restoringWifiCheck = true
                         wifiOnlyCheckBox.isChecked = previous
-                        wifiOnlyCheckBox.setOnCheckedChangeListener { _, value ->
-                            backupPrefs.edit().putBoolean("drive_backup_wifi_only", value).apply()
-                        }
                         backupPrefs.edit().putBoolean("drive_backup_wifi_only", previous).apply()
+                        restoringWifiCheck = false
                         status.text = "Pengaturan jaringan gagal disimpan: ${error.localizedMessage ?: "periksa koneksi"}"
                     }
             }
