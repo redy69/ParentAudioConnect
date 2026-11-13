@@ -98,7 +98,7 @@ class ParentToChildMediaProtocol(
                 send(JSONObject().put("type", "parent_send_error").put("transferId", id)
                     .put("message", error.localizedMessage ?: "Pengiriman gagal"))
                 activeId = null
-                onStatus(error.localizedMessage ?: "Pengiriman gagal")
+                onStatus("Pengiriman gagal: " + (error.localizedMessage ?: "kesalahan"))
             } finally {
                 temp?.delete()
             }
@@ -128,7 +128,7 @@ class ParentToChildMediaProtocol(
                 onStatus(if (msg.optBoolean("success", false)) {
                     "Berhasil disimpan di galeri HP anak"
                 } else {
-                    msg.optString("message", "HP anak gagal menyimpan file")
+                    "HP anak menolak transfer: " + msg.optString("message", "persetujuan atau penyimpanan tidak tersedia")
                 })
             }
         }
