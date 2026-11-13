@@ -1,4 +1,4 @@
-name: Gallery P2P Test APK
+name: Gallery P2P Signed Test APK
 
 on:
   push:
@@ -10,11 +10,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: gallery-p2p-test-apk
+  group: gallery-p2p-signed-test-apk
   cancel-in-progress: true
 
 jobs:
-  build-debug:
+  build-signed-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout selected branch
@@ -40,13 +40,33 @@ jobs:
       - name: Install Android SDK components
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Build debug APK only
-        run: gradle assembleDebug
+      - name: Prepare permanent signing key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::Missing GitHub Actions secret ANDROID_KEYSTORE_BASE64"
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/parent-audio-release.jks"
+          test -s "$RUNNER_TEMP/parent-audio-release.jks"
 
-      - name: Upload test APK
+      - name: Build signed release APK for testing only
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/parent-audio-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+          test -n "$ANDROID_KEY_ALIAS"
+          test -n "$ANDROID_KEY_PASSWORD"
+          gradle assembleRelease -PversionCode=333
+
+      - name: Upload signed test APK only
         uses: actions/upload-artifact@v4
         with:
-          name: SantetHP-gallery-P2P-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: SantetHP-gallery-P2P-release-signed-test
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 7
