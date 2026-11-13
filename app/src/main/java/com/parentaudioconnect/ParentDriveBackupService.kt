@@ -209,7 +209,12 @@ class ParentDriveBackupService : Service() {
                             val childKey = java.security.MessageDigest.getInstance("SHA-256")
                                 .digest((pairingCode ?: "unknown-child").toByteArray(Charsets.UTF_8))
                                 .joinToString("") { "%02x".format(it.toInt() and 0xff) }
-                            val childFolder = uploader.ensureChildFolder(childKey, childDisplayName, rootFolder)
+                            val backupPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+                            val customFolderName = backupPrefs.getString("parent_drive_child_folder_name_$childKey", null)
+                            val childFolder = uploader.ensureChildFolder(
+                                childKey, customFolderName?.takeIf { it.isNotBlank() } ?: childDisplayName, rootFolder
+                            )
+                            backupPrefs.edit().putString("parent_drive_child_folder_id_$childKey", childFolder).apply()
                             val mediaType = if (mime.startsWith("video/")) "video" else "photo"
                             val mediaFolder = uploader.ensureMediaFolder(childKey, mediaType, childFolder)
                             uploader.uploadFile(
