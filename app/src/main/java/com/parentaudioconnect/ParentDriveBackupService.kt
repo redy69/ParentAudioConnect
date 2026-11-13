@@ -37,6 +37,7 @@ class ParentDriveBackupService : Service() {
 
     private val binder = LocalBinder()
     @Volatile private var galleryStateListener: ((String) -> Unit)? = null
+    @Volatile private var transportConnected = false
     private var galleryPinned = false
     private var preGalleryPairingCode: String? = null
     private var preGalleryQueueIndex: Int = 0
@@ -127,6 +128,7 @@ class ParentDriveBackupService : Service() {
             startTransport(code)
         } else {
             updateStatus("Galeri Anak aktif • backup tetap berjalan sesuai aturan Wi-Fi")
+            if (transportConnected) galleryStateListener?.invoke("P2P TERHUBUNG • Galeri siap")
         }
         return true
     }
@@ -259,6 +261,10 @@ class ParentDriveBackupService : Service() {
                 getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
                     .putBoolean("drive_backup_wifi_only", wifiOnly).apply()
                 if (snapshot?.getBoolean("driveBackupEnabled") != true) {
+                    if (galleryPinned) {
+                        updateStatus("Backup anak ini tidak aktif • Galeri Anak tetap tersambung")
+                        return@addSnapshotListener
+                    }
                     if (childQueue.size > 1) {
                         updateStatus("Izin backup $childDisplayName tidak aktif • lanjut ke perangkat anak berikutnya")
                         advanceToNextChild("Izin backup tidak aktif")
@@ -286,12 +292,16 @@ class ParentDriveBackupService : Service() {
                 Log.i(TAG, message)
                 updateStatus(message)
                 if (message.contains("P2P TERHUBUNG")) {
+                    transportConnected = true
                     reconnectHandler.removeCallbacks(reconnectRunnable)
                     reconnectHandler.removeCallbacks(childRotationRunnable)
                     galleryStateListener?.invoke(message)
                     if (!galleryPinned && childQueue.size > 1) scheduleChildRotationTimeout()
                     if (canUseBackupNetwork()) activeProtocol.requestNextBackup()
                 } else {
+                    if (message.contains("terputus") || message.contains("gagal") || message.contains("ditutup")) {
+                        transportConnected = false
+                    }
                     galleryStateListener?.invoke(message)
                 }
                 if (!stopping && !galleryPinned &&
@@ -459,6 +469,7 @@ class ParentDriveBackupService : Service() {
 
     private fun stopP2pTransport() {
         stopping = true
+        transportConnected = false
         reconnectHandler.removeCallbacks(reconnectRunnable)
         reconnectHandler.removeCallbacks(networkGateRunnable)
         reconnectHandler.removeCallbacks(childRotationRunnable)
