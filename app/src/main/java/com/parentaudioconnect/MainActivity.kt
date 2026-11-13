@@ -230,7 +230,7 @@ private var receivedMp3File: File? = null
         rootLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.TOP
-            setPadding(dp(9), dp(5), dp(9), dp(8))
+            setPadding(dp(11), dp(7), dp(11), dp(11))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.rgb(231, 239, 255), Color.rgb(247, 249, 255), Color.rgb(229, 238, 253))
@@ -240,7 +240,7 @@ private var receivedMp3File: File? = null
         val title = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(11), dp(6), dp(11), dp(6))
+            setPadding(dp(14), dp(9), dp(14), dp(9))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.rgb(15, 29, 64), Color.rgb(35, 69, 139), Color.rgb(67, 104, 183))
@@ -342,21 +342,21 @@ private var receivedMp3File: File? = null
         childNetworkGlyph = StatusGlyphDrawable(false)
         childQuickStatusText = TextView(this).apply {
             text = "--    ·    Menunggu jaringan"
-            textSize = 11f
+            textSize = 11.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.005f
-            setTextColor(Color.rgb(55, 78, 115))
+            letterSpacing = 0.008f
+            setTextColor(Color.rgb(48, 70, 108))
             gravity = Gravity.CENTER_VERTICAL
             includeFontPadding = false
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(dp(9), dp(3), dp(9), dp(3))
+            setPadding(dp(11), dp(4), dp(11), dp(4))
             compoundDrawablePadding = dp(7)
             setCompoundDrawablesRelativeWithIntrinsicBounds(childBatteryGlyph, null, childNetworkGlyph, null)
             background = GradientDrawable().apply {
-                setColor(Color.argb(235, 255, 255, 255))
-                cornerRadius = dp(12).toFloat()
-                setStroke(dp(1), Color.rgb(218, 229, 246))
+                setColor(Color.WHITE)
+                cornerRadius = dp(13).toFloat()
+                setStroke(dp(1), Color.rgb(204, 220, 244))
             }
         }
 
@@ -533,7 +533,7 @@ private var receivedMp3File: File? = null
             cornerRadius = dp(13).toFloat()
             setStroke(dp(1), Color.rgb(210, 223, 245))
         }
-        selectedChildButton.setPadding(dp(12), dp(2), dp(10), dp(2))
+        selectedChildButton.setPadding(dp(13), dp(2), dp(10), dp(2))
         selectedChildButton.elevation = dp(1).toFloat()
         selectedChildButton.minimumHeight = dp(40)
         selectedChildButton.setTypeface(null, android.graphics.Typeface.BOLD)
@@ -597,7 +597,7 @@ private var receivedMp3File: File? = null
 
         rootLayout.addView(title, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply { bottomMargin = dp(11) })
+        ).apply { bottomMargin = dp(9) })
         childModePanel = TextView(this).apply {
             text = "🛡️  HP ANAK SIAP\n\nPerangkat berhasil terhubung\nMenunggu perintah dari HP orang tua"
             textSize = 16f
@@ -769,7 +769,7 @@ private var receivedMp3File: File? = null
         childIdentityColumn.addView(selectedChildButton, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(40)
         ))
-        childHeaderRow.addView(childIdentityColumn, LinearLayout.LayoutParams(0, dp(40), 1f).apply { weight = 1f })
+        childHeaderRow.addView(childIdentityColumn, LinearLayout.LayoutParams(0, dp(42), 1f).apply { weight = 1f })
         val notificationsBellButton = createButton("🔔")
         notificationsBellButton.textSize = 19f
         notificationsBellButton.contentDescription = "Lihat notifikasi HP anak"
@@ -779,14 +779,14 @@ private var receivedMp3File: File? = null
             cornerRadius = dp(15).toFloat()
             setStroke(dp(1), Color.rgb(210, 223, 245))
         }
-        notificationsBellButton.layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
-            setMargins(dp(2), 0, dp(2), 0)
+        notificationsBellButton.layoutParams = LinearLayout.LayoutParams(dp(42), dp(42)).apply {
+            setMargins(dp(3), 0, dp(3), 0)
         }
         notificationsBellButton.setOnClickListener { showChildNotificationsDialog() }
         childHeaderRow.addView(notificationsBellButton)
         parentOnlyViews.add(notificationsBellButton)
         childHeaderRow.addView(addChildButton)
-        rootLayout.addView(childHeaderRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(40)))
+        rootLayout.addView(childHeaderRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(42)))
         parentOnlyViews.add(childHeaderRow)
         rootLayout.addView(childQuickStatusText, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(28)
@@ -873,22 +873,28 @@ private var receivedMp3File: File? = null
         val featureGroupCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(8), dp(7), dp(8), dp(7))
-            background = roundedPanel(Color.argb(248, 255, 255, 255), 17)
-            elevation = dp(1).toFloat()
+            background = GradientDrawable().apply {
+                setColor(Color.WHITE)
+                cornerRadius = dp(17).toFloat()
+                setStroke(dp(1), Color.rgb(210, 224, 246))
+            }
+            elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { setMargins(0, dp(2), 0, dp(5)) }
         }
         featureGroupCard.addView(featureHeading)
-        featureGroupCard.addView(actionButtonsRow)
+        featureGroupCard.addView(actionButtonsRow, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(68)
+        ))
         featureGroupCard.addView(secondActionRow, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(72)
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(68)
         ))
         featureGroupCard.addView(firstFeatureRow, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(72)
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(68)
         ))
         featureGroupCard.addView(secondFeatureRow, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(72)
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(68)
         ))
         rootLayout.addView(featureGroupCard)
         parentOnlyViews.add(featureGroupCard)
@@ -978,6 +984,18 @@ private var receivedMp3File: File? = null
         mapsPage.addView(safeZonesContainer)
         rootLayout.addView(mapsPage)
         mapsPage.tag = "santethp_maps_page"
+        updateButton.textSize = 12.5f
+        updateButton.minHeight = dp(46)
+        updateButton.background = GradientDrawable().apply {
+            setColor(Color.WHITE)
+            cornerRadius = dp(14).toFloat()
+            setStroke(dp(1), Color.rgb(202, 218, 242))
+        }
+        updateButton.setTextColor(Color.rgb(45, 79, 143))
+        updateButton.elevation = dp(1).toFloat()
+        updateButton.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(46)
+        ).apply { setMargins(0, dp(8), 0, dp(4)) }
         rootLayout.addView(updateButton)
         rootLayout.addView(updateInfoText)
 
@@ -1903,10 +1921,14 @@ private var receivedMp3File: File? = null
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(6), dp(4), dp(6), dp(4))
-            minimumHeight = dp(54)
-            background = roundedPanel(Color.argb(205, 255, 255, 255), 14)
-            elevation = dp(2).toFloat()
+            setPadding(dp(7), dp(5), dp(7), dp(5))
+            minimumHeight = dp(58)
+            background = GradientDrawable().apply {
+                setColor(Color.WHITE)
+                cornerRadius = dp(13).toFloat()
+                setStroke(dp(1), Color.rgb(218, 228, 245))
+            }
+            elevation = dp(1).toFloat()
             isClickable = true
             isFocusable = true
             contentDescription = label
@@ -1914,25 +1936,24 @@ private var receivedMp3File: File? = null
         val iconView: View = if (label == "CHAT ADMIN") {
             WhatsAppBrandIconView().apply {
                 layoutParams = LinearLayout.LayoutParams(dp(30), dp(30)).apply {
-                    rightMargin = dp(5)
+                    marginEnd = dp(6)
                 }
             }
         } else {
             TextView(this).apply {
                 text = icon
-                textSize = if (label == "SERVER") 21f else 20f
+                textSize = if (label == "SERVER") 20f else 19f
                 gravity = Gravity.CENTER
                 setTextColor(Color.WHITE)
                 background = GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
                     intArrayOf(blendWithWhite(accent, 0.12f), accent, blendWithWhite(accent, 0.28f))
                 ).apply {
-                    cornerRadius = dp(15).toFloat()
-                    setStroke(dp(1), Color.argb(115, 255, 255, 255))
+                    cornerRadius = dp(11).toFloat()
+                    setStroke(dp(1), Color.argb(95, 255, 255, 255))
                 }
-                elevation = dp(1).toFloat()
-                layoutParams = LinearLayout.LayoutParams(dp(28), dp(28)).apply {
-                    rightMargin = dp(5)
+                layoutParams = LinearLayout.LayoutParams(dp(30), dp(30)).apply {
+                    marginEnd = dp(6)
                 }
             }
         }
@@ -1953,25 +1974,23 @@ private var receivedMp3File: File? = null
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(1), 0, dp(1))
         }
-        val labelView = TextView(this).apply {
+        textStack.addView(TextView(this).apply {
             text = label
-            textSize = 11.7f
+            textSize = 10.8f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.012f
-            setTextColor(Color.rgb(27, 43, 73))
+            letterSpacing = 0.01f
+            setTextColor(Color.rgb(31, 48, 79))
             maxLines = 2
             setLineSpacing(dp(1).toFloat(), 1f)
-        }
-        val helperView = TextView(this).apply {
+        })
+        textStack.addView(TextView(this).apply {
             text = helper
-            textSize = 9f
-            setTextColor(Color.rgb(88, 105, 134))
+            textSize = 8.5f
+            setTextColor(Color.rgb(94, 109, 135))
             setPadding(0, dp(2), 0, 0)
             maxLines = 2
             setLineSpacing(dp(1).toFloat(), 1f)
-        }
-        textStack.addView(labelView)
-        textStack.addView(helperView)
+        })
         card.addView(iconView)
         card.addView(textStack, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         return card
@@ -2072,10 +2091,33 @@ private var receivedMp3File: File? = null
         val connected = selectedChildCode?.let { childConnected[it] == true } == true
         val childLabel = if (name.isNullOrBlank()) "Pilih perangkat anak" else name
         val connectionLabel = if (connected) "● ONLINE" else "○ OFFLINE"
-        selectedChildButton.text = "🧒  $childLabel  ·  $connectionLabel  $arrow"
-        selectedChildButton.setTextColor(
-            if (connected) Color.rgb(24, 105, 72) else Color.rgb(75, 91, 119)
+        val childDisplay = android.text.SpannableString("🧒  $childLabel   $connectionLabel   $arrow")
+        val nameStart = 4
+        val nameEnd = (nameStart + childLabel.length).coerceAtMost(childDisplay.length)
+        childDisplay.setSpan(
+            android.text.style.ForegroundColorSpan(Color.rgb(35, 65, 125)),
+            nameStart, nameEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
         )
+        childDisplay.setSpan(
+            android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+            nameStart, nameEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+        val stateStart = childDisplay.indexOf(connectionLabel)
+        if (stateStart >= 0) {
+            childDisplay.setSpan(
+                android.text.style.ForegroundColorSpan(
+                    if (connected) Color.rgb(24, 132, 83) else Color.rgb(112, 122, 143)
+                ),
+                stateStart, stateStart + connectionLabel.length,
+                android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            childDisplay.setSpan(
+                android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+                stateStart, stateStart + connectionLabel.length,
+                android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
+        selectedChildButton.text = childDisplay
         val selectedSnapshot = selectedChildCode?.let { childSnapshots[it] }
         if (selectedSnapshot == null) {
             childBatteryGlyph.levelPercent = -1
@@ -2110,7 +2152,10 @@ private var receivedMp3File: File? = null
                     childNetworkGlyph.mode = "ethernet"
                     "Ethernet"
                 }
-                else -> ""
+                else -> {
+                    childNetworkGlyph.mode = "wifi"
+                    "Jaringan"
+                }
             }
             childQuickStatusText.text = if (networkStatus.isBlank()) {
                 batteryLabel
@@ -4569,20 +4614,43 @@ private var receivedMp3File: File? = null
     private fun createChildActivityCard(icon: String, title: String, content: LinearLayout): LinearLayout {
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(10), dp(12), dp(10))
-            background = roundedPanel(Color.WHITE, 16)
+            setPadding(dp(11), dp(10), dp(11), dp(10))
+            background = GradientDrawable().apply {
+                setColor(Color.WHITE)
+                cornerRadius = dp(16).toFloat()
+                setStroke(dp(1), Color.rgb(211, 224, 245))
+            }
             elevation = dp(1).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(5)) }
-            addView(TextView(this@MainActivity).apply {
-                text = "$icon  $title"
+            ).apply { setMargins(0, dp(4), 0, dp(6)) }
+            val headingRow = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, 0, 0, dp(7))
+            }
+            headingRow.addView(TextView(this@MainActivity).apply {
+                text = icon
+                textSize = 15f
+                gravity = Gravity.CENTER
+                setTextColor(Color.rgb(42, 87, 170))
+                background = GradientDrawable().apply {
+                    setColor(Color.rgb(235, 243, 255))
+                    cornerRadius = dp(9).toFloat()
+                }
+                layoutParams = LinearLayout.LayoutParams(dp(29), dp(29)).apply {
+                    marginEnd = dp(8)
+                }
+            })
+            headingRow.addView(TextView(this@MainActivity).apply {
+                text = title
                 textSize = 11.5f
                 setTypeface(null, android.graphics.Typeface.BOLD)
-                letterSpacing = 0.025f
-                setTextColor(Color.rgb(43, 76, 139))
-                setPadding(dp(1), dp(1), dp(1), dp(5))
+                letterSpacing = 0.035f
+                setTextColor(Color.rgb(40, 69, 119))
+                gravity = Gravity.CENTER_VERTICAL
             })
+            addView(headingRow)
             addView(content)
         }
     }
@@ -4595,8 +4663,9 @@ private var receivedMp3File: File? = null
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(9), dp(6), dp(9), dp(6))
             background = GradientDrawable().apply {
-                setColor(if (muted) Color.rgb(247, 249, 253) else Color.rgb(244, 248, 255))
+                setColor(if (muted) Color.rgb(248, 250, 254) else Color.rgb(245, 248, 255))
                 cornerRadius = dp(10).toFloat()
+                setStroke(dp(1), if (muted) Color.rgb(239, 243, 249) else Color.rgb(234, 240, 250))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
