@@ -126,6 +126,9 @@ private lateinit var playMp3Button: Button
     private var parentSendP2pManager: GalleryP2pManager? = null
     private var parentSendProtocol: ParentToChildMediaProtocol? = null
     private var parentSendStarted = false
+    private var pendingParentSendUri: Uri? = null
+    private var pendingParentSendName: String = ""
+    private var pendingParentSendMime: String = ""
     private var parentGalleryStatus: TextView? = null
     private var parentGalleryList: LinearLayout? = null
     private val parentGalleryRows = linkedMapOf<String, LinearLayout>()
@@ -3272,13 +3275,111 @@ private var receivedMp3File: File? = null
     }
 
     private fun showSendMediaToChildInfo() {
-        if (selectedChildCode.isNullOrBlank()) {
+        if (currentRole != "parent") return
+        val code = selectedChildCode
+        if (code.isNullOrBlank()) {
             Toast.makeText(this, "Pilih HP anak terlebih dahulu.", Toast.LENGTH_LONG).show()
             return
         }
-        AlertDialog.Builder(this).setTitle("Kirim ke HP Anak")
-            .setMessage("Fitur pengiriman foto dan video dari HP orang tua sedang disiapkan. File akan otomatis disimpan ke galeri HP anak hanya setelah fitur penerimaan diaktifkan dan disetujui sebelumnya dari HP anak. Tidak ada persetujuan berulang per file.")
-            .setPositiveButton("Mengerti", null).show()
+        if (getSharedPreferences("parent_audio", MODE_PRIVATE)
+                .getBoolean("parent_drive_backup_service_active", false)
+        ) {
+            Toast.makeText(this, "Hentikan Backup Google Drive terlebih dahulu agar koneksi P2P tidak bertabrakan.", Toast.LENGTH_LONG).show()
+            return
+        }
+        if (childSnapshots[code]?.getBoolean("parentMediaReceiveEnabled") != true) {
+            AlertDialog.Builder(this).setTitle("Penerimaan belum diaktifkan")
+                .setMessage("Aktifkan dan setujui terlebih dahulu menu Penerimaan dari HP Orang Tua pada HP anak. Setelah aktif, foto/video dapat disimpan otomatis tanpa persetujuan per file.")
+                .setPositiveButton("Mengerti", null).show()
+            return
+        }
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*"))
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        }
+        startActivityForResult(intent, PARENT_MEDIA_PICKER)
+    }
+
+    private fun startParentMediaTransfer(uri: Uri) {
+        val code = selectedChildCode
+        if (code.isNullOrBlank()) {
+            statusText.text = "Pilih HP anak terlebih dahulu"
+            return
+        }
+        if (childSnapshots[code]?.getBoolean("parentMediaReceiveEnabled") != true) {
+            statusText.text = "Penerimaan dari orang tua sudah tidak aktif di HP anak"
+            return
+        }
+        stopParentMediaTransfer()
+        parentSendStarted = false
+        pendingParentSendUri = uri
+        val resolver = contentResolver
+        val mime = resolver.getType(uri).orEmpty()
+        val name = resolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0) else null
+        } ?: "SantetHP-" + System.currentTimeMillis()
+        if (!mime.startsWith("image/") && !mime.startsWith("video/")) {
+            statusText.text = "File yang dipilih bukan foto atau video"
+            return
+        }
+        pendingParentSendName = name
+        pendingParentSendMime = mime
+        statusText.text = "Menghubungkan ke HP anak untuk mengirim $name…"
+
+        lateinit var manager: GalleryP2pManager
+        val protocol = ParentToChildMediaProtocol(
+            context = applicationContext,
+            role = GalleryP2pManager.Role.PARENT,
+            sendFrame = { bytes, binary -> manager.send(bytes, binary) },
+            onStatus = { message ->
+                runOnUiThread {
+                    statusText.text = message
+                    if (message.startsWith("Berhasil disimpan") ||
+                        message.startsWith("HP anak gagal") ||
+                        message.startsWith("HP anak menolak") ||
+                        message.startsWith("Pengiriman gagal") ||
+                        message.startsWith("Koneksi terputus")
+                    ) {
+                        rootLayout.postDelayed({ stopParentMediaTransfer() }, 1200)
+                    }
+                }
+            }
+        )
+        parentSendProtocol = protocol
+        manager = GalleryP2pManager(
+            context = applicationContext,
+            pairingCode = code,
+            localRole = GalleryP2pManager.Role.PARENT,
+            onState = { message ->
+                runOnUiThread {
+                    statusText.text = message
+                    if (message.contains("P2P TERHUBUNG") && !parentSendStarted) {
+                        parentSendStarted = true
+                        val accepted = protocol.sendFromUri(uri, name, mime)
+                        if (!accepted) {
+                            statusText.text = "Transfer belum dapat dimulai"
+                            rootLayout.postDelayed({ stopParentMediaTransfer() }, 1000)
+                        }
+                    } else if (message.contains("P2P gagal") || message.contains("gagal memulai")) {
+                        rootLayout.postDelayed({ stopParentMediaTransfer() }, 1500)
+                    }
+                }
+            },
+            onData = { bytes, binary -> protocol.onFrame(bytes, binary) }
+        )
+        parentSendP2pManager = manager
+        manager.start()
+    }
+
+    private fun stopParentMediaTransfer() {
+        parentSendProtocol?.close()
+        parentSendProtocol = null
+        parentSendP2pManager?.close()
+        parentSendP2pManager = null
+        parentSendStarted = false
+        pendingParentSendUri = null
     }
 
     private fun showGoogleDriveBackupSettings() {
@@ -4751,6 +4852,17 @@ override fun onActivityResult(
     super.onActivityResult(requestCode, resultCode, data)
 
     if (googleDriveAuthorization?.onActivityResult(requestCode, resultCode, data) == true) return
+
+    if (requestCode == PARENT_MEDIA_PICKER && resultCode == RESULT_OK) {
+        val uri = data?.data
+        if (uri != null) {
+            try {
+                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (_: Exception) { }
+            startParentMediaTransfer(uri)
+        }
+        return
+    }
 
     if (requestCode == MP3_PICKER &&
         resultCode == RESULT_OK
