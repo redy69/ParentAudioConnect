@@ -85,10 +85,16 @@ class ParentDriveBackupService : Service() {
         if (accessToken != token) folderId = null
         accessToken = token
         if (displayName.isNotBlank()) childDisplayName = displayName
-        if (manager != null) {
+        if (manager != null && pairingCode == code) {
             updateStatus("Izin Google Drive diperbarui • melanjutkan antrean backup")
             protocol?.requestNextBackup()
             return START_STICKY
+        }
+        if (manager != null && pairingCode != code) {
+            updateStatus("Beralih ke antrean backup perangkat anak yang dipilih")
+            stopP2pTransport()
+            consentListener?.remove()
+            consentListener = null
         }
         getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
             .putBoolean("parent_drive_backup_service_active", true)
