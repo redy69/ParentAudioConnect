@@ -512,6 +512,4 @@ class ParentDriveBackupService : Service() {
         stopTransport(clearSavedState = false)
         super.onDestroy()
     }
-
-    override fun onBind(intent: Intent?): IBinder? = null
 }
