@@ -794,6 +794,16 @@ private var receivedMp3File: File? = null
         parentOnlyViews.add(liveKitTestButton)
         rootLayout.addView(childDeviceStatusText)
         parentOnlyViews.add(childDeviceStatusText)
+        val featureHeading = TextView(this).apply {
+            text = "FITUR & PEMANTAUAN"
+            textSize = 11.5f
+            setTextColor(Color.rgb(49, 82, 145))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            letterSpacing = 0.105f
+            setPadding(dp(4), dp(10), dp(4), dp(5))
+        }
+        rootLayout.addView(featureHeading)
+        parentOnlyViews.add(featureHeading)
         parentAppBlockPanel = TextView(this).apply {
             text = "🚫  BLOKIR APLIKASI\nMenunggu persetujuan dan daftar aplikasi dari HP anak • Ketuk untuk mengatur"
             textSize = 12.5f
@@ -812,28 +822,6 @@ private var receivedMp3File: File? = null
         }
         rootLayout.addView(parentAppBlockPanel)
         parentOnlyViews.add(parentAppBlockPanel)
-        val parentNotificationsButton = TextView(this).apply {
-            text = "🔔  NOTIFIKASI HP ANAK\nLihat riwayat notifikasi dari semua aplikasi"
-            textSize = 13.5f
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(47, 55, 110))
-            gravity = Gravity.CENTER_VERTICAL
-            setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(18), dp(17), dp(18), dp(17))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(245, 241, 255))
-            ).apply {
-                cornerRadius = dp(18).toFloat()
-                setStroke(dp(1), Color.rgb(211, 198, 239))
-            }
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(5), 0, dp(8)) }
-            setOnClickListener { showChildNotificationsDialog() }
-        }
-        rootLayout.addView(parentNotificationsButton)
-        parentOnlyViews.add(parentNotificationsButton)
         val parentGalleryButton = TextView(this).apply {
             text = "🖼️  GALERI & BACKUP\nGaleri Anak • Kirim ke HP Anak • Backup Google Drive"
             textSize = 13.5f
