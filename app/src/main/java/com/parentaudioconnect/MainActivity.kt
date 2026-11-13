@@ -1714,6 +1714,9 @@ private var receivedMp3File: File? = null
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
 
+    private fun dp(value: Float): Float =
+        value * resources.displayMetrics.density
+
     private fun blendWithWhite(color: Int, amount: Float): Int {
         val inverse = 1f - amount
         return Color.rgb(
