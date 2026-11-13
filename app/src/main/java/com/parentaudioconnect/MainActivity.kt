@@ -831,8 +831,6 @@ private var receivedMp3File: File? = null
         parentOnlyViews.add(childHeaderRow)
         rootLayout.addView(childrenContainer)
         parentOnlyViews.add(childrenContainer)
-        rootLayout.addView(updateButton)
-        rootLayout.addView(updateInfoText)
         rootLayout.addView(parentButton)
         rootLayout.addView(childButton)
         val statusHeading = TextView(this).apply {
@@ -871,22 +869,14 @@ private var receivedMp3File: File? = null
         }
         rootLayout.addView(primaryControlHeading)
         parentOnlyViews.add(primaryControlHeading)
-        // Keep the four primary parent actions directly below the child's activity card.
-        rootLayout.addView(actionButtonsRow)
-        rootLayout.addView(childDeviceStatusText)
-        rootLayout.addView(childAppActivityStatusText)
-        parentOnlyViews.add(childDeviceStatusText)
-        parentOnlyViews.add(childAppActivityStatusText)
         val featureHeading = TextView(this).apply {
-            text = "FITUR & PEMANTAUAN"
+            text = "8 FITUR UTAMA"
             textSize = 11.5f
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.085f
             setPadding(dp(4), dp(8), dp(4), dp(4))
         }
-        rootLayout.addView(featureHeading)
-        parentOnlyViews.add(featureHeading)
         parentAppBlockPanel = TextView(this).apply {
             text = "🚫  BLOKIR APLIKASI\nAtur aplikasi yang boleh digunakan di HP anak"
             textSize = 13f
@@ -907,8 +897,9 @@ private var receivedMp3File: File? = null
             ).apply { setMargins(0, dp(2), 0, dp(4)) }
             setOnClickListener { showParentAppBlockDialog() }
         }
-        rootLayout.addView(parentAppBlockPanel)
-        parentOnlyViews.add(parentAppBlockPanel)
+        parentAppBlockPanel.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
+            setMargins(dp(3), dp(3), dp(3), dp(3))
+        }
         val parentGalleryButton = TextView(this).apply {
             text = "🖼️  GALERI & BACKUP\nGaleri Anak • Kirim ke HP Anak • Backup Google Drive"
             textSize = 13f
@@ -929,8 +920,9 @@ private var receivedMp3File: File? = null
             ).apply { setMargins(0, dp(2), 0, dp(4)) }
             setOnClickListener { showGaleriBackupMenu() }
         }
-        rootLayout.addView(parentGalleryButton)
-        parentOnlyViews.add(parentGalleryButton)
+        parentGalleryButton.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
+            setMargins(dp(3), dp(3), dp(3), dp(3))
+        }
         val mapsButton = TextView(this).apply {
             text = "🗺️  MAPS & GEO-FENCE\nBuka peta lokasi perangkat anak"
             textSize = 13f
@@ -952,8 +944,50 @@ private var receivedMp3File: File? = null
             ).apply { setMargins(0, dp(2), 0, dp(4)) }
             setOnClickListener { showMapsPage() }
         }
-        rootLayout.addView(mapsButton)
-        parentOnlyViews.add(mapsButton)
+        mapsButton.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
+            setMargins(dp(3), dp(3), dp(3), dp(3))
+        }
+        liveKitTestButton.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
+            setMargins(dp(3), dp(3), dp(3), dp(3))
+        }
+
+        val firstFeatureRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        firstFeatureRow.addView(parentAppBlockPanel)
+        firstFeatureRow.addView(parentGalleryButton)
+        val secondFeatureRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        secondFeatureRow.addView(mapsButton)
+        secondFeatureRow.addView(liveKitTestButton)
+
+        val featureGroupCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(8), dp(7), dp(8), dp(7))
+            background = roundedPanel(Color.argb(248, 255, 255, 255), 17)
+            elevation = dp(1).toFloat()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(2), 0, dp(5)) }
+        }
+        featureGroupCard.addView(featureHeading)
+        featureGroupCard.addView(actionButtonsRow)
+        featureGroupCard.addView(firstFeatureRow, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(86)
+        ))
+        featureGroupCard.addView(secondFeatureRow, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(86)
+        ))
+        rootLayout.addView(featureGroupCard)
+        parentOnlyViews.add(featureGroupCard)
+        rootLayout.addView(childAppActivityStatusText)
+        rootLayout.addView(childDeviceStatusText)
+        parentOnlyViews.add(childAppActivityStatusText)
+        parentOnlyViews.add(childDeviceStatusText)
+
         rootLayout.addView(cancelPairingButton)
         additionalControlsHeading = TextView(this).apply {
             text = "KONTROL TAMBAHAN"
@@ -967,18 +1001,7 @@ private var receivedMp3File: File? = null
         rootLayout.addView(additionalControlsHeading)
         rootLayout.addView(playMp3Button)
         rootLayout.addView(cameraStandbyButton)
-        val connectionSettingsHeading = TextView(this).apply {
-            text = "PENGATURAN KONEKSI"
-            textSize = 11.5f
-            setTextColor(Color.rgb(49, 82, 145))
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.085f
-            setPadding(dp(4), dp(8), dp(4), dp(4))
-        }
-        rootLayout.addView(connectionSettingsHeading)
-        parentOnlyViews.add(connectionSettingsHeading)
-        rootLayout.addView(liveKitTestButton)
-        parentOnlyViews.add(liveKitTestButton)
+        // Server & Failover is grouped with the other four dashboard features above.
 
         val mapsPage = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -1046,6 +1069,8 @@ private var receivedMp3File: File? = null
         mapsPage.addView(safeZonesContainer)
         rootLayout.addView(mapsPage)
         mapsPage.tag = "santethp_maps_page"
+        rootLayout.addView(updateButton)
+        rootLayout.addView(updateInfoText)
 
         showRoleSelection()
         val scrollView = ScrollView(this).apply {
