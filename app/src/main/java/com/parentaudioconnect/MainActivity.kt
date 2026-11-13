@@ -84,7 +84,7 @@ class MainActivity : Activity(), LifecycleOwner {
     private lateinit var statusText: TextView
     private lateinit var connectionStatusText: TextView
     private lateinit var updateInfoText: TextView
-    private lateinit var childAudioActivityText: TextView
+    private lateinit var childAudioActivityText: AudioVisualizerView
     private lateinit var childDeviceStatusText: LinearLayout
     private lateinit var childAppActivityStatusText: LinearLayout
     private lateinit var childUsageRowsContainer: LinearLayout
@@ -381,19 +381,10 @@ private var receivedMp3File: File? = null
             visibility = View.GONE
         }
 
-        childAudioActivityText = TextView(this).apply {
-            text = "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
-            textSize = 13f
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.01f
-            setTextColor(Color.rgb(32, 55, 92))
-            gravity = Gravity.CENTER_VERTICAL
-            setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(13), dp(9), dp(13), dp(9))
-            background = roundedPanel(Color.argb(190, 255, 255, 255), 16)
-            elevation = dp(1).toFloat()
+        childAudioActivityText = AudioVisualizerView().apply {
+            contentDescription = "Aktivitas audio anak"
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(78)
             ).apply { setMargins(0, dp(2), 0, dp(4)) }
         }
 
@@ -824,7 +815,7 @@ private var receivedMp3File: File? = null
         rootLayout.addView(pairingInstructionText)
         rootLayout.addView(codeText)
         val activityHeading = TextView(this).apply {
-            text = "STATUS PEMUTARAN AUDIO"
+            text = "AKTIVITAS AUDIO ANAK"
             textSize = 11.5f
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -1822,6 +1813,132 @@ private var receivedMp3File: File? = null
             setStroke(dp(1), Color.argb(185, 255, 255, 255))
         }
 
+    /**
+     * Lightweight animated audio-style visualizer for the parent dashboard.
+     * It animates locally and only while attached to the visible window.
+     */
+    private inner class AudioVisualizerView : View(this@MainActivity) {
+        private val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(32, 55, 92)
+            textSize = dp(12.5f).toFloat()
+            typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+        }
+        private val statusPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(104, 117, 140)
+            textSize = dp(11f).toFloat()
+            typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
+        }
+        private val barPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+        }
+        private var statusLabel = "Tidak sedang memutar audio"
+        private var audioActive = false
+        private var framePosted = false
+
+        fun setActivityState(label: String, active: Boolean) {
+            if (statusLabel == label && audioActive == active) return
+            statusLabel = label
+            audioActive = active
+            contentDescription = "Aktivitas audio anak: $label"
+            invalidate()
+            updateAnimation()
+        }
+
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val w = width.toFloat()
+            val h = height.toFloat()
+            if (w <= 0f || h <= 0f) return
+            val radius = dp(16).toFloat()
+            panelPaint.style = Paint.Style.FILL
+            panelPaint.color = Color.argb(248, 255, 255, 255)
+            canvas.drawRoundRect(0f, 0f, w, h, radius, radius, panelPaint)
+            panelPaint.style = Paint.Style.STROKE
+            panelPaint.strokeWidth = dp(1).toFloat()
+            panelPaint.color = Color.rgb(218, 229, 246)
+            canvas.drawRoundRect(dp(0.5f), dp(0.5f), w - dp(0.5f), h - dp(0.5f), radius, radius, panelPaint)
+
+            val left = dp(14).toFloat()
+            canvas.drawText("AKTIVITAS AUDIO ANAK", left, dp(27).toFloat(), titlePaint)
+            val maxTextWidth = (w * 0.58f - dp(18)).coerceAtLeast(dp(80).toFloat())
+            val shownStatus = android.text.TextUtils.ellipsize(
+                statusLabel, android.text.TextPaint(statusPaint), maxTextWidth,
+                android.text.TextUtils.TruncateAt.END
+            ).toString()
+            canvas.drawText(shownStatus, left, dp(49).toFloat(), statusPaint)
+
+            val barCount = 15
+            val gap = dp(3).toFloat()
+            val barWidth = dp(3.5f).toFloat()
+            val totalBarsWidth = barCount * barWidth + (barCount - 1) * gap
+            val startX = (w - dp(14) - totalBarsWidth).coerceAtLeast(w * 0.62f)
+            val centerY = h * 0.53f
+            val now = android.os.SystemClock.uptimeMillis()
+            for (i in 0 until barCount) {
+                val wave = if (audioActive) {
+                    (kotlin.math.sin(now / 175.0 + i * 0.72) * 0.5 + 0.5).toFloat()
+                } else {
+                    0.12f + (i % 3) * 0.025f
+                }
+                val barHeight = dp(5).toFloat() + wave * dp(if (audioActive) 31 else 4)
+                val x = startX + i * (barWidth + gap)
+                barPaint.color = if (audioActive) {
+                    Color.rgb(42, 132 + (wave * 35).toInt(), 220)
+                } else {
+                    Color.rgb(174, 198, 228)
+                }
+                canvas.drawRoundRect(
+                    x, centerY - barHeight / 2f, x + barWidth, centerY + barHeight / 2f,
+                    barWidth, barWidth, barPaint
+                )
+            }
+        }
+
+        private val animationTick = object : Runnable {
+            override fun run() {
+                framePosted = false
+                if (!audioActive || !isAttachedToWindow || visibility != View.VISIBLE) return
+                invalidate()
+                postAnimationFrame()
+            }
+        }
+
+        private fun postAnimationFrame() {
+            if (framePosted || !audioActive || !isAttachedToWindow || visibility != View.VISIBLE) return
+            framePosted = true
+            postDelayed(animationTick, 45L)
+        }
+
+        private fun updateAnimation() {
+            if (audioActive) postAnimationFrame()
+            else {
+                removeCallbacks(animationTick)
+                framePosted = false
+            }
+        }
+
+        override fun onAttachedToWindow() {
+            super.onAttachedToWindow()
+            updateAnimation()
+        }
+
+        override fun onDetachedFromWindow() {
+            removeCallbacks(animationTick)
+            framePosted = false
+            super.onDetachedFromWindow()
+        }
+
+        override fun onVisibilityChanged(changedView: View, visibility: Int) {
+            super.onVisibilityChanged(changedView, visibility)
+            if (visibility == View.VISIBLE) updateAnimation()
+            else {
+                removeCallbacks(animationTick)
+                framePosted = false
+            }
+        }
+    }
+
     private inner class StatusGlyphDrawable(private val isBattery: Boolean) : android.graphics.drawable.Drawable() {
         private val glyphPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         var levelPercent: Int = -1
@@ -2576,7 +2693,7 @@ private var receivedMp3File: File? = null
         } ?: run {
             latestPairingSnapshot = null
             childAudioActivityText.removeCallbacks(staleStatusRunnable)
-            childAudioActivityText.text = "AKTIVITAS HP ANAK\nMenunggu data perangkat yang dipilih..."
+            childAudioActivityText.setActivityState("Menunggu data perangkat yang dipilih...", false)
             childUsageRowsContainer.removeAllViews()
             childActivityRowsContainer.removeAllViews()
             addChildActivityRow(childUsageRowsContainer, "Menunggu data dari perangkat ini...")
@@ -3262,19 +3379,14 @@ private var receivedMp3File: File? = null
         val mp3AudioActive =
             snapshot.getBoolean("mp3AudioActive") == true && mp3Fresh
 
-        childAudioActivityText.text = when {
-            liveAudioActive && mp3AudioActive ->
-                "AKTIVITAS HP ANAK\nMP3 dan audio live sedang aktif"
-            liveAudioActive ->
-                "AKTIVITAS HP ANAK\nAudio langsung sedang diputar"
-            mp3AudioActive ->
-                "AKTIVITAS HP ANAK\nMP3 sedang diputar"
-            else ->
-                "AKTIVITAS HP ANAK\nTidak sedang memutar audio"
+        val activityLabel = when {
+            liveAudioActive && mp3AudioActive -> "MP3 dan Audio Live sedang aktif"
+            liveAudioActive -> "Audio Live sedang aktif"
+            mp3AudioActive -> "MP3 sedang diputar"
+            else -> "Tidak sedang memutar audio"
         }
-        childAudioActivityText.setTextColor(
-            if (liveAudioActive || mp3AudioActive) Color.rgb(28, 150, 92)
-            else Color.rgb(104, 117, 140)
+        childAudioActivityText.setActivityState(
+            activityLabel, liveAudioActive || mp3AudioActive
         )
     }
 
