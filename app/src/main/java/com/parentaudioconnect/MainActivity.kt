@@ -3029,11 +3029,13 @@ private var receivedMp3File: File? = null
         if (currentRole != "child") return
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         val enabled = prefs.getBoolean("child_gallery_sharing_enabled", false)
-        val message = "Jika diaktifkan, daftar foto dan video dari HP ini dapat dilihat oleh HP orang tua yang sudah dipasangkan. Pada rancangan ini, thumbnail ditampilkan lebih dulu; file asli/HD tidak dikirim otomatis dan baru diminta saat orang tua memilih item. Android akan meminta izin media. Anda dapat menghentikan berbagi kapan saja."
-        AlertDialog.Builder(this)
+        val backupEnabled = prefs.getBoolean("child_drive_backup_consent", false)
+        val message = "Jika diaktifkan, daftar foto dan video dari HP ini dapat dilihat oleh HP orang tua yang sudah dipasangkan. Thumbnail ditampilkan lebih dulu; file asli/HD baru dikirim saat orang tua memilih item. Anda dapat menghentikan berbagi kapan saja."
+        val dialog = AlertDialog.Builder(this)
             .setTitle(if (enabled) "Berbagi galeri sedang aktif" else "Persetujuan berbagi galeri")
             .setMessage(message)
             .setNegativeButton("Tutup", null)
+            .setNeutralButton("Pengaturan Backup Drive", null)
             .setPositiveButton(if (enabled) "Hentikan berbagi" else "Saya setuju • Lanjutkan") { _, _ ->
                 if (enabled) {
                     prefs.edit().putBoolean("child_gallery_sharing_enabled", false).apply()
@@ -3046,12 +3048,63 @@ private var receivedMp3File: File? = null
                         .putBoolean("child_gallery_server_consent_confirmed", false)
                         .apply()
                     updateChildGalleryPanel()
-                    // If Android permissions were already granted, do not wait for a
-                    // permission callback that may not arrive; save consent immediately.
                     if (hasGalleryMediaAccess()) {
                         updateGalleryConsentOnServer(true) { startChildGalleryP2pIfAllowed() }
                     } else {
                         requestPermissions(galleryMediaPermissions(), GALLERY_MEDIA_PERMISSION)
+                    }
+                }
+            }
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                dialog.dismiss()
+                showChildDriveBackupConsent()
+            }
+        }
+        dialog.show()
+    }
+
+    /**
+     * Separate child-side consent for future automatic Drive backup. The complete
+     * MediaStore snapshot is captured on IO before enabling the tracker, so media
+     * already on the device is never added to the new-file upload queue.
+     */
+    private fun showChildDriveBackupConsent() {
+        if (currentRole != "child") return
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        val enabled = prefs.getBoolean("child_drive_backup_consent", false)
+        val message = if (enabled) {
+            "Persetujuan backup foto dan video baru sedang aktif. File yang sudah ada sebelum persetujuan tidak dimasukkan ke antrean. Pengiriman dan upload otomatis belum berjalan sampai integrasi Drive selesai. Anda dapat mencabut persetujuan kapan saja."
+        } else {
+            "Jika disetujui, hanya foto dan video yang ditambahkan SETELAH persetujuan ini yang akan dipersiapkan untuk backup ke Google Drive orang tua. Semua file lama tetap hanya tampil di Galeri Anak dan tidak akan diunggah. Persetujuan ini terpisah dari Berbagi Galeri dan dapat dicabut kapan saja. Saat ini integrasi pengiriman/upload otomatis masih dalam pengerjaan."
+        }
+        AlertDialog.Builder(this)
+            .setTitle(if (enabled) "Persetujuan Backup Drive aktif" else "Persetujuan Backup Google Drive")
+            .setMessage(message)
+            .setNegativeButton("Tutup", null)
+            .setPositiveButton(if (enabled) "Cabut persetujuan" else "Saya setuju • Catat file lama sebagai awal") { _, _ ->
+                if (enabled) {
+                    GalleryBackupTracker(this).disable()
+                    prefs.edit().putBoolean("child_drive_backup_consent", false).apply()
+                    Toast.makeText(this, "Persetujuan Backup Drive dicabut.", Toast.LENGTH_LONG).show()
+                } else if (!hasGalleryMediaAccess()) {
+                    Toast.makeText(this, "Aktifkan izin foto dan video terlebih dahulu melalui Berbagi Galeri.", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this, "Sedang mencatat galeri yang sudah ada sebagai batas awal backup…", Toast.LENGTH_LONG).show()
+                    activityScope.launch {
+                        try {
+                            withContext(Dispatchers.IO) {
+                                val repository = GalleryMediaRepository(this@MainActivity)
+                                GalleryBackupTracker(this@MainActivity).enableWithCompleteBaseline(repository)
+                            }
+                            prefs.edit().putBoolean("child_drive_backup_consent", true).apply()
+                            Toast.makeText(this@MainActivity, "Persetujuan tersimpan. File lama dikecualikan dari antrean backup.", Toast.LENGTH_LONG).show()
+                            showChildDriveBackupConsent()
+                        } catch (error: Exception) {
+                            GalleryBackupTracker(this@MainActivity).disable()
+                            Toast.makeText(this@MainActivity, "Gagal mencatat batas awal galeri: ${error.localizedMessage ?: "coba lagi"}", Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
             }
