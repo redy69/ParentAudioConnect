@@ -111,7 +111,8 @@ class GoogleDriveUploader(private val accessToken: String) {
         mimeType: String,
         parentFolderId: String,
         stableKey: String? = null,
-        progress: ProgressListener = ProgressListener { _, _ -> }
+        progress: ProgressListener = ProgressListener { _, _ -> },
+        canContinue: () -> Boolean = { true }
     ): UploadedFile {
         require(file.isFile && file.canRead()) { "File backup tidak dapat dibaca." }
         if (!stableKey.isNullOrBlank()) {
@@ -146,6 +147,7 @@ class GoogleDriveUploader(private val accessToken: String) {
         var offset = 0L
         RandomAccessFile(file, "r").use { input ->
             while (offset < total) {
+                if (!canContinue()) throw java.io.IOException("Jaringan backup tidak diizinkan saat ini • file tetap dalam antrean")
                 val length = minOf(CHUNK_BYTES.toLong(), total - offset).toInt()
                 val bytes = ByteArray(length)
                 input.seek(offset)
