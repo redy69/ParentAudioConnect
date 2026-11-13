@@ -1023,6 +1023,8 @@ private var receivedMp3File: File? = null
                     action = ParentDriveBackupService.ACTION_START
                     putExtra(ParentDriveBackupService.EXTRA_PAIR_CODE, code)
                     putExtra(ParentDriveBackupService.EXTRA_ACCESS_TOKEN, token)
+                                     putExtra(ParentDriveBackupService.EXTRA_CHILD_NAME, childNames[code] ?: "HP Anak")
+                    putExtra(ParentDriveBackupService.EXTRA_CHILD_NAME, prefs.getString("parent_drive_backup_child_name", "HP Anak") ?: "HP Anak")
                 }
                 try {
                     ContextCompat.startForegroundService(this, intent)
@@ -4246,6 +4248,7 @@ private var receivedMp3File: File? = null
             action = ParentDriveBackupService.ACTION_START
             putExtra(ParentDriveBackupService.EXTRA_PAIR_CODE, code)
             putExtra(ParentDriveBackupService.EXTRA_ACCESS_TOKEN, googleDriveAccessToken)
+            putExtra(ParentDriveBackupService.EXTRA_CHILD_NAME, childNames[code] ?: "HP Anak")
         }
         try {
             ContextCompat.startForegroundService(this, intent)
