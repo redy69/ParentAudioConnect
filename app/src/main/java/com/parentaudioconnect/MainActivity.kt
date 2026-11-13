@@ -328,14 +328,15 @@ private var receivedMp3File: File? = null
 
         childQuickStatusText = TextView(this).apply {
             text = "🔋 --   •   ᯤ Menunggu data jaringan"
-            textSize = 11f
+            textSize = 10.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.005f
             setTextColor(Color.rgb(65, 83, 116))
             gravity = Gravity.CENTER_VERTICAL
+            includeFontPadding = false
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(dp(8), dp(3), dp(8), dp(3))
+            setPadding(dp(6), dp(3), dp(6), dp(3))
         }
 
         updateInfoText = TextView(this).apply {
@@ -2017,7 +2018,10 @@ private var receivedMp3File: File? = null
                                 !it.equals("Tidak terdeteksi / tanpa SIM", ignoreCase = true) &&
                                 !it.equals("Tidak tersedia", ignoreCase = true)
                         }
-                    if (operator.isNullOrBlank()) "📶" else "📶 $operator"
+                    val compactOperator = operator?.let {
+                        if (it.length > 12) "${it.take(11)}…" else it
+                    }
+                    if (compactOperator.isNullOrBlank()) "📶" else "📶 $compactOperator"
                 }
                 network.contains("ethernet") -> "⌁ Ethernet"
                 else -> ""
