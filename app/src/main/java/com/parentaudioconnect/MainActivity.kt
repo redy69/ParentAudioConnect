@@ -101,6 +101,7 @@ private lateinit var playMp3Button: Button
     private lateinit var actionButtonsRow: LinearLayout
     private lateinit var addChildButton: Button
     private lateinit var selectedChildButton: Button
+    private lateinit var childQuickStatusText: TextView
     private lateinit var cancelPairingButton: Button
     private lateinit var updateButton: Button
     private lateinit var cameraStandbyButton: Button
@@ -324,6 +325,25 @@ private var receivedMp3File: File? = null
             ).apply { setMargins(dp(6), 0, dp(6), 0) }
         }
 
+        childQuickStatusText = TextView(this).apply {
+            text = "🔋 --   •   ᯤ Menunggu data jaringan"
+            textSize = 11f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            letterSpacing = 0.005f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER_VERTICAL
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setPadding(dp(10), dp(6), dp(10), dp(6))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.argb(105, 255, 255, 255), Color.argb(58, 205, 224, 255))
+            ).apply {
+                cornerRadius = dp(13).toFloat()
+                setStroke(dp(1), Color.argb(105, 255, 255, 255))
+            }
+        }
+
         updateInfoText = TextView(this).apply {
             text = "Belum ada pemeriksaan pembaruan."
             textSize = 11.5f
@@ -511,17 +531,14 @@ private var receivedMp3File: File? = null
         selectedChildButton = createButton("Pilih anak  ▾")
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
         selectedChildButton.setOnClickListener { toggleChildrenPanel() }
-        selectedChildButton.setTextColor(Color.rgb(35, 57, 96))
-        selectedChildButton.textSize = 13.5f
+        selectedChildButton.setTextColor(Color.WHITE)
+        selectedChildButton.textSize = 16f
         selectedChildButton.contentDescription = "Pilih perangkat anak"
-        selectedChildButton.background = GradientDrawable(
-            GradientDrawable.Orientation.TL_BR,
-            intArrayOf(Color.WHITE, Color.rgb(246, 249, 255))
-        ).apply {
-            cornerRadius = dp(17).toFloat()
-            setStroke(dp(1), Color.rgb(211, 224, 246))
+        selectedChildButton.background = GradientDrawable().apply {
+            setColor(Color.TRANSPARENT)
         }
-        selectedChildButton.elevation = dp(2).toFloat()
+        selectedChildButton.setPadding(dp(4), dp(3), dp(4), dp(3))
+        selectedChildButton.elevation = 0f
         selectedChildButton.setTypeface(null, android.graphics.Typeface.BOLD)
         addChildButton.setTextColor(Color.WHITE)
         addChildButton.background = GradientDrawable(
@@ -740,7 +757,26 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        childHeaderRow.addView(selectedChildButton, LinearLayout.LayoutParams(0, dp(42), 1f))
+        val childIdentityGlass = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(9), dp(5), dp(9), dp(7))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(48, 78, 211), Color.rgb(42, 96, 205), Color.rgb(73, 126, 226))
+            ).apply {
+                cornerRadius = dp(19).toFloat()
+                setStroke(dp(1), Color.argb(100, 255, 255, 255))
+            }
+            elevation = dp(3).toFloat()
+        }
+        childIdentityGlass.addView(selectedChildButton, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(34)
+        ))
+        childIdentityGlass.addView(childQuickStatusText, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(30)
+        ))
+        childHeaderRow.addView(childIdentityGlass, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         childHeaderRow.addView(connectionStatusText)
         childHeaderRow.addView(addChildButton)
         rootLayout.addView(childHeaderRow)
@@ -1920,6 +1956,23 @@ private var receivedMp3File: File? = null
         (connectionStatusText.background as? GradientDrawable)?.setColor(
             if (connected) Color.rgb(226, 247, 237) else Color.rgb(239, 243, 249)
         )
+        val selectedSnapshot = selectedChildCode?.let { childSnapshots[it] }
+        if (selectedSnapshot == null) {
+            childQuickStatusText.text = "🔋 --   •   ᯤ Menunggu data jaringan"
+        } else {
+            val battery = selectedSnapshot.getLong("deviceBatteryPercent")?.toInt() ?: -1
+            val network = selectedSnapshot.getString("deviceNetworkType")?.takeIf { it.isNotBlank() }
+                ?: "Jaringan --"
+            val internet = selectedSnapshot.getBoolean("deviceInternetValidated") == true
+            val updatedAt = selectedSnapshot.getTimestamp("deviceStatusAt")
+            val ageMs = updatedAt?.toDate()?.time?.let { System.currentTimeMillis() - it }
+            val fresh = ageMs != null && ageMs in -60_000L..15 * 60 * 1000L
+            val batteryLabel = if (battery in 0..100) "$battery%" else "--"
+            val networkLabel = network.replace('_', ' ').take(15)
+            childQuickStatusText.text = "🔋 $batteryLabel   •   ᯤ $networkLabel · " +
+                (if (internet) "Internet aktif" else "Internet --") +
+                (if (fresh) "" else " · data lama")
+        }
         val conditionTitle = "KONDISI HP ${name?.takeIf { it.isNotBlank() } ?: "ANAK"}"
         childDeviceStatusText.text = childDeviceStatusText.text.toString()
             .replaceFirst(Regex("^KONDISI HP [^\n]*"), conditionTitle)
