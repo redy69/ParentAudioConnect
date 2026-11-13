@@ -864,73 +864,74 @@ private var receivedMp3File: File? = null
             textSize = 11.5f
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.105f
-            setPadding(dp(4), dp(10), dp(4), dp(5))
+            letterSpacing = 0.085f
+            setPadding(dp(4), dp(8), dp(4), dp(4))
         }
         rootLayout.addView(featureHeading)
         parentOnlyViews.add(featureHeading)
         parentAppBlockPanel = TextView(this).apply {
             text = "🚫  BLOKIR APLIKASI\nAtur aplikasi yang boleh digunakan di HP anak"
-            textSize = 13.5f
+            textSize = 13f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(35, 65, 125))
             gravity = Gravity.CENTER_VERTICAL
-            setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(16), dp(13), dp(16), dp(13))
+            setLineSpacing(dp(2).toFloat(), 1f)
+            setPadding(dp(14), dp(11), dp(14), dp(11))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(235, 243, 255))
             ).apply {
-                cornerRadius = dp(18).toFloat()
-                setStroke(dp(1), Color.rgb(190, 211, 244))
+                cornerRadius = dp(15).toFloat()
+                setStroke(dp(1), Color.rgb(198, 216, 243))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(4), 0, dp(7)) }
+            ).apply { setMargins(0, dp(3), 0, dp(5)) }
             setOnClickListener { showParentAppBlockDialog() }
         }
         rootLayout.addView(parentAppBlockPanel)
         parentOnlyViews.add(parentAppBlockPanel)
         val parentGalleryButton = TextView(this).apply {
             text = "🖼️  GALERI & BACKUP\nGaleri Anak • Kirim ke HP Anak • Backup Google Drive"
-            textSize = 13.5f
+            textSize = 13f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(35, 65, 125))
             gravity = Gravity.CENTER_VERTICAL
-            setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(16), dp(14), dp(16), dp(14))
+            setLineSpacing(dp(2).toFloat(), 1f)
+            setPadding(dp(14), dp(11), dp(14), dp(11))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(235, 243, 255))
             ).apply {
-                cornerRadius = dp(18).toFloat()
-                setStroke(dp(1), Color.rgb(190, 211, 244))
+                cornerRadius = dp(15).toFloat()
+                setStroke(dp(1), Color.rgb(198, 216, 243))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(5), 0, dp(8)) }
+            ).apply { setMargins(0, dp(3), 0, dp(5)) }
             setOnClickListener { showGaleriBackupMenu() }
         }
         rootLayout.addView(parentGalleryButton)
         parentOnlyViews.add(parentGalleryButton)
         val mapsButton = TextView(this).apply {
             text = "🗺️  MAPS & GEO-FENCE\nBuka peta lokasi perangkat anak"
-            textSize = 14f
+            textSize = 13f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(35, 65, 125))
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(14), dp(16), dp(14))
+            setLineSpacing(dp(2).toFloat(), 1f)
+            setPadding(dp(14), dp(11), dp(14), dp(11))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(235, 243, 255))
             ).apply {
-                cornerRadius = dp(18).toFloat()
-                setStroke(dp(1), Color.rgb(190, 211, 244))
+                cornerRadius = dp(15).toFloat()
+                setStroke(dp(1), Color.rgb(198, 216, 243))
             }
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(5), 0, dp(8)) }
+            ).apply { setMargins(0, dp(3), 0, dp(5)) }
             setOnClickListener { showMapsPage() }
         }
         rootLayout.addView(mapsButton)
