@@ -59,6 +59,7 @@ class GalleryBackupP2pProtocol(
             "backup_chunk" -> if (role == GalleryP2pManager.Role.PARENT) receiveChunk(message)
             "backup_end" -> if (role == GalleryP2pManager.Role.PARENT) receiveEnd(message)
             "backup_ack" -> if (role == GalleryP2pManager.Role.CHILD) receiveAck(message)
+            "backup_ack_received" -> if (role == GalleryP2pManager.Role.PARENT) requestNext()
             "backup_error" -> onStatus(message.optString("message", "Backup P2P gagal"))
         }
         return true
@@ -234,6 +235,7 @@ class GalleryBackupP2pProtocol(
             onStatus("Upload Google Drive belum berhasil • file tetap dalam antrean untuk dicoba lagi")
         }
         sendingId = null
+        send(JSONObject().put("type", "backup_ack_received").put("key", key))
     }
 
     private fun failIncoming(transfer: Incoming, message: String) {
