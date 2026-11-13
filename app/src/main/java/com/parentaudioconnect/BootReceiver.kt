@@ -36,7 +36,8 @@ class BootReceiver : BroadcastReceiver() {
             prefs.getBoolean("child_gallery_sharing_enabled", false)
         val serverConsentConfirmed =
             prefs.getBoolean("child_gallery_server_consent_confirmed", false)
-        if (gallerySharingEnabled && serverConsentConfirmed) {
+        val backupConsent = prefs.getBoolean("child_drive_backup_consent", false)
+        if ((gallerySharingEnabled && serverConsentConfirmed) || backupConsent) {
             try {
                 val serviceIntent = Intent(context, ChildGalleryP2pService::class.java)
                     .setAction(ChildGalleryP2pService.ACTION_START)
