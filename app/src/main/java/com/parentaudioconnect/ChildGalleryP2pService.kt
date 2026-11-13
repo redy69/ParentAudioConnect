@@ -41,10 +41,11 @@ class ChildGalleryP2pService : Service() {
         }
 
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
-        val enabled = prefs.getBoolean("child_gallery_sharing_enabled", false)
-        val serverConfirmed = prefs.getBoolean("child_gallery_server_consent_confirmed", false)
+        val galleryConsent = prefs.getBoolean("child_gallery_sharing_enabled", false) &&
+            prefs.getBoolean("child_gallery_server_consent_confirmed", false)
+        val backupConsent = prefs.getBoolean("child_drive_backup_consent", false)
         val code = prefs.getString("pair_code", null)
-        if (!enabled || !serverConfirmed || !hasGalleryMediaAccess() || code.isNullOrBlank()) {
+        if ((!galleryConsent && !backupConsent) || !hasGalleryMediaAccess() || code.isNullOrBlank()) {
             Log.i(TAG, "Service tidak dimulai: persetujuan, izin media, atau pairing belum tersedia")
             stopTransport()
             stopSelf()
@@ -57,7 +58,15 @@ class ChildGalleryP2pService : Service() {
     }
 
     private fun startAsForeground() {
-        val notification = buildNotification("Menjaga koneksi langsung ke HP orang tua")
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        val galleryEnabled = prefs.getBoolean("child_gallery_sharing_enabled", false) &&
+            prefs.getBoolean("child_gallery_server_consent_confirmed", false)
+        val message = if (galleryEnabled) {
+            "Menjaga koneksi galeri P2P ke HP orang tua"
+        } else {
+            "Menjaga koneksi backup media baru yang telah disetujui"
+        }
+        val notification = buildNotification(message)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 NOTIFICATION_ID,
@@ -72,7 +81,7 @@ class ChildGalleryP2pService : Service() {
     private fun buildNotification(message: String): Notification =
         NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_gallery)
-            .setContentTitle("SantetHP • Berbagi galeri aktif")
+            .setContentTitle("SantetHP • Layanan media aktif")
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(
                 "$message. Berbagi hanya berlangsung selama persetujuan anak dan izin media tetap aktif."
