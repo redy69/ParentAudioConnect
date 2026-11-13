@@ -1857,10 +1857,10 @@ private var receivedMp3File: File? = null
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(6), dp(5), dp(6), dp(5))
-            minHeight = dp(56)
+            setPadding(dp(6), dp(4), dp(6), dp(4))
+            minHeight = dp(54)
             background = roundedPanel(Color.argb(205, 255, 255, 255), 14)
-            elevation = dp(3).toFloat()
+            elevation = dp(2).toFloat()
             isClickable = true
             isFocusable = true
             contentDescription = label
