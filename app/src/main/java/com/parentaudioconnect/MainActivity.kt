@@ -3605,22 +3605,15 @@ private var receivedMp3File: File? = null
                             Toast.makeText(this, "Izin Google Drive berhasil diberikan.", Toast.LENGTH_LONG).show()
                             if (childSnapshots[code]?.getBoolean("driveBackupEnabled") == true) {
                                 // The gallery dialog owns a separate parent P2P session.
-                                // Close it before the backup foreground service takes over.
+                                // Close it before the multi-child backup scheduler takes over.
                                 if (parentGalleryDialog?.isShowing == true) {
                                     parentGalleryDialog?.dismiss()
+                                    stopParentGalleryP2p()
                                 }
-                                val serviceIntent = Intent(this, ParentDriveBackupService::class.java).apply {
-                                    action = ParentDriveBackupService.ACTION_START
-                                    putExtra(ParentDriveBackupService.EXTRA_PAIR_CODE, code)
-                                    putExtra(ParentDriveBackupService.EXTRA_ACCESS_TOKEN, token)
-                                    putExtra(ParentDriveBackupService.EXTRA_CHILD_NAME, folderNameInput.text.toString().trim().ifBlank { childName })
+                                childSnapshots[code]?.let {
+                                    maybeStartParentDriveBackupForChild(code, it)
                                 }
-                                try {
-                                    ContextCompat.startForegroundService(this, serviceIntent)
-                                    status.text = "Google Drive terhubung. Layanan backup aktif; hanya file baru dari HP anak yang disetujui akan dikirim."
-                                } catch (_: Exception) {
-                                    status.text = "Izin Drive berhasil, tetapi layanan backup tidak dapat dimulai. Periksa izin notifikasi dan coba lagi."
-                                }
+                                status.text = "Google Drive terhubung. Antrean backup otomatis bergantian sedang disiapkan."
                             } else {
                                 status.text = "Google Drive terhubung. Persetujuan backup belum aktif dari HP anak."
                             }
