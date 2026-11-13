@@ -3018,7 +3018,11 @@ private var receivedMp3File: File? = null
         }
         if (!enabled) {
             prefs.edit().putBoolean("child_gallery_server_consent_confirmed", false).apply()
-            stopChildGalleryP2p()
+            // Gallery browsing can be revoked while the separate Drive-backup
+            // consent remains active; keep the transport only for that consent.
+            if (!prefs.getBoolean("child_drive_backup_consent", false)) {
+                stopChildGalleryP2p()
+            }
         }
         db.collection("pairings").document(code).update(
             mapOf("gallerySharingEnabled" to enabled, "gallerySharingUpdatedAt" to Timestamp.now())
