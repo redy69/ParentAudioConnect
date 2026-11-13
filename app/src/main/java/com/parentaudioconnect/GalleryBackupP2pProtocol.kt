@@ -187,7 +187,8 @@ class GalleryBackupP2pProtocol(
         val id = message.optString("transferId")
         val key = message.optString("key")
         val size = message.optLong("size", -1)
-        if (!requestOutstanding || id.isBlank() || id.length > 64 || key.isBlank() || key.length > 160 ||
+        if (!requestOutstanding || !canReceiveBackup() ||
+            id.isBlank() || id.length > 64 || key.isBlank() || key.length > 160 ||
             size <= 0 || size > MAX_FILE_BYTES || incoming != null
         ) {
             requestOutstanding = false
