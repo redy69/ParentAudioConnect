@@ -314,16 +314,16 @@ private var receivedMp3File: File? = null
 
         connectionStatusText = TextView(this).apply {
             text = "○ OFFLINE"
-            textSize = 10.5f
+            textSize = 9.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(105, 116, 137))
             gravity = Gravity.CENTER
-            setPadding(dp(8), dp(4), dp(8), dp(4))
+            setPadding(dp(6), dp(3), dp(6), dp(3))
             background = roundedPanel(Color.argb(205, 239, 245, 255), 14)
             maxLines = 1
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)
-            ).apply { setMargins(dp(6), 0, dp(6), 0) }
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(32)
+            ).apply { setMargins(dp(3), 0, dp(3), 0) }
         }
 
         childQuickStatusText = TextView(this).apply {
@@ -503,15 +503,17 @@ private var receivedMp3File: File? = null
         addChildButton = createButton("＋")
         addChildButton.textSize = 25f
         addChildButton.contentDescription = "Tambah anak"
-        addChildButton.layoutParams = LinearLayout.LayoutParams(dp(42), dp(42)).apply { setMargins(dp(8), dp(7), 0, dp(7)) }
+        addChildButton.layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply { setMargins(dp(3), dp(5), 0, dp(5)) }
         selectedChildButton = createButton("Pilih anak  ▾")
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
         selectedChildButton.setOnClickListener { toggleChildrenPanel() }
         selectedChildButton.setTextColor(Color.rgb(35, 65, 125))
-        selectedChildButton.textSize = 16f
+        selectedChildButton.textSize = 14.5f
+        selectedChildButton.maxLines = 1
+        selectedChildButton.ellipsize = android.text.TextUtils.TruncateAt.END
         selectedChildButton.contentDescription = "Pilih perangkat anak"
         selectedChildButton.background = roundedPanel(Color.WHITE, 12)
-        selectedChildButton.setPadding(dp(8), dp(3), dp(8), dp(3))
+        selectedChildButton.setPadding(dp(8), dp(2), dp(6), dp(2))
         selectedChildButton.elevation = dp(1).toFloat()
         selectedChildButton.setTypeface(null, android.graphics.Typeface.BOLD)
         addChildButton.setTextColor(Color.WHITE)
@@ -793,7 +795,7 @@ private var receivedMp3File: File? = null
         childIdentityColumn.addView(childQuickStatusText, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(22)
         ))
-        childHeaderRow.addView(childIdentityColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        childHeaderRow.addView(childIdentityColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { weight = 1f })
         childHeaderRow.addView(connectionStatusText)
         val notificationsBellButton = createButton("🔔")
         notificationsBellButton.textSize = 19f
@@ -801,7 +803,7 @@ private var receivedMp3File: File? = null
         notificationsBellButton.setTextColor(Color.rgb(42, 76, 145))
         notificationsBellButton.background = roundedPanel(Color.WHITE, 14)
         notificationsBellButton.layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
-            setMargins(dp(3), dp(5), dp(3), dp(5))
+            setMargins(dp(2), dp(5), dp(2), dp(5))
         }
         notificationsBellButton.setOnClickListener { showChildNotificationsDialog() }
         childHeaderRow.addView(notificationsBellButton)
