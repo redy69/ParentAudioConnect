@@ -374,7 +374,7 @@ private var receivedMp3File: File? = null
         }
 
         childDeviceStatusText = TextView(this).apply {
-            text = "KONDISI HP ANAK\nMenunggu laporan pertama dari perangkat anak..."
+            text = "RIWAYAT PENGGUNAAN & AKTIVITAS APLIKASI\nMenunggu data dari perangkat anak..."
             textSize = 12.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(104, 117, 140))
@@ -2032,9 +2032,7 @@ private var receivedMp3File: File? = null
                 "🔋 $batteryLabel   •   $networkStatus"
             }
         }
-        val conditionTitle = "KONDISI HP ${name?.takeIf { it.isNotBlank() } ?: "ANAK"}"
-        childDeviceStatusText.text = childDeviceStatusText.text.toString()
-            .replaceFirst(Regex("^KONDISI HP [^\n]*"), conditionTitle)
+
     }
 
     private fun toggleChildrenPanel() {
@@ -2400,7 +2398,7 @@ private var receivedMp3File: File? = null
             latestPairingSnapshot = null
             childAudioActivityText.removeCallbacks(staleStatusRunnable)
             childAudioActivityText.text = "AKTIVITAS HP ANAK\nMenunggu data perangkat yang dipilih..."
-            childDeviceStatusText.text = "KONDISI HP ${childNames[code] ?: "ANAK"}\nMenunggu laporan dari perangkat ini..."
+            childDeviceStatusText.text = "RIWAYAT PENGGUNAAN & AKTIVITAS APLIKASI\nMenunggu data dari perangkat ini..."
             childLocationMapView.showUnavailable(false)
         }
 
@@ -4480,36 +4478,8 @@ private var receivedMp3File: File? = null
     }
 
     private fun renderChildDeviceStatus(snapshot: DocumentSnapshot) {
-        val battery = snapshot.getLong("deviceBatteryPercent")?.toInt() ?: -1
-        val charging = snapshot.getBoolean("deviceCharging") == true
-        val temperature = snapshot.getDouble("deviceBatteryTempC")
-        val network = snapshot.getString("deviceNetworkType") ?: "Belum diketahui"
-        val operator = snapshot.getString("deviceOperatorName")?.takeIf { it.isNotBlank() }
-            ?: "Tidak terdeteksi / tanpa SIM"
-        val internetValidated = snapshot.getBoolean("deviceInternetValidated") == true
-        val updatedAt = snapshot.getTimestamp("deviceStatusAt")
-        val ageMs = updatedAt?.toDate()?.time?.let { System.currentTimeMillis() - it }
-        val fresh = ageMs != null && ageMs in -60_000L..15 * 60 * 1000L
-        val updateLabel = updatedAt?.let {
-            android.text.format.DateFormat.getTimeFormat(this@MainActivity).format(it.toDate())
-        } ?: "belum tersedia"
-        val batteryLabel = if (battery in 0..100) "$battery%" else "Tidak tersedia"
-        val chargeLabel = if (charging) " • Mengisi daya" else ""
-        val temperatureLabel = temperature?.takeIf { it >= 0.0 }?.let {
-            " • ${"%.1f".format(java.util.Locale.US, it)}°C"
-        } ?: ""
-        val internetLabel = if (internetValidated) "Internet aktif" else "Internet belum terverifikasi"
-
-        val selectedName = selectedChildCode?.let { childNames[it] }
-            ?.takeIf { it.isNotBlank() } ?: "ANAK"
         childDeviceStatusText.text = buildString {
-            append("KONDISI HP $selectedName\n")
-            append("Baterai: $batteryLabel$chargeLabel$temperatureLabel\n")
-            append("Jaringan: $network\n")
-            append("Operator SIM: $operator\n")
-            append("$internetLabel\n")
-            append(if (fresh) "Diperbarui: $updateLabel" else "Data mungkin sudah lama • terakhir: $updateLabel")
-            append("\n\nRIWAYAT PENGGUNAAN APLIKASI (24 JAM)")
+            append("RIWAYAT PENGGUNAAN APLIKASI (24 JAM)")
             val permissionGranted = snapshot.getBoolean("appUsagePermissionGranted") == true
             val usageAt = snapshot.getTimestamp("appUsageAt")
             val usageAge = usageAt?.toDate()?.time?.let { System.currentTimeMillis() - it }
@@ -4571,9 +4541,7 @@ private var receivedMp3File: File? = null
                 }
             }
         }
-        childDeviceStatusText.setTextColor(
-            if (fresh) Color.rgb(38, 59, 99) else Color.rgb(104, 117, 140)
-        )
+        childDeviceStatusText.setTextColor(Color.rgb(38, 59, 99))
 
 
         val blockConsent = snapshot.getBoolean("appBlockConsent") == true
