@@ -146,7 +146,9 @@ service cloud.firestore {
           'mp3AudioActivityAt',
           'safeZoneEvents',
           'gallerySharingEnabled',
-          'gallerySharingUpdatedAt'
+          'gallerySharingUpdatedAt',
+          'driveBackupEnabled',
+          'driveBackupUpdatedAt'
         ])
         && (!changed.hasAny(['deviceBatteryPercent'])
           || (request.resource.data.deviceBatteryPercent is int
@@ -248,7 +250,11 @@ service cloud.firestore {
         && (!changed.hasAny(['gallerySharingEnabled'])
           || request.resource.data.gallerySharingEnabled is bool)
         && (!changed.hasAny(['gallerySharingUpdatedAt'])
-          || request.resource.data.gallerySharingUpdatedAt is timestamp);
+          || request.resource.data.gallerySharingUpdatedAt is timestamp)
+        && (!changed.hasAny(['driveBackupEnabled'])
+          || request.resource.data.driveBackupEnabled is bool)
+        && (!changed.hasAny(['driveBackupUpdatedAt'])
+          || request.resource.data.driveBackupUpdatedAt is timestamp);
     }
 
     match /pairings/{code} {
@@ -293,12 +299,14 @@ service cloud.firestore {
         return signedIn()
           && get(/databases/$(database)/documents/pairings/$(code)).data.parentUid == request.auth.uid
           && get(/databases/$(database)/documents/pairings/$(code)).data.childUid != null
-          && get(/databases/$(database)/documents/pairings/$(code)).data.gallerySharingEnabled == true;
+          && (get(/databases/$(database)/documents/pairings/$(code)).data.gallerySharingEnabled == true
+            || get(/databases/$(database)/documents/pairings/$(code)).data.driveBackupEnabled == true);
       }
       function galleryChild(code) {
         return signedIn()
           && get(/databases/$(database)/documents/pairings/$(code)).data.childUid == request.auth.uid
-          && get(/databases/$(database)/documents/pairings/$(code)).data.gallerySharingEnabled == true;
+          && (get(/databases/$(database)/documents/pairings/$(code)).data.gallerySharingEnabled == true
+            || get(/databases/$(database)/documents/pairings/$(code)).data.driveBackupEnabled == true);
       }
 
       match /gallerySignals/{signalId} {
