@@ -227,6 +227,11 @@ class GalleryP2pGalleryProtocol(
             }
             try {
                 if (offset == 0 || childItems.isEmpty()) {
+                    // Keep backup discovery independent from the 1,000-item
+                    // gallery browsing cap. A parent refresh also discovers
+                    // newly added media, but does not transfer or upload it.
+                    val completeMediaSet = repository.listMedia(limit = null)
+                    backupTracker.discoverNewMedia(completeMediaSet)
                     childItems = repository.listMedia(MAX_INDEX_ITEMS).associateBy { it.stableKey }
                 }
                 val allItems = childItems.values.toList()
