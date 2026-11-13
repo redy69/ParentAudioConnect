@@ -118,6 +118,20 @@ private lateinit var playMp3Button: Button
     private var childGalleryProtocol: GalleryP2pGalleryProtocol? = null
     private var parentGalleryP2pManager: GalleryP2pManager? = null
     private var parentGalleryProtocol: GalleryP2pGalleryProtocol? = null
+    private var parentDriveBackupBinder: ParentDriveBackupService.LocalBinder? = null
+    private var parentDriveBackupBindRequested = false
+    private var parentGalleryUsingBackupService = false
+    private val parentDriveBackupConnection = object : android.content.ServiceConnection {
+        override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
+            parentDriveBackupBinder = service as? ParentDriveBackupService.LocalBinder
+            parentDriveBackupBindRequested = false
+            if (parentDriveBackupBinder != null) rootLayout.post { showParentGalleryStatus() }
+        }
+        override fun onServiceDisconnected(name: android.content.ComponentName?) {
+            parentDriveBackupBinder = null
+            parentDriveBackupBindRequested = false
+        }
+    }
     private var parentGalleryDialog: AlertDialog? = null
     private var googleDriveAuthorization: GoogleDriveAuthorization? = null
     // Access tokens are short-lived; keep only in memory, never in preferences.
@@ -3637,12 +3651,15 @@ private var receivedMp3File: File? = null
         }
         val backupServiceActive = getSharedPreferences("parent_audio", MODE_PRIVATE)
             .getBoolean("parent_drive_backup_service_active", false)
-        if (backupServiceActive) {
-            AlertDialog.Builder(this)
-                .setTitle("Backup Google Drive sedang aktif")
-                .setMessage("Layanan backup sedang memakai koneksi P2P HP anak. Hentikan backup terlebih dahulu melalui menu Backup Google Drive sebelum membuka Galeri Anak agar kedua koneksi tidak saling memutus.")
-                .setPositiveButton("Mengerti", null)
-                .show()
+        if (backupServiceActive && parentDriveBackupBinder == null) {
+            if (!parentDriveBackupBindRequested) {
+                parentDriveBackupBindRequested = bindService(
+                    Intent(this, ParentDriveBackupService::class.java),
+                    parentDriveBackupConnection,
+                    BIND_AUTO_CREATE
+                )
+            }
+            Toast.makeText(this, "Menghubungkan Galeri Anak ke layanan backup bersama…", Toast.LENGTH_SHORT).show()
             return
         }
         val enabled = childSnapshots[code]?.getBoolean("gallerySharingEnabled") == true
@@ -3695,7 +3712,7 @@ private var receivedMp3File: File? = null
                 parentGalleryMediaItems.clear()
                 parentGalleryThumbQueue.clear()
                 parentGalleryThumbInFlight = null
-                parentGalleryIndexRequested = parentGalleryProtocol?.requestIndex() == true
+                parentGalleryIndexRequested = parentDriveBackupBinder?.requestGalleryIndex() == true
                 if (parentGalleryIndexRequested) {
                     status.text = "Meminta daftar foto dan video terbaru…"
                 } else {
@@ -3706,19 +3723,20 @@ private var receivedMp3File: File? = null
             }
         }
         dialog.setOnDismissListener {
-            stopParentGalleryP2p()
+            if (parentGalleryUsingBackupService) {
+                parentDriveBackupBinder?.closeGallery()
+                parentGalleryUsingBackupService = false
+            } else {
+                stopParentGalleryP2p()
+            }
             parentGalleryDialog = null
             parentGalleryStatus = null
             parentGalleryList = null
         }
         dialog.show()
 
-        lateinit var manager: GalleryP2pManager
-        lateinit var protocol: GalleryP2pGalleryProtocol
-        protocol = GalleryP2pGalleryProtocol(
-            context = this,
-            role = GalleryP2pManager.Role.PARENT,
-            sendFrame = { bytes, binary -> parentGalleryP2pManager?.send(bytes, binary) ?: false },
+        parentGalleryUsingBackupService = backupServiceActive
+        parentDriveBackupBinder?.attachGalleryCallbacks(
             onMediaIndex = { items ->
                 runOnUiThread {
                     if (parentGalleryDialog?.isShowing != true) return@runOnUiThread
@@ -3794,7 +3812,7 @@ private var receivedMp3File: File? = null
                                                 openSavedGalleryMedia(savedUri, item.mime)
                                             } else {
                                                 if (savedUriText != null) savedPrefs.edit().remove(prefKey).apply()
-                                                if (parentGalleryProtocol?.requestOriginal(item.key) != true) {
+                                                if (parentDriveBackupBinder?.requestGalleryOriginal(item.key) != true) {
                                                     Toast.makeText(this, "Permintaan unduh belum terkirim. Periksa koneksi P2P.", Toast.LENGTH_LONG).show()
                                                 } else {
                                                     status.text = "Meminta file asli: " + item.name
@@ -3847,49 +3865,6 @@ private var receivedMp3File: File? = null
                     if (parentGalleryDialog?.isShowing == true) status.text = message
                 }
             },
-            canReceiveBackup = { !googleDriveAccessToken.isNullOrBlank() },
-            onBackupFileReady = { key, file, fileName, mime, complete ->
-                val accessToken = googleDriveAccessToken
-                if (accessToken.isNullOrBlank()) {
-                    file.delete()
-                    runOnUiThread {
-                        status.text = "File baru sudah diterima, tetapi akun Google Drive belum dihubungkan. Antrean anak tetap menunggu."
-                        complete(false)
-                    }
-                } else {
-                    Thread {
-                        try {
-                            val uploader = GoogleDriveUploader(accessToken)
-                            val folderId = googleDriveBackupFolderId ?: uploader.ensureBackupFolder().also {
-                                googleDriveBackupFolderId = it
-                            }
-                            uploader.uploadFile(
-                                file, fileName, mime, folderId, stableKey = key,
-                                progress = GoogleDriveUploader.ProgressListener { sent, total ->
-                                    runOnUiThread {
-                                        if (parentGalleryDialog?.isShowing == true) {
-                                            status.text = "Mengunggah ke Google Drive: " +
-                                                android.text.format.Formatter.formatFileSize(this, sent) +
-                                                " / " + android.text.format.Formatter.formatFileSize(this, total)
-                                        }
-                                    }
-                                }
-                            )
-                            file.delete()
-                            runOnUiThread {
-                                status.text = "Backup berhasil diunggah ke Google Drive: $fileName"
-                                complete(true)
-                            }
-                        } catch (error: Exception) {
-                            file.delete()
-                            runOnUiThread {
-                                status.text = "Upload Drive gagal: ${error.localizedMessage ?: "coba hubungkan ulang akun Google"}"
-                                complete(false)
-                            }
-                        }
-                    }.start()
-                }
-            },
             onOriginalReady = { key, file, fileName, mime ->
                 runOnUiThread {
                     try {
@@ -3908,44 +3883,41 @@ private var receivedMp3File: File? = null
                         Toast.makeText(this, status.text, Toast.LENGTH_LONG).show()
                     }
                 }
-            }
-        )
-        parentGalleryProtocol = protocol
-        manager = GalleryP2pManager(
-            context = this,
-            pairingCode = code,
-            localRole = GalleryP2pManager.Role.PARENT,
+            },
             onState = { message ->
                 runOnUiThread {
                     if (parentGalleryDialog?.isShowing == true) status.text = message
-                    if (message.contains("P2P TERHUBUNG")) {
-                        if (childSnapshots[code]?.getBoolean("gallerySharingEnabled") == true &&
-                            !parentGalleryIndexRequested
-                        ) {
-                            parentGalleryIndexRequested = protocol.requestIndex()
-                        }
-                        if (childSnapshots[code]?.getBoolean("driveBackupEnabled") == true &&
-                            !googleDriveAccessToken.isNullOrBlank()
-                        ) {
-                            protocol.requestNextBackup()
-                        }
+                    if (message.contains("P2P TERHUBUNG") &&
+                        childSnapshots[code]?.getBoolean("gallerySharingEnabled") == true &&
+                        !parentGalleryIndexRequested
+                    ) {
+                        parentGalleryIndexRequested = parentDriveBackupBinder?.requestGalleryIndex() == true
                     }
                     if (message.contains("terputus") || message.contains("ditutup") || message.contains("gagal")) {
-                        protocol.cancelOriginal()
+                        status.text = message
                     }
                 }
-            },
-            onData = { bytes, binary -> protocol.onFrame(bytes, binary) }
+            }
         )
-        parentGalleryP2pManager = manager
-        manager.start()
+        if (parentDriveBackupBinder?.openGallery(code, name) != true) {
+            status.text = "Layanan backup belum siap membuka galeri. Coba muat ulang sebentar lagi."
+        }
+        parentGalleryProtocol = null
+        parentGalleryP2pManager = null
+        parentGalleryProtocol = protocol
+
     }
 
     private fun requestNextParentGalleryThumbnail() {
         if (parentGalleryThumbInFlight != null || parentGalleryDialog?.isShowing != true) return
         val next = parentGalleryThumbQueue.removeFirstOrNull() ?: return
         parentGalleryThumbInFlight = next
-        if (parentGalleryProtocol?.requestThumbnail(next) != true) {
+        val requested = if (parentGalleryUsingBackupService) {
+            parentDriveBackupBinder?.requestGalleryThumbnail(next) == true
+        } else {
+            parentGalleryProtocol?.requestThumbnail(next) == true
+        }
+        if (!requested) {
             parentGalleryThumbInFlight = null
             parentGalleryThumbQueue.addFirst(next)
             parentGalleryStatus?.text = "Koneksi belum siap mengirim thumbnail. Ketuk Muat ulang setelah P2P tersambung."
