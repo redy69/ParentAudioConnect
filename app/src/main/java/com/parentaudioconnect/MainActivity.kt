@@ -300,7 +300,7 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(34, 57, 96))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(12), dp(7), dp(12), dp(7))
+            setPadding(dp(12), dp(6), dp(12), dp(6))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
@@ -309,10 +309,10 @@ private var receivedMp3File: File? = null
                 setStroke(dp(1), Color.rgb(195, 215, 245))
             }
             elevation = dp(2).toFloat()
-            minHeight = dp(42)
+            minHeight = dp(40)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(5)) }
+            ).apply { setMargins(0, dp(2), 0, dp(4)) }
         }
 
         connectionStatusText = TextView(this).apply {
@@ -374,12 +374,12 @@ private var receivedMp3File: File? = null
             setTextColor(Color.rgb(32, 55, 92))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(13), dp(10), dp(13), dp(10))
+            setPadding(dp(13), dp(9), dp(13), dp(9))
             background = roundedPanel(Color.argb(190, 255, 255, 255), 16)
             elevation = dp(1).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(3), 0, dp(5)) }
+            ).apply { setMargins(0, dp(2), 0, dp(4)) }
         }
 
         childUsageRowsContainer = LinearLayout(this).apply {
@@ -1398,7 +1398,7 @@ private var receivedMp3File: File? = null
         zones.forEach { zone ->
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(12), dp(10), dp(12), dp(10))
+                setPadding(dp(12), dp(9), dp(12), dp(9))
                 background = GradientDrawable().apply {
                     setColor(Color.WHITE)
                     cornerRadius = dp(14).toFloat()
@@ -1406,7 +1406,7 @@ private var receivedMp3File: File? = null
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply { setMargins(0, dp(4), 0, dp(4)) }
+                ).apply { setMargins(0, dp(3), 0, dp(3)) }
             }
             card.addView(TextView(this).apply {
                 text = zone.name + "  •  radius " + zone.radiusM + " m"
@@ -1458,7 +1458,7 @@ private var receivedMp3File: File? = null
             textSize = 12f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(39, 70, 122))
-            setPadding(dp(3), dp(16), dp(3), dp(7))
+            setPadding(dp(3), dp(12), dp(3), dp(6))
         })
         if (events.isEmpty()) {
             safeZonesContainer.addView(TextView(this).apply {
@@ -4435,7 +4435,7 @@ private var receivedMp3File: File? = null
                     val whenText = timestamp?.toDate()?.let { formatter.format(it) } ?: "Waktu tidak tersedia"
                     val card = LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
-                        setPadding(dp(12), dp(10), dp(12), dp(10))
+                        setPadding(dp(11), dp(9), dp(11), dp(9))
                         background = GradientDrawable().apply {
                             setColor(Color.WHITE)
                             cornerRadius = dp(13).toFloat()
@@ -4443,7 +4443,7 @@ private var receivedMp3File: File? = null
                         }
                         layoutParams = LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-                        ).apply { setMargins(0, dp(4), 0, dp(4)) }
+                        ).apply { setMargins(0, dp(3), 0, dp(3)) }
                     }
                     card.addView(TextView(this).apply {
                         text = appName
