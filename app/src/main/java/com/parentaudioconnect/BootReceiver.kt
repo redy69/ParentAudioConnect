@@ -29,9 +29,9 @@ class BootReceiver : BroadcastReceiver() {
 
         ChildDeviceStatusWorker.schedule(context)
 
-        // Reconnect only when the child had already enabled sharing and the
-        // server acknowledged that consent. The service re-checks media access,
-        // consent, and pairing code before it opens the P2P transport.
+        // Restore the transport when either the gallery consent was
+        // acknowledged by the server or the child separately consented to
+        // Drive backup. The service re-checks media access and pairing code.
         val gallerySharingEnabled =
             prefs.getBoolean("child_gallery_sharing_enabled", false)
         val serverConsentConfirmed =
