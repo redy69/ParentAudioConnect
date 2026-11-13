@@ -233,39 +233,29 @@ private var receivedMp3File: File? = null
             setPadding(dp(11), dp(7), dp(11), dp(11))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.rgb(231, 243, 237), Color.rgb(246, 250, 247), Color.rgb(225, 239, 231))
+                intArrayOf(Color.rgb(231, 239, 255), Color.rgb(247, 249, 255), Color.rgb(229, 238, 253))
             )
-        }
-
-        val dashboardHeader = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(10), dp(12), dp(10))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.rgb(12, 66, 50), Color.rgb(6, 78, 59), Color.rgb(9, 57, 44))
-            ).apply {
-                cornerRadius = dp(20).toFloat()
-                setStroke(dp(1), Color.argb(72, 220, 255, 239))
-            }
-            elevation = dp(3).toFloat()
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, 0, 0, dp(9)) }
         }
 
         val title = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(3), dp(2), dp(3), dp(8))
-            setBackgroundColor(Color.TRANSPARENT)
-            elevation = 0f
+            setPadding(dp(14), dp(9), dp(14), dp(9))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(15, 29, 64), Color.rgb(35, 69, 139), Color.rgb(67, 104, 183))
+            ).apply {
+                cornerRadius = dp(19).toFloat()
+                setStroke(dp(1), Color.argb(68, 255, 255, 255))
+            }
+            elevation = dp(3).toFloat()
 
             addView(TextView(this@MainActivity).apply {
                 text = "PARENTAL CARE  •  FAMILY CONNECT"
                 textSize = 10f
                 letterSpacing = 0.13f
                 setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(Color.rgb(190, 235, 215))
+                setTextColor(Color.rgb(190, 211, 255))
             })
 
             val brandRow = LinearLayout(this@MainActivity).apply {
@@ -278,7 +268,7 @@ private var receivedMp3File: File? = null
                 textSize = 23f
                 letterSpacing = 0.005f
                 setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(Color.rgb(190, 235, 215))
+                setTextColor(Color.WHITE)
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             })
             brandRow.addView(TextView(this@MainActivity).apply {
@@ -300,7 +290,7 @@ private var receivedMp3File: File? = null
             addView(TextView(this@MainActivity).apply {
                 text = "Ruang kendali bersama"
                 textSize = 13.5f
-                setTextColor(Color.rgb(224, 245, 234))
+                setTextColor(Color.rgb(224, 234, 255))
                 letterSpacing = 0.015f
             })
         }
@@ -357,16 +347,20 @@ private var receivedMp3File: File? = null
             textSize = 11.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.008f
-            setTextColor(Color.rgb(239, 250, 244))
+            setTextColor(Color.rgb(48, 70, 108))
             gravity = Gravity.CENTER_VERTICAL
             includeFontPadding = false
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(dp(2), dp(3), dp(2), dp(3))
+            setPadding(dp(11), dp(4), dp(11), dp(4))
             compoundDrawablePadding = dp(7)
-            // Keep battery and network indicators directly on the glass panel, without a long wrapper.
+            // Keep battery at the leading edge; network glyph is placed inline before its label. 
             setCompoundDrawablesRelativeWithIntrinsicBounds(childBatteryGlyph, null, null, null)
-            setBackgroundColor(Color.TRANSPARENT)
+            background = GradientDrawable().apply {
+                setColor(Color.WHITE)
+                cornerRadius = dp(13).toFloat()
+                setStroke(dp(1), Color.rgb(204, 220, 244))
+            }
         }
 
         updateInfoText = TextView(this).apply {
@@ -531,15 +525,15 @@ private var receivedMp3File: File? = null
         selectedChildButton = createButton("Pilih anak  ▾")
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
         selectedChildButton.setOnClickListener { toggleChildrenPanel() }
-        selectedChildButton.setTextColor(Color.WHITE)
+        selectedChildButton.setTextColor(Color.rgb(35, 65, 125))
         selectedChildButton.textSize = 14.5f
         selectedChildButton.maxLines = 1
         selectedChildButton.ellipsize = android.text.TextUtils.TruncateAt.END
         selectedChildButton.contentDescription = "Pilih perangkat anak"
         selectedChildButton.background = GradientDrawable().apply {
-            setColor(Color.argb(42, 255, 255, 255))
-            cornerRadius = dp(20).toFloat()
-            setStroke(dp(1), Color.argb(90, 235, 255, 244))
+            setColor(Color.WHITE)
+            cornerRadius = dp(13).toFloat()
+            setStroke(dp(1), Color.rgb(210, 223, 245))
         }
         selectedChildButton.setPadding(dp(13), dp(2), dp(10), dp(2))
         selectedChildButton.elevation = dp(1).toFloat()
@@ -548,7 +542,7 @@ private var receivedMp3File: File? = null
         addChildButton.setTextColor(Color.WHITE)
         addChildButton.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
-            intArrayOf(Color.rgb(26, 112, 78), Color.rgb(6, 78, 59))
+            intArrayOf(Color.rgb(73, 112, 235), Color.rgb(43, 76, 190))
         ).apply { cornerRadius = dp(16).toFloat() }
         addChildButton.elevation = dp(3).toFloat()
         cancelPairingButton = createButton("BATALKAN KODE")
@@ -603,10 +597,9 @@ private var receivedMp3File: File? = null
             }
         }
 
-        dashboardHeader.addView(title, LinearLayout.LayoutParams(
+        rootLayout.addView(title, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-        ))
-        rootLayout.addView(dashboardHeader)
+        ).apply { bottomMargin = dp(9) })
         childModePanel = TextView(this).apply {
             text = "🛡️  HP ANAK SIAP\n\nPerangkat berhasil terhubung\nMenunggu perintah dari HP orang tua"
             textSize = 16f
@@ -760,12 +753,12 @@ private var receivedMp3File: File? = null
         val deviceSectionTitle = TextView(this).apply {
             text = "PERANGKAT ANAK"
             textSize = 11.5f
-            setTextColor(Color.rgb(205, 239, 220))
+            setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.085f
             setPadding(dp(4), dp(7), dp(4), dp(3))
         }
-        dashboardHeader.addView(deviceSectionTitle)
+        rootLayout.addView(deviceSectionTitle)
         parentOnlyViews.add(deviceSectionTitle)
         val childHeaderRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -800,19 +793,11 @@ private var receivedMp3File: File? = null
         childHeaderRow.addView(notificationsBellButton)
         parentOnlyViews.add(notificationsBellButton)
         childHeaderRow.addView(addChildButton)
-        dashboardHeader.addView(childHeaderRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(42)))
+        rootLayout.addView(childHeaderRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(42)))
         parentOnlyViews.add(childHeaderRow)
-
-        // Thin divider above the battery/Wi-Fi indicators, matching the screenshot reference.
-        dashboardHeader.addView(View(this).apply {
-            setBackgroundColor(Color.argb(105, 225, 255, 239))
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(1)
-            ).apply { setMargins(dp(3), dp(8), dp(3), dp(5)) }
-        })
-        dashboardHeader.addView(childQuickStatusText, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(28)
-        ).apply { setMargins(dp(3), 0, dp(3), 0) })
+        rootLayout.addView(childQuickStatusText, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(32)
+        ).apply { setMargins(dp(3), dp(4), dp(3), dp(3)) })
         parentOnlyViews.add(childQuickStatusText)
         rootLayout.addView(childrenContainer)
         parentOnlyViews.add(childrenContainer)
