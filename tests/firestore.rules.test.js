@@ -77,6 +77,26 @@ test("parent can save a valid schedule using Sunday=1 through Saturday=7", async
   }));
 });
 
+test("parent can configure Wi-Fi-only Drive backup per child", async () => {
+  const db = testEnv.authenticatedContext("parent-user").firestore();
+  await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    driveBackupWifiOnly: true
+  }));
+  await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    driveBackupWifiOnly: false
+  }));
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    driveBackupWifiOnly: "yes"
+  }));
+});
+
+test("child cannot change the parent's Wi-Fi-only backup preference", async () => {
+  const db = testEnv.authenticatedContext("child-user").firestore();
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    driveBackupWifiOnly: false
+  }));
+});
+
 test("parent cannot save an invalid schedule day", async () => {
   const db = testEnv.authenticatedContext("parent-user").firestore();
   await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
