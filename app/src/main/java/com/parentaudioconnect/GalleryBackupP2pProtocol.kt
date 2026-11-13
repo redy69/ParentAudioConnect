@@ -221,6 +221,10 @@ class GalleryBackupP2pProtocol(
     private fun receiveChunk(message: JSONObject) {
         val transfer = incoming ?: return
         if (message.optString("transferId") != transfer.id) return
+        if (!canReceiveBackup()) {
+            failIncoming(transfer, "Backup dijeda • koneksi Wi-Fi tidak tersedia atau izin Drive belum siap")
+            return
+        }
         val encoded = message.optString("data")
         if (message.optInt("sequence", -1) != transfer.sequence ||
             encoded.isBlank() || encoded.length > CHUNK_BYTES * 2
