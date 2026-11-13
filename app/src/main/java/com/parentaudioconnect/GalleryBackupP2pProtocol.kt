@@ -107,6 +107,13 @@ class GalleryBackupP2pProtocol(
                 .put("message", "Persetujuan backup atau izin media anak tidak aktif"))
             return
         }
+        val wifiOnly = app.getSharedPreferences("parent_audio", Context.MODE_PRIVATE)
+            .getBoolean("drive_backup_wifi_only", true)
+        if (!BackupNetworkPolicy.canUseBackupNetwork(app, wifiOnly)) {
+            onStatus("Backup dijeda • HP anak menunggu koneksi Wi-Fi")
+            send(JSONObject().put("type", "backup_queue_empty"))
+            return
+        }
         if (sendingId != null) return
         worker.execute {
             if (closed || sendingId != null || !tracker.isEnabled()) return@execute
@@ -147,6 +154,9 @@ class GalleryBackupP2pProtocol(
                     while (true) {
                         if (closed || sendingId != transferId || !tracker.isEnabled()) {
                             throw InterruptedException("Persetujuan backup dicabut atau koneksi ditutup")
+                        }
+                        if (!BackupNetworkPolicy.canUseBackupNetwork(app, wifiOnly)) {
+                            throw InterruptedException("Wi-Fi terputus • file tetap dalam antrean backup")
                         }
                         val count = input.read(buffer)
                         if (count < 0) break
