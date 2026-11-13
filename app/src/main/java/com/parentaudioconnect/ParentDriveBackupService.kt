@@ -51,6 +51,7 @@ class ParentDriveBackupService : Service() {
         accessToken = token
         if (manager != null) {
             updateStatus("Izin Google Drive diperbarui • melanjutkan antrean backup")
+            protocol?.requestNextBackup()
             return START_STICKY
         }
         getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
