@@ -69,7 +69,9 @@ class ParentDriveBackupService : Service() {
             return START_STICKY
         }
         getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
-            .putBoolean("parent_drive_backup_service_active", true).apply()
+            .putBoolean("parent_drive_backup_service_active", true)
+            .putString("parent_drive_backup_pair_code", code)
+            .apply()
         startAsForeground("Menunggu koneksi HP anak untuk backup media baru")
         pairingCode = code
         listenForConsent(code)
@@ -189,7 +191,13 @@ class ParentDriveBackupService : Service() {
                         } catch (error: Exception) {
                             file.delete()
                             Log.e(TAG, "Upload Drive gagal", error)
-                            updateStatus("Upload Drive gagal • buka SantetHP dan hubungkan ulang Google Drive")
+                            updateStatus(
+                                if (error.message.orEmpty().contains("401") || error.message.orEmpty().contains("403")) {
+                                    "Izin Google Drive kedaluwarsa/ditolak • buka SantetHP untuk otorisasi ulang"
+                                } else {
+                                    "Upload Drive gagal • file tetap dalam antrean dan akan dicoba lagi setelah koneksi pulih"
+                                }
+                            )
                             complete(false)
                         }
                     }.start()
@@ -218,7 +226,10 @@ class ParentDriveBackupService : Service() {
         folderId = null
         pairingCode = null
         getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
-            .putBoolean("parent_drive_backup_service_active", false).apply()
+            .putBoolean("parent_drive_backup_service_active", false)
+            .remove("parent_drive_backup_pair_code")
+            .remove("parent_drive_backup_authorized_at")
+            .apply()
     }
 
     override fun onDestroy() {
