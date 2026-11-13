@@ -194,6 +194,10 @@ class ParentDriveBackupService : Service() {
                             Log.e(TAG, "Upload Drive gagal", error)
                             val authorizationFailure = error.message.orEmpty().contains("401") ||
                                 error.message.orEmpty().contains("403")
+                            if (authorizationFailure) {
+                                getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                                    .putBoolean("parent_drive_backup_reauth_required", true).apply()
+                            }
                             updateStatus(
                                 if (authorizationFailure) {
                                     "Izin Google Drive kedaluwarsa/ditolak • buka SantetHP untuk otorisasi ulang"
@@ -238,6 +242,7 @@ class ParentDriveBackupService : Service() {
                 .putBoolean("parent_drive_backup_service_active", false)
                 .remove("parent_drive_backup_pair_code")
                 .remove("parent_drive_backup_authorized_at")
+                .remove("parent_drive_backup_reauth_required")
                 .apply()
         }
     }
