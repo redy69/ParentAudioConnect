@@ -34,7 +34,9 @@ class GalleryBackupTracker(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     @Synchronized
-    fun isEnabled(): Boolean = prefs.getBoolean(KEY_ENABLED, false)
+    fun isEnabled(): Boolean =
+        prefs.getBoolean(KEY_ENABLED, false) &&
+            prefs.getBoolean("child_drive_backup_consent", false)
 
     /**
      * Called only after the child user explicitly enables backup.
@@ -43,7 +45,11 @@ class GalleryBackupTracker(context: Context) {
     @Synchronized
     fun enableWithBaseline(currentItems: List<GalleryMediaRepository.MediaItem>) {
         val known = currentItems.map { it.stableKey }.toSet()
+        // Persist the explicit child consent and tracker activation in the same
+        // SharedPreferences transaction. A crash can never leave the tracker
+        // active while the consent flag still says the child has not agreed.
         prefs.edit()
+            .putBoolean("child_drive_backup_consent", true)
             .putBoolean(KEY_ENABLED, true)
             .putBoolean(KEY_BASELINE_DONE, true)
             .putString(KEY_KNOWN, JSONArray(known.toList()).toString())
@@ -64,7 +70,11 @@ class GalleryBackupTracker(context: Context) {
 
     @Synchronized
     fun disable() {
-        prefs.edit().putBoolean(KEY_ENABLED, false).apply()
+        // Revoking consent immediately blocks discovery as well as future uploads.
+        prefs.edit()
+            .putBoolean(KEY_ENABLED, false)
+            .putBoolean("child_drive_backup_consent", false)
+            .apply()
     }
 
     /**
