@@ -31,7 +31,7 @@ File `app/google-services.json` sudah memuat Firebase Android app dengan package
 
 ## Mendapatkan SHA-1 release
 
-Jalankan pada mesin/lingkungan yang memiliki release keystore. Gunakan path dan alias yang sama dengan variabel signing build:
+Jalankan pada mesin/lingkungan yang memiliki release keystore. Gunakan path dan alias yang sama dengan variabel signing build. Repository juga menyediakan workflow manual **Show release signing SHA-1** di GitHub Actions; jalankan workflow itu pada branch fitur ini untuk menampilkan hanya fingerprint SHA-1 (workflow tidak membuat APK dan tidak mencetak password/keystore).
 
 ```bash
 keytool -list -v -keystore /path/ke/release.keystore -alias ALIAS_RELEASE
@@ -48,8 +48,7 @@ Perubahan rules di `firestore.rules` sudah disimpan di branch fitur. Rules baru 
 Sebelum pengujian perangkat, tinjau lalu terbitkan rules ke project `parentaudioconnect`. Dari lingkungan yang sudah login Firebase CLI dan terhubung ke project yang benar:
 
 ```bash
-firebase use parentaudioconnect
-firebase deploy --only firestore:rules
+firebase deploy --project parentaudioconnect --only firestore:rules
 ```
 
 Perintah deploy **belum dijalankan** oleh perubahan repository ini. Pastikan project aktif benar sebelum menerbitkan rules.
