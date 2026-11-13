@@ -317,29 +317,35 @@ private var receivedMp3File: File? = null
 
         connectionStatusText = TextView(this).apply {
             text = "○ OFFLINE"
-            textSize = 9.5f
+            textSize = 10.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
+            letterSpacing = 0.015f
             setTextColor(Color.rgb(105, 116, 137))
             gravity = Gravity.CENTER
-            setPadding(dp(6), dp(3), dp(6), dp(3))
-            background = roundedPanel(Color.argb(205, 239, 245, 255), 14)
+            includeFontPadding = false
+            setPadding(dp(9), dp(4), dp(9), dp(4))
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(239, 243, 249))
+                cornerRadius = dp(15).toFloat()
+                setStroke(dp(1), Color.rgb(218, 226, 239))
+            }
             maxLines = 1
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(32)
-            ).apply { setMargins(dp(3), 0, dp(3), 0) }
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(30)
+            ).apply { setMargins(dp(4), 0, dp(3), 0) }
         }
 
         childQuickStatusText = TextView(this).apply {
             text = "🔋 --   •   ᯤ Menunggu data jaringan"
             textSize = 10.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.005f
-            setTextColor(Color.rgb(65, 83, 116))
+            letterSpacing = 0.01f
+            setTextColor(Color.rgb(75, 94, 128))
             gravity = Gravity.CENTER_VERTICAL
             includeFontPadding = false
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(dp(6), dp(3), dp(6), dp(3))
+            setPadding(dp(7), dp(2), dp(5), dp(2))
         }
 
         updateInfoText = TextView(this).apply {
@@ -512,8 +518,12 @@ private var receivedMp3File: File? = null
         selectedChildButton.maxLines = 1
         selectedChildButton.ellipsize = android.text.TextUtils.TruncateAt.END
         selectedChildButton.contentDescription = "Pilih perangkat anak"
-        selectedChildButton.background = roundedPanel(Color.WHITE, 12)
-        selectedChildButton.setPadding(dp(8), dp(2), dp(6), dp(2))
+        selectedChildButton.background = GradientDrawable().apply {
+            setColor(Color.WHITE)
+            cornerRadius = dp(13).toFloat()
+            setStroke(dp(1), Color.rgb(210, 223, 245))
+        }
+        selectedChildButton.setPadding(dp(10), dp(2), dp(7), dp(2))
         selectedChildButton.elevation = dp(1).toFloat()
         selectedChildButton.setTypeface(null, android.graphics.Typeface.BOLD)
         addChildButton.setTextColor(Color.WHITE)
@@ -797,7 +807,7 @@ private var receivedMp3File: File? = null
             ViewGroup.LayoutParams.MATCH_PARENT, dp(34)
         ))
         childIdentityColumn.addView(childQuickStatusText, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(22)
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(21)
         ))
         childHeaderRow.addView(childIdentityColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { weight = 1f })
         childHeaderRow.addView(connectionStatusText)
