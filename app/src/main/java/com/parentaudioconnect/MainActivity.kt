@@ -1825,6 +1825,8 @@ private var receivedMp3File: File? = null
         private val glyphPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         var levelPercent: Int = -1
             set(value) { field = value.coerceIn(-1, 100); invalidateSelf() }
+        var isCharging: Boolean = false
+            set(value) { field = value; invalidateSelf() }
         var mode: String = "wifi"
             set(value) { field = value; invalidateSelf() }
         override fun getIntrinsicWidth(): Int = dp(18)
@@ -1855,6 +1857,24 @@ private var receivedMp3File: File? = null
                     val inset = dp(1.5f)
                     val fillWidth = (right - left - inset * 2) * levelPercent / 100f
                     if (fillWidth > 0f) canvas.drawRoundRect(left + inset, top + inset, left + inset + fillWidth, bottom - inset, dp(1f), dp(1f), glyphPaint)
+                }
+                if (isCharging) {
+                    val bolt = Path().apply {
+                        moveTo(cx + w * 0.03f, cy - h * 0.19f)
+                        lineTo(cx - w * 0.13f, cy + h * 0.02f)
+                        lineTo(cx - w * 0.01f, cy + h * 0.02f)
+                        lineTo(cx - w * 0.06f, cy + h * 0.19f)
+                        lineTo(cx + w * 0.14f, cy - h * 0.04f)
+                        lineTo(cx + w * 0.03f, cy - h * 0.04f)
+                        close()
+                    }
+                    glyphPaint.color = Color.rgb(255, 255, 255)
+                    glyphPaint.style = Paint.Style.FILL
+                    canvas.drawPath(bolt, glyphPaint)
+                    glyphPaint.color = Color.rgb(24, 155, 98)
+                    glyphPaint.style = Paint.Style.STROKE
+                    glyphPaint.strokeWidth = dp(0.8f)
+                    canvas.drawPath(bolt, glyphPaint)
                 }
             } else when (mode) {
                 "cellular" -> {
@@ -2142,6 +2162,7 @@ private var receivedMp3File: File? = null
                 ?.trim()?.lowercase(java.util.Locale.ROOT).orEmpty()
             val batteryLabel = if (battery in 0..100) "$battery%" else "--"
             childBatteryGlyph.levelPercent = battery
+            childBatteryGlyph.isCharging = selectedSnapshot.getBoolean("deviceCharging") == true
             val networkStatus = when {
                 network.contains("wi-fi") || network.contains("wifi") -> {
                     childNetworkGlyph.mode = "wifi"
