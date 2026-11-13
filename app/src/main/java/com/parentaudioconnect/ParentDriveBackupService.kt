@@ -527,6 +527,10 @@ class ParentDriveBackupService : Service() {
         galleryPinned = false
         preGalleryPairingCode = null
         galleryStateListener = null
+        galleryMediaIndexCallback = null
+        galleryThumbnailCallback = null
+        galleryStatusCallback = null
+        galleryOriginalReadyCallback = null
         if (clearSavedState) {
             getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
                 .putBoolean("parent_drive_backup_service_active", false)
