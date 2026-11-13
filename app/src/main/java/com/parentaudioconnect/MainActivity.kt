@@ -997,13 +997,43 @@ private var receivedMp3File: File? = null
         rootLayout.addView(updateInfoText)
 
         showRoleSelection()
+        // Keep the brand and selected-child status visible while dashboard content scrolls.
+        // Move these existing views out of the scrolling content without recreating them,
+        // preserving their listeners and parent-only visibility behavior.
+        rootLayout.removeView(title)
+        rootLayout.removeView(deviceSectionTitle)
+        rootLayout.removeView(childHeaderRow)
+        rootLayout.removeView(childQuickStatusText)
+
+        val stickyHeader = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(11), dp(7), dp(11), dp(3))
+        }
+        stickyHeader.addView(title, title.layoutParams)
+        stickyHeader.addView(deviceSectionTitle, deviceSectionTitle.layoutParams)
+        stickyHeader.addView(childHeaderRow, childHeaderRow.layoutParams)
+        stickyHeader.addView(childQuickStatusText, childQuickStatusText.layoutParams)
+
         val scrollView = ScrollView(this).apply {
             isFillViewport = true
             isVerticalScrollBarEnabled = false
             setBackgroundColor(Color.TRANSPARENT)
             addView(rootLayout)
         }
-        setContentView(scrollView)
+        val screenLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(231, 239, 255), Color.rgb(247, 249, 255), Color.rgb(229, 238, 253))
+            )
+            addView(stickyHeader, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ))
+            addView(scrollView, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
+            ))
+        }
+        setContentView(screenLayout)
 
         connectFirebase()
     }
@@ -1858,7 +1888,8 @@ private var receivedMp3File: File? = null
             val gap = dp(3).toFloat()
             val barWidth = dp(3.5f).toFloat()
             val totalBarsWidth = barCount * barWidth + (barCount - 1) * gap
-            val startX = (w - dp(14) - totalBarsWidth).coerceAtLeast(w * 0.62f)
+            // Center the equalizer horizontally within the entire panel.
+            val startX = (w - totalBarsWidth) * 0.5f
             val centerY = h * 0.5f
             val now = android.os.SystemClock.uptimeMillis()
             for (i in 0 until barCount) {
@@ -1870,7 +1901,8 @@ private var receivedMp3File: File? = null
                 val barHeight = dp(5).toFloat() + wave * dp(if (audioActive) 31 else 4)
                 val x = startX + i * (barWidth + gap)
                 barPaint.color = if (audioActive) {
-                    Color.rgb(42, 132 + (wave * 35).toInt(), 220)
+                    // Active playback uses a vivid, animated green equalizer.
+                    Color.rgb(28, 150 + (wave * 75).toInt(), 55 + (wave * 22).toInt())
                 } else {
                     Color.rgb(174, 198, 228)
                 }
