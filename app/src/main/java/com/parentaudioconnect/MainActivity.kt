@@ -105,6 +105,8 @@ private lateinit var playMp3Button: Button
     private lateinit var addChildButton: Button
     private lateinit var selectedChildButton: Button
     private lateinit var childQuickStatusText: TextView
+    private lateinit var childBatteryGlyph: StatusGlyphDrawable
+    private lateinit var childNetworkGlyph: StatusGlyphDrawable
     private lateinit var cancelPairingButton: Button
     private lateinit var updateButton: Button
     private lateinit var cameraStandbyButton: Button
@@ -336,17 +338,26 @@ private var receivedMp3File: File? = null
             ).apply { setMargins(dp(4), 0, dp(3), 0) }
         }
 
+        childBatteryGlyph = StatusGlyphDrawable(true)
+        childNetworkGlyph = StatusGlyphDrawable(false)
         childQuickStatusText = TextView(this).apply {
-            text = "▰  --    ·    ≋  Menunggu jaringan"
-            textSize = 10.5f
+            text = "--    ·    Menunggu jaringan"
+            textSize = 11f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.01f
-            setTextColor(Color.rgb(75, 94, 128))
+            letterSpacing = 0.005f
+            setTextColor(Color.rgb(55, 78, 115))
             gravity = Gravity.CENTER_VERTICAL
             includeFontPadding = false
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(dp(7), dp(2), dp(5), dp(2))
+            setPadding(dp(9), dp(3), dp(9), dp(3))
+            compoundDrawablePadding = dp(7)
+            setCompoundDrawablesRelativeWithIntrinsicBounds(childBatteryGlyph, null, childNetworkGlyph, null)
+            background = GradientDrawable().apply {
+                setColor(Color.argb(235, 255, 255, 255))
+                cornerRadius = dp(12).toFloat()
+                setStroke(dp(1), Color.rgb(218, 229, 246))
+            }
         }
 
         updateInfoText = TextView(this).apply {
@@ -1776,6 +1787,75 @@ private var receivedMp3File: File? = null
             setStroke(dp(1), Color.argb(185, 255, 255, 255))
         }
 
+    private inner class StatusGlyphDrawable(private val isBattery: Boolean) : android.graphics.drawable.Drawable() {
+        private val glyphPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        var levelPercent: Int = -1
+            set(value) { field = value.coerceIn(-1, 100); invalidateSelf() }
+        var mode: String = "wifi"
+            set(value) { field = value; invalidateSelf() }
+        override fun getIntrinsicWidth(): Int = dp(18)
+        override fun getIntrinsicHeight(): Int = dp(18)
+        override fun draw(canvas: Canvas) {
+            val b = bounds
+            val w = b.width().toFloat()
+            val h = b.height().toFloat()
+            if (w <= 0f || h <= 0f) return
+            val cx = b.exactCenterX()
+            val cy = b.exactCenterY()
+            glyphPaint.color = Color.rgb(48, 111, 194)
+            glyphPaint.style = Paint.Style.STROKE
+            glyphPaint.strokeWidth = dp(1.6f)
+            glyphPaint.strokeCap = Paint.Cap.ROUND
+            glyphPaint.strokeJoin = Paint.Join.ROUND
+            glyphPaint.colorFilter = null
+            if (isBattery) {
+                val left = cx - w * 0.34f
+                val top = cy - h * 0.25f
+                val right = cx + w * 0.27f
+                val bottom = cy + h * 0.25f
+                canvas.drawRoundRect(left, top, right, bottom, dp(2f), dp(2f), glyphPaint)
+                glyphPaint.style = Paint.Style.FILL
+                canvas.drawRoundRect(right, cy - h * 0.09f, right + w * 0.10f, cy + h * 0.09f, dp(1f), dp(1f), glyphPaint)
+                if (levelPercent >= 0) {
+                    glyphPaint.color = when { levelPercent <= 15 -> Color.rgb(218, 76, 76); levelPercent <= 30 -> Color.rgb(221, 155, 49); else -> Color.rgb(38, 159, 105) }
+                    val inset = dp(1.5f)
+                    val fillWidth = (right - left - inset * 2) * levelPercent / 100f
+                    if (fillWidth > 0f) canvas.drawRoundRect(left + inset, top + inset, left + inset + fillWidth, bottom - inset, dp(1f), dp(1f), glyphPaint)
+                }
+            } else when (mode) {
+                "cellular" -> {
+                    glyphPaint.style = Paint.Style.FILL
+                    val barW = w * 0.13f
+                    val gap = w * 0.055f
+                    for (i in 0..3) {
+                        val barH = h * (0.25f + i * 0.17f)
+                        val x = cx - (barW * 2f + gap * 1.5f) + i * (barW + gap)
+                        canvas.drawRoundRect(x, cy + h * 0.32f - barH, x + barW, cy + h * 0.32f, dp(1f), dp(1f), glyphPaint)
+                    }
+                }
+                "ethernet" -> {
+                    val p = Path().apply { moveTo(cx - w * 0.24f, cy - h * 0.10f); lineTo(cx + w * 0.24f, cy - h * 0.10f); lineTo(cx + w * 0.24f, cy + h * 0.12f); lineTo(cx - w * 0.24f, cy + h * 0.12f); close() }
+                    canvas.drawPath(p, glyphPaint)
+                    canvas.drawLine(cx - w * 0.12f, cy - h * 0.32f, cx - w * 0.12f, cy - h * 0.10f, glyphPaint)
+                    canvas.drawLine(cx + w * 0.12f, cy - h * 0.32f, cx + w * 0.12f, cy - h * 0.10f, glyphPaint)
+                    canvas.drawLine(cx, cy + h * 0.12f, cx, cy + h * 0.31f, glyphPaint)
+                }
+                else -> {
+                    for (r in listOf(0.20f, 0.36f, 0.51f)) {
+                        val oval = android.graphics.RectF(cx - w * r, cy - h * r, cx + w * r, cy + h * r)
+                        canvas.drawArc(oval, 225f, 90f, false, glyphPaint)
+                    }
+                    glyphPaint.style = Paint.Style.FILL
+                    canvas.drawCircle(cx, cy + h * 0.28f, dp(1.1f), glyphPaint)
+                }
+            }
+        }
+        override fun setAlpha(alpha: Int) { glyphPaint.alpha = alpha; invalidateSelf() }
+        override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { glyphPaint.colorFilter = colorFilter; invalidateSelf() }
+        @Deprecated("Deprecated in Android graphics")
+        override fun getOpacity(): Int = android.graphics.PixelFormat.TRANSLUCENT
+    }
+
     private inner class WhatsAppBrandIconView : View(this@MainActivity) {
         private val iconPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
 
@@ -1995,14 +2075,20 @@ private var receivedMp3File: File? = null
         )
         val selectedSnapshot = selectedChildCode?.let { childSnapshots[it] }
         if (selectedSnapshot == null) {
-            childQuickStatusText.text = "▰  --    ·    ≋  Menunggu jaringan"
+            childBatteryGlyph.levelPercent = -1
+            childNetworkGlyph.mode = "wifi"
+            childQuickStatusText.text = "--    ·    Menunggu jaringan"
         } else {
             val battery = selectedSnapshot.getLong("deviceBatteryPercent")?.toInt() ?: -1
             val network = selectedSnapshot.getString("deviceNetworkType")
                 ?.trim()?.lowercase(java.util.Locale.ROOT).orEmpty()
             val batteryLabel = if (battery in 0..100) "$battery%" else "--"
+            childBatteryGlyph.levelPercent = battery
             val networkStatus = when {
-                network.contains("wi-fi") || network.contains("wifi") -> "≋  Wi-Fi"
+                network.contains("wi-fi") || network.contains("wifi") -> {
+                    childNetworkGlyph.mode = "wifi"
+                    "Wi-Fi"
+                }
                 network.contains("data seluler") || network.contains("seluler") ||
                     network.contains("cellular") || network.contains("mobile") -> {
                     val operator = selectedSnapshot.getString("deviceOperatorName")
@@ -2011,18 +2097,22 @@ private var receivedMp3File: File? = null
                                 !it.equals("Tidak terdeteksi / tanpa SIM", ignoreCase = true) &&
                                 !it.equals("Tidak tersedia", ignoreCase = true)
                         }
+                    childNetworkGlyph.mode = "cellular"
                     val compactOperator = operator?.let {
-                        if (it.length > 12) "${it.take(11)}…" else it
+                        if (it.length > 14) "${it.take(13)}…" else it
                     }
-                    if (compactOperator.isNullOrBlank()) "▥  Data seluler" else "▥  $compactOperator"
+                    if (compactOperator.isNullOrBlank()) "Data seluler" else compactOperator
                 }
-                network.contains("ethernet") -> "⌁  Ethernet"
+                network.contains("ethernet") -> {
+                    childNetworkGlyph.mode = "ethernet"
+                    "Ethernet"
+                }
                 else -> ""
             }
             childQuickStatusText.text = if (networkStatus.isBlank()) {
-                "▰  $batteryLabel"
+                batteryLabel
             } else {
-                "▰  $batteryLabel    ·    $networkStatus"
+                "$batteryLabel    ·    $networkStatus"
             }
         }
 
