@@ -1925,7 +1925,7 @@ private var receivedMp3File: File? = null
                 ?.trim()?.lowercase(java.util.Locale.ROOT).orEmpty()
             val batteryLabel = if (battery in 0..100) "$battery%" else "--"
             val networkStatus = when {
-                network.contains("wi-fi") || network.contains("wifi") -> "⌁"
+                network.contains("wi-fi") || network.contains("wifi") -> "🛜"
                 network.contains("data seluler") || network.contains("seluler") ||
                     network.contains("cellular") || network.contains("mobile") -> {
                     val operator = selectedSnapshot.getString("deviceOperatorName")
@@ -1934,7 +1934,7 @@ private var receivedMp3File: File? = null
                                 !it.equals("Tidak terdeteksi / tanpa SIM", ignoreCase = true) &&
                                 !it.equals("Tidak tersedia", ignoreCase = true)
                         }
-                    if (operator.isNullOrBlank()) "ᯤ" else "ᯤ $operator"
+                    if (operator.isNullOrBlank()) "📶" else "📶 $operator"
                 }
                 network.contains("ethernet") -> "⌁ Ethernet"
                 else -> ""
