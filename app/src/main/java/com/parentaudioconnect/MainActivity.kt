@@ -519,7 +519,7 @@ private var receivedMp3File: File? = null
         addChildButton = createButton("＋")
         addChildButton.textSize = 25f
         addChildButton.contentDescription = "Tambah anak"
-        addChildButton.layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply { setMargins(dp(3), 0, dp(2), 0) }
+        addChildButton.layoutParams = LinearLayout.LayoutParams(dp(42), dp(42)).apply { setMargins(dp(3), 0, dp(2), 0) }
         selectedChildButton = createButton("Pilih anak  ▾")
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
         selectedChildButton.setOnClickListener { toggleChildrenPanel() }
@@ -767,7 +767,7 @@ private var receivedMp3File: File? = null
             gravity = Gravity.CENTER_VERTICAL
         }
         childIdentityColumn.addView(selectedChildButton, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(40)
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(42)
         ))
         childHeaderRow.addView(childIdentityColumn, LinearLayout.LayoutParams(0, dp(42), 1f).apply { weight = 1f })
         val notificationsBellButton = createButton("🔔")
@@ -789,7 +789,7 @@ private var receivedMp3File: File? = null
         rootLayout.addView(childHeaderRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(42)))
         parentOnlyViews.add(childHeaderRow)
         rootLayout.addView(childQuickStatusText, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(28)
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(32)
         ).apply { setMargins(dp(3), dp(4), dp(3), dp(3)) })
         parentOnlyViews.add(childQuickStatusText)
         rootLayout.addView(childrenContainer)
@@ -872,7 +872,7 @@ private var receivedMp3File: File? = null
 
         val featureGroupCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(8), dp(7), dp(8), dp(7))
+            setPadding(dp(10), dp(9), dp(10), dp(9))
             background = GradientDrawable().apply {
                 setColor(Color.WHITE)
                 cornerRadius = dp(17).toFloat()
