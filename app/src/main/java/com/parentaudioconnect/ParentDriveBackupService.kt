@@ -215,6 +215,13 @@ class ParentDriveBackupService : Service() {
                                 childKey, customFolderName?.takeIf { it.isNotBlank() } ?: childDisplayName, rootFolder
                             )
                             backupPrefs.edit().putString("parent_drive_child_folder_id_$childKey", childFolder).apply()
+                            if (backupPrefs.getBoolean("parent_drive_child_folder_rename_pending_$childKey", false)) {
+                                uploader.renameFolder(
+                                    childFolder,
+                                    customFolderName?.takeIf { it.isNotBlank() } ?: childDisplayName
+                                )
+                                backupPrefs.edit().putBoolean("parent_drive_child_folder_rename_pending_$childKey", false).apply()
+                            }
                             val mediaType = if (mime.startsWith("video/")) "video" else "photo"
                             val mediaFolder = uploader.ensureMediaFolder(childKey, mediaType, childFolder)
                             uploader.uploadFile(
