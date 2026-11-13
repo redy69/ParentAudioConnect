@@ -41,12 +41,21 @@ class GalleryBackupP2pProtocol(
     private val worker = Executors.newSingleThreadExecutor()
     @Volatile private var closed = false
     @Volatile private var sendingId: String? = null
+    @Volatile private var sendingKey: String? = null
     @Volatile private var incoming: Incoming? = null
+    @Volatile private var requestOutstanding = false
+    @Volatile private var awaitingAckKey: String? = null
 
-    /** Parent calls this only after Drive authorization is available. */
-    fun requestNext(): Boolean =
-        role == GalleryP2pManager.Role.PARENT && !closed && canReceiveBackup() &&
-            send(JSONObject().put("type", "backup_next_request"))
+    /** Parent calls this only after Drive authorization is available. Avoid overlapping requests. */
+    @Synchronized
+    fun requestNext(): Boolean {
+        if (role != GalleryP2pManager.Role.PARENT || closed || !canReceiveBackup() ||
+            requestOutstanding || incoming != null || awaitingAckKey != null
+        ) return false
+        val sent = send(JSONObject().put("type", "backup_next_request"))
+        if (sent) requestOutstanding = true
+        return sent
+    }
 
     /** Child announces that its persistent queue has at least one pending item. */
     fun notifyPending() {
@@ -68,8 +77,25 @@ class GalleryBackupP2pProtocol(
             "backup_chunk" -> if (role == GalleryP2pManager.Role.PARENT) receiveChunk(message)
             "backup_end" -> if (role == GalleryP2pManager.Role.PARENT) receiveEnd(message)
             "backup_ack" -> if (role == GalleryP2pManager.Role.CHILD) receiveAck(message)
-            "backup_ack_received" -> if (role == GalleryP2pManager.Role.PARENT) requestNext()
-            "backup_error" -> onStatus(message.optString("message", "Backup P2P gagal"))
+            "backup_ack_received" -> if (role == GalleryP2pManager.Role.PARENT) {
+                val key = message.optString("key")
+                if (key.isNotBlank() && key == awaitingAckKey) {
+                    awaitingAckKey = null
+                    requestNext()
+                }
+            }
+            "backup_error" -> {
+                val transferId = message.optString("transferId")
+                if (role == GalleryP2pManager.Role.CHILD && transferId.isNotBlank() && transferId == sendingId) {
+                    sendingId = null
+                    sendingKey = null
+                }
+                if (role == GalleryP2pManager.Role.PARENT) {
+                    requestOutstanding = false
+                    incoming?.let { failIncoming(it, message.optString("message", "Backup P2P gagal")) }
+                }
+                onStatus(message.optString("message", "Backup P2P gagal"))
+            }
         }
         return true
     }
@@ -105,6 +131,7 @@ class GalleryBackupP2pProtocol(
             )
             val transferId = UUID.randomUUID().toString()
             sendingId = transferId
+            sendingKey = item.stableKey
             try {
                 val start = JSONObject().put("type", "backup_start").put("transferId", transferId)
                     .put("key", item.stableKey).put("name", item.displayName.take(180))
@@ -148,20 +175,23 @@ class GalleryBackupP2pProtocol(
                 send(JSONObject().put("type", "backup_error").put("transferId", transferId)
                     .put("key", item.stableKey).put("message", error.localizedMessage ?: "Transfer gagal"))
                 sendingId = null
+                sendingKey = null
             }
         }
     }
 
+    @Synchronized
     private fun receiveStart(message: JSONObject) {
         val id = message.optString("transferId")
         val key = message.optString("key")
         val size = message.optLong("size", -1)
-        if (id.isBlank() || id.length > 64 || key.isBlank() || key.length > 160 ||
+        if (!requestOutstanding || id.isBlank() || id.length > 64 || key.isBlank() || key.length > 160 ||
             size <= 0 || size > MAX_FILE_BYTES || incoming != null
         ) {
             send(JSONObject().put("type", "backup_error").put("message", "Metadata backup tidak valid"))
             return
         }
+        requestOutstanding = false
         try {
             val file = File.createTempFile("santethp-drive-backup-", ".part", app.cacheDir)
             incoming = Incoming(id, key, message.optString("name").take(180),
@@ -217,6 +247,7 @@ class GalleryBackupP2pProtocol(
                 return
             }
             incoming = null
+            awaitingAckKey = transfer.key
             onStatus("File backup lolos verifikasi • mengunggah ke Google Drive")
             onFileReady(transfer.key, transfer.file, transfer.name, transfer.mime) { uploaded ->
                 if (uploaded) {
@@ -237,6 +268,7 @@ class GalleryBackupP2pProtocol(
         val id = message.optString("transferId")
         if (id.isBlank() || id != sendingId) return
         val key = message.optString("key")
+        if (key.isBlank() || key != sendingKey) return
         val uploaded = message.optBoolean("success", false)
         if (uploaded) {
             tracker.markUploaded(key)
@@ -245,6 +277,7 @@ class GalleryBackupP2pProtocol(
             onStatus("Upload Google Drive belum berhasil • file tetap dalam antrean untuk dicoba lagi")
         }
         sendingId = null
+        sendingKey = null
         if (uploaded) send(JSONObject().put("type", "backup_ack_received").put("key", key))
     }
 
@@ -252,6 +285,7 @@ class GalleryBackupP2pProtocol(
         try { transfer.output.close() } catch (_: Exception) { }
         transfer.file.delete()
         if (incoming?.id == transfer.id) incoming = null
+        requestOutstanding = false
         send(JSONObject().put("type", "backup_error").put("transferId", transfer.id)
             .put("key", transfer.key).put("message", message))
         onStatus(message)
@@ -276,6 +310,9 @@ class GalleryBackupP2pProtocol(
         if (closed) return
         closed = true
         sendingId = null
+        sendingKey = null
+        requestOutstanding = false
+        awaitingAckKey = null
         incoming?.let {
             try { it.output.close() } catch (_: Exception) { }
             it.file.delete()
