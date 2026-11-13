@@ -528,13 +528,17 @@ private var receivedMp3File: File? = null
         liveKitTestButton = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(14), dp(10), dp(14), dp(10))
-            minHeight = dp(68)
-            background = roundedPanel(Color.WHITE, 17)
-            elevation = dp(2).toFloat()
+            setPadding(dp(12), dp(9), dp(12), dp(9))
+            minHeight = dp(58)
+            background = GradientDrawable().apply {
+                setColor(Color.WHITE)
+                cornerRadius = dp(15).toFloat()
+                setStroke(dp(1), Color.rgb(198, 216, 243))
+            }
+            elevation = dp(1).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(5), 0, dp(5)) }
+            ).apply { setMargins(0, dp(3), 0, dp(4)) }
 
             addView(TextView(this@MainActivity).apply {
                 text = "🖧"
@@ -942,8 +946,8 @@ private var receivedMp3File: File? = null
             textSize = 11.5f
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.105f
-            setPadding(dp(4), dp(11), dp(4), dp(5))
+            letterSpacing = 0.085f
+            setPadding(dp(4), dp(8), dp(4), dp(4))
             visibility = View.GONE
         }
         rootLayout.addView(additionalControlsHeading)
@@ -954,8 +958,8 @@ private var receivedMp3File: File? = null
             textSize = 11.5f
             setTextColor(Color.rgb(49, 82, 145))
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.105f
-            setPadding(dp(4), dp(11), dp(4), dp(5))
+            letterSpacing = 0.085f
+            setPadding(dp(4), dp(8), dp(4), dp(4))
         }
         rootLayout.addView(connectionSettingsHeading)
         parentOnlyViews.add(connectionSettingsHeading)
