@@ -519,6 +519,11 @@ private var receivedMp3File: File? = null
         addChildButton = createButton("＋")
         addChildButton.textSize = 25f
         addChildButton.contentDescription = "Tambah anak"
+        addChildButton.minimumHeight = dp(42)
+        addChildButton.minimumWidth = dp(42)
+        addChildButton.setPadding(0, 0, 0, 0)
+        addChildButton.gravity = Gravity.CENTER
+        addChildButton.stateListAnimator = null
         addChildButton.layoutParams = LinearLayout.LayoutParams(dp(42), dp(42)).apply { setMargins(dp(3), 0, dp(2), 0) }
         selectedChildButton = createButton("Pilih anak  ▾")
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
@@ -772,6 +777,11 @@ private var receivedMp3File: File? = null
         childHeaderRow.addView(childIdentityColumn, LinearLayout.LayoutParams(0, dp(42), 1f).apply { weight = 1f })
         val notificationsBellButton = createButton("🔔")
         notificationsBellButton.textSize = 19f
+        notificationsBellButton.minimumHeight = dp(42)
+        notificationsBellButton.minimumWidth = dp(42)
+        notificationsBellButton.setPadding(0, 0, 0, 0)
+        notificationsBellButton.gravity = Gravity.CENTER
+        notificationsBellButton.stateListAnimator = null
         notificationsBellButton.contentDescription = "Lihat notifikasi HP anak"
         notificationsBellButton.setTextColor(Color.rgb(42, 76, 145))
         notificationsBellButton.background = GradientDrawable().apply {
