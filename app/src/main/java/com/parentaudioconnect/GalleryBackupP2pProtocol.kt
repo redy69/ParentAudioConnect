@@ -16,6 +16,7 @@ class GalleryBackupP2pProtocol(
     private val role: GalleryP2pManager.Role,
     private val sendFrame: (ByteArray, Boolean) -> Boolean,
     private val onStatus: (String) -> Unit,
+    private val canReceiveBackup: () -> Boolean = { true },
     private val onFileReady: (String, File, String, String, (Boolean) -> Unit) -> Unit = { _, file, _, _, done ->
         file.delete()
         done(false)
@@ -44,8 +45,15 @@ class GalleryBackupP2pProtocol(
 
     /** Parent calls this only after Drive authorization is available. */
     fun requestNext(): Boolean =
-        role == GalleryP2pManager.Role.PARENT && !closed &&
+        role == GalleryP2pManager.Role.PARENT && !closed && canReceiveBackup() &&
             send(JSONObject().put("type", "backup_next_request"))
+
+    /** Child announces that its persistent queue has at least one pending item. */
+    fun notifyPending() {
+        if (role == GalleryP2pManager.Role.CHILD && !closed && tracker.isEnabled() && tracker.pendingItems().isNotEmpty()) {
+            send(JSONObject().put("type", "backup_queue_available"))
+        }
+    }
 
     /** Returns true when this frame belongs to the backup protocol. */
     fun onFrame(bytes: ByteArray, binary: Boolean): Boolean {
@@ -55,6 +63,7 @@ class GalleryBackupP2pProtocol(
         if (!type.startsWith("backup_")) return false
         when (type) {
             "backup_next_request" -> if (role == GalleryP2pManager.Role.CHILD) sendNextPending()
+            "backup_queue_available" -> if (role == GalleryP2pManager.Role.PARENT) requestNext()
             "backup_start" -> if (role == GalleryP2pManager.Role.PARENT) receiveStart(message)
             "backup_chunk" -> if (role == GalleryP2pManager.Role.PARENT) receiveChunk(message)
             "backup_end" -> if (role == GalleryP2pManager.Role.PARENT) receiveEnd(message)
