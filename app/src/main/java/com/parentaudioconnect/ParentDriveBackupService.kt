@@ -34,6 +34,23 @@ class ParentDriveBackupService : Service() {
     private var folderId: String? = null
     private var accessToken: String? = null
     private val reconnectHandler = Handler(Looper.getMainLooper())
+    private val networkGateRunnable = object : Runnable {
+        override fun run() {
+            if (stopping) return
+            if (canUseBackupNetwork()) {
+                protocol?.requestNextBackup()
+            } else {
+                updateStatus("Backup dijeda • HP orang tua menunggu koneksi Wi-Fi")
+            }
+            reconnectHandler.postDelayed(this, 15000L)
+        }
+    }
+
+    private fun canUseBackupNetwork(): Boolean {
+        val wifiOnly = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            .getBoolean("drive_backup_wifi_only", true)
+        return BackupNetworkPolicy.canUseBackupNetwork(this, wifiOnly)
+    }
     @Volatile private var stopping = false
     private var pairingCode: String? = null
     private var childDisplayName: String = "HP Anak"
@@ -79,6 +96,9 @@ class ParentDriveBackupService : Service() {
             .putString("parent_drive_backup_child_name", childDisplayName)
             .apply()
         startAsForeground("Menunggu koneksi HP anak untuk backup media baru")
+        stopping = false
+        reconnectHandler.removeCallbacks(networkGateRunnable)
+        reconnectHandler.post(networkGateRunnable)
         pairingCode = code
         listenForConsent(code)
         startTransport(code)
@@ -133,10 +153,15 @@ class ParentDriveBackupService : Service() {
                     Log.w(TAG, "Tidak dapat memeriksa status persetujuan backup", error)
                     return@addSnapshotListener
                 }
+                val wifiOnly = snapshot?.getBoolean("driveBackupWifiOnly") ?: true
+                getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                    .putBoolean("drive_backup_wifi_only", wifiOnly).apply()
                 if (snapshot?.getBoolean("driveBackupEnabled") != true) {
                     updateStatus("Persetujuan backup dari HP anak tidak aktif")
                     stopTransport()
                     stopSelf()
+                } else if (canUseBackupNetwork()) {
+                    protocol?.requestNextBackup()
                 }
             }
     }
@@ -170,7 +195,7 @@ class ParentDriveBackupService : Service() {
             onMediaIndex = { },
             onThumbnail = { _, _ -> },
             onStatus = ::updateStatus,
-            canReceiveBackup = { !accessToken.isNullOrBlank() },
+            canReceiveBackup = { !accessToken.isNullOrBlank() && canUseBackupNetwork() },
             onBackupFileReady = { key, file, name, mime, complete ->
                 val token = accessToken
                 if (token.isNullOrBlank()) {
@@ -249,6 +274,7 @@ class ParentDriveBackupService : Service() {
     private fun stopP2pTransport() {
         stopping = true
         reconnectHandler.removeCallbacks(reconnectRunnable)
+        reconnectHandler.removeCallbacks(networkGateRunnable)
         protocol?.close()
         protocol = null
         manager?.close()
