@@ -1001,13 +1001,7 @@ private var receivedMp3File: File? = null
     }
 
     private fun stopChildGalleryP2p() {
-        val serviceIntent = Intent(this, ChildGalleryP2pService::class.java)
-            .setAction(ChildGalleryP2pService.ACTION_STOP)
-        try {
-            startService(serviceIntent)
-        } catch (_: Exception) {
-            stopService(Intent(this, ChildGalleryP2pService::class.java))
-        }
+        stopService(Intent(this, ChildGalleryP2pService::class.java))
     }
 
     private fun updateChildUsageAccessPanel() {
