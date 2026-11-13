@@ -805,19 +805,23 @@ private var receivedMp3File: File? = null
         rootLayout.addView(featureHeading)
         parentOnlyViews.add(featureHeading)
         parentAppBlockPanel = TextView(this).apply {
-            text = "🚫  BLOKIR APLIKASI\nMenunggu persetujuan dan daftar aplikasi dari HP anak • Ketuk untuk mengatur"
-            textSize = 12.5f
-            setTextColor(Color.rgb(35, 53, 88))
+            text = "🚫  BLOKIR APLIKASI\nAtur aplikasi yang boleh digunakan di HP anak"
+            textSize = 13.5f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(35, 65, 125))
+            gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(3).toFloat(), 1f)
-            setPadding(dp(17), dp(16), dp(17), dp(16))
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(255, 247, 241))).apply {
-                cornerRadius = dp(19).toFloat()
-                setStroke(dp(1), Color.rgb(245, 205, 180))
+            setPadding(dp(18), dp(15), dp(18), dp(15))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(235, 243, 255))
+            ).apply {
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), Color.rgb(190, 211, 244))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, dp(4), 0, dp(8)) }
+            ).apply { setMargins(0, dp(4), 0, dp(7)) }
             setOnClickListener { showParentAppBlockDialog() }
         }
         rootLayout.addView(parentAppBlockPanel)
