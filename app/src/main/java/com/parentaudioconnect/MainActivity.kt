@@ -3625,7 +3625,9 @@ private var receivedMp3File: File? = null
                                 }
                             }
                         }
-                    }.show()
+                    }
+                    .setPositiveButton("Tutup", null)
+                    .show()
             }
             .addOnFailureListener {
                 Toast.makeText(this, "Gagal mengambil daftar aplikasi anak.", Toast.LENGTH_LONG).show()
@@ -4220,7 +4222,7 @@ private var receivedMp3File: File? = null
             "Backup Google Drive" to "Atur pencadangan foto dan video"
         )
         val dialog = SantetHpDialogBuilder().setTitle("Galeri & Backup")
-            .setView(popupContentCard(popupChoiceCards(options) { which ->
+            .setView(popupChoiceCards(options) { which ->
                 when (which) {
                     0 -> showParentGalleryStatus()
                     1 -> showSendMediaToChildInfo()
@@ -6152,7 +6154,7 @@ private var receivedMp3File: File? = null
         lateinit var serverDialog: AlertDialog
         serverDialog = SantetHpDialogBuilder()
             .setTitle("Pilih Server LiveKit")
-            .setView(popupContentCard(popupChoiceCards(serverOptions, selectedIndex) { which ->
+            .setView(popupChoiceCards(serverOptions, selectedIndex) { which ->
                 serverDialog.dismiss()
                 applyLiveKitTestServer(code, serverIds[which], labels[which])
             }))
