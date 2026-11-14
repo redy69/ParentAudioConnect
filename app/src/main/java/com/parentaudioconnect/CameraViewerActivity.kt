@@ -59,18 +59,31 @@ class CameraViewerActivity : Activity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.BLACK)
-            setPadding(12, 12, 12, 12)
+            setBackgroundColor(Color.rgb(8, 15, 30))
+            setPadding(dp(12), dp(12), dp(12), dp(12))
         }
         status = TextView(this).apply {
             text = "Menghubungkan kamera anak…"
             setTextColor(Color.WHITE)
-            textSize = 16f
+            textSize = 13.5f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            letterSpacing = 0.025f
             gravity = Gravity.CENTER
-            setPadding(8, 12, 8, 12)
+            includeFontPadding = false
+            minHeight = dp(48)
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(22, 43, 78), Color.rgb(17, 31, 57))
+            ).apply {
+                cornerRadius = dp(15).toFloat()
+                setStroke(dp(1), Color.rgb(53, 83, 130))
+            }
         }
         renderer = SurfaceViewRenderer(this)
         val videoFrame = FrameLayout(this).apply {
+            setBackgroundColor(Color.rgb(3, 8, 18))
+            elevation = dp(2).toFloat()
             addView(renderer, FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
@@ -80,23 +93,27 @@ class CameraViewerActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
-        val switch = Button(this).apply {
-            text = "GANTI KAMERA"
-            setOnClickListener { switchCamera() }
-        }
-        val stop = Button(this).apply {
-            text = "HENTIKAN"
-            setOnClickListener { stopCameraAndClose() }
-        }
-        controls.addView(switch, LinearLayout.LayoutParams(0, 54, 1f))
-        controls.addView(stop, LinearLayout.LayoutParams(0, 54, 1f))
+        val switch = createCameraControl("GANTI KAMERA", Color.rgb(54, 94, 190))
+        switch.setOnClickListener { switchCamera() }
+        val stop = createCameraControl("HENTIKAN", Color.rgb(176, 57, 68))
+        stop.setOnClickListener { stopCameraAndClose() }
+        controls.addView(switch, LinearLayout.LayoutParams(0, dp(50), 1f).apply {
+            marginEnd = dp(6)
+        })
+        controls.addView(stop, LinearLayout.LayoutParams(0, dp(50), 1f).apply {
+            marginStart = dp(6)
+        })
         root.addView(status, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-        ))
+        ).apply { bottomMargin = dp(10) })
         root.addView(videoFrame, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+        ).apply {
+            bottomMargin = dp(12)
+        })
+        root.addView(controls, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
         ))
-        root.addView(controls)
         setContentView(root)
 
         connectToCameraRoom()
@@ -267,6 +284,29 @@ class CameraViewerActivity : Activity() {
             connection.disconnect()
         }
     }
+
+    private fun createCameraControl(label: String, color: Int): Button = Button(this).apply {
+        text = label
+        isAllCaps = false
+        textSize = 12f
+        letterSpacing = 0.045f
+        setTypeface(null, android.graphics.Typeface.BOLD)
+        setTextColor(Color.WHITE)
+        gravity = Gravity.CENTER
+        includeFontPadding = false
+        minHeight = dp(50)
+        setPadding(dp(10), dp(8), dp(10), dp(8))
+        background = GradientDrawable().apply {
+            setColor(color)
+            cornerRadius = dp(14).toFloat()
+            setStroke(dp(1), Color.argb(75, 255, 255, 255))
+        }
+        elevation = dp(2).toFloat()
+        stateListAnimator = null
+    }
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
 
     @Deprecated("Deprecated in Android API")
     override fun onBackPressed() {
