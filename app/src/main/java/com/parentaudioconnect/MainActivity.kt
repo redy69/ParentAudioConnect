@@ -1407,17 +1407,35 @@ private var receivedMp3File: File? = null
         safeZonesContainer.removeAllViews()
         val zones = readSafeZones(snapshot)
         safeZonesContainer.addView(TextView(this).apply {
-            text = "TITIK AMAN TERSIMPAN (" + zones.size + "/10)"
-            textSize = 12f
+            text = "📍  TITIK AMAN TERSIMPAN  " + zones.size + "/10"
+            textSize = 11.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
+            letterSpacing = 0.035f
             setTextColor(Color.rgb(25, 91, 67))
-            setPadding(dp(3), dp(10), dp(3), dp(7))
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(11), dp(9), dp(11), dp(9))
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(235, 246, 239))
+                cornerRadius = dp(11).toFloat()
+                setStroke(dp(1), Color.rgb(198, 222, 207))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(5), 0, dp(7)) }
         })
         if (zones.isEmpty()) {
             safeZonesContainer.addView(TextView(this).apply {
                 text = "Belum ada titik aman. Tekan tombol tambah, lalu pilih lokasi pada peta."
                 textSize = 12f
-                setTextColor(Color.rgb(104, 117, 140))
+                setTextColor(Color.rgb(83, 108, 99))
+                gravity = Gravity.CENTER_VERTICAL
+                setLineSpacing(dp(2).toFloat(), 1f)
+                setPadding(dp(12), dp(12), dp(12), dp(12))
+                background = GradientDrawable().apply {
+                    setColor(Color.rgb(248, 251, 249))
+                    cornerRadius = dp(12).toFloat()
+                    setStroke(dp(1), Color.rgb(216, 231, 221))
+                }
             })
             renderSafeZoneHistory(snapshot)
             return
@@ -1427,9 +1445,9 @@ private var receivedMp3File: File? = null
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(12), dp(9), dp(12), dp(9))
                 background = GradientDrawable().apply {
-                    setColor(Color.WHITE)
+                    setColor(Color.rgb(250, 253, 251))
                     cornerRadius = dp(15).toFloat()
-                    setStroke(dp(1), Color.rgb(211, 230, 221))
+                    setStroke(dp(1), Color.rgb(198, 222, 207))
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
