@@ -1093,6 +1093,8 @@ private var receivedMp3File: File? = null
             updateChildAppActivityPanel()
             updateChildNotificationPanel()
             updateChildGalleryPanel()
+            // Re-evaluate the child landing page after Android settings return.
+            showChildConnectedScreen()
             // Device battery/network reporting is independent of Usage Access.
             // Always re-enqueue the lightweight status worker when the child app resumes.
             ChildDeviceStatusWorker.schedule(this)
@@ -1718,21 +1720,76 @@ private var receivedMp3File: File? = null
         updateSelectedChildButton()
     }
 
+    /**
+     * Only permissions for features explicitly enabled on this child device
+     * are required. Optional features that were never enabled do not block
+     * the simplified child screen.
+     */
+    private fun childPermissionIssues(): List<String> {
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        val issues = mutableListOf<String>()
+
+        if (prefs.getBoolean("child_usage_audit_enabled", false) &&
+            !AppUsageReporter.hasUsageAccess(this)
+        ) issues.add("Akses penggunaan aplikasi")
+
+        if (prefs.getBoolean("child_location_sharing_enabled", false)) {
+            val fine = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            val coarse = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            if (!fine && !coarse) issues.add("Izin lokasi")
+            if (Build.VERSION.SDK_INT >= 33 &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) issues.add("Izin notifikasi untuk layanan lokasi")
+        }
+
+        if ((prefs.getBoolean("child_app_block_consent", false) ||
+             prefs.getBoolean("child_app_activity_consent", false)) &&
+            !isAppBlockAccessibilityEnabled()
+        ) issues.add("Aksesibilitas SantetHP")
+
+        if (prefs.getBoolean("child_notification_monitoring_enabled", false) &&
+            !notificationListenerAccessEnabled()
+        ) issues.add("Akses pemantauan notifikasi")
+
+        if (prefs.getBoolean("child_gallery_sharing_enabled", false) &&
+            !hasGalleryMediaAccess()
+        ) issues.add("Akses foto dan video")
+
+        if (prefs.getBoolean("remote_camera_armed", false) &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
+        ) issues.add("Izin kamera")
+
+        return issues
+    }
+
     private fun showChildConnectedScreen() {
         roleIntroText.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
-        additionalControlsHeading.visibility = View.VISIBLE
-        childModePanel.visibility = View.VISIBLE
-        childLocationPanel.visibility = View.VISIBLE
-        childAppBlockPanel.visibility = View.VISIBLE
-        childAppActivityPanel.visibility = View.VISIBLE
-        childNotificationPanel.visibility = View.VISIBLE
-        childGalleryPanel.visibility = View.VISIBLE
         updateChildGalleryPanel()
         updateChildLocationPanel()
         updateChildAppBlockPanel()
         updateChildAppActivityPanel()
         updateChildNotificationPanel()
+
+        val issues = childPermissionIssues()
+        val needsSetup = issues.isNotEmpty()
+        additionalControlsHeading.text = if (needsSetup) "PEMERIKSAAN PERIZINAN" else "PERANGKAT SIAP"
+        additionalControlsHeading.visibility = View.VISIBLE
+        childModePanel.visibility = if (issues.any { it == "Akses penggunaan aplikasi" }) View.VISIBLE else View.GONE
+        childLocationPanel.visibility = if (issues.any { it.startsWith("Izin lokasi") || it.startsWith("Izin notifikasi untuk layanan lokasi") }) View.VISIBLE else View.GONE
+        childAppBlockPanel.visibility = if (issues.any { it == "Aksesibilitas SantetHP" } &&
+            getSharedPreferences("parent_audio", MODE_PRIVATE).getBoolean("child_app_block_consent", false)) View.VISIBLE else View.GONE
+        childAppActivityPanel.visibility = if (issues.any { it == "Aksesibilitas SantetHP" } &&
+            getSharedPreferences("parent_audio", MODE_PRIVATE).getBoolean("child_app_activity_consent", false)) View.VISIBLE else View.GONE
+        childNotificationPanel.visibility = if (issues.any { it == "Akses pemantauan notifikasi" }) View.VISIBLE else View.GONE
+        childGalleryPanel.visibility = if (issues.any { it == "Akses foto dan video" }) View.VISIBLE else View.GONE
+
+        statusText.text = if (needsSetup) {
+            "Beberapa izin untuk fitur yang diaktifkan perlu diperiksa: " + issues.joinToString(", ") + ". Ketuk kartu terkait untuk membuka pengaturan."
+        } else {
+            "Semua izin untuk fitur yang digunakan sudah aktif. Pengaturan perangkat dikelola dari HP orang tua."
+        }
+        statusText.visibility = View.VISIBLE
         updateButton.visibility = View.VISIBLE
         updateInfoText.visibility = View.VISIBLE
         updateButton.text = "PERIKSA PEMBARUAN APLIKASI"
