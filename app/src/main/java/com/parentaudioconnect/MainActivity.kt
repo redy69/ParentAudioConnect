@@ -5135,9 +5135,18 @@ private var receivedMp3File: File? = null
                 if (documents.isEmpty()) {
                     list.addView(TextView(this).apply {
                         text = "Belum ada notifikasi. Pastikan HP anak online dan akses notifikasi SantetHP sudah aktif."
-                        textSize = 13f
-                        setTextColor(Color.rgb(104, 117, 140))
-                        setPadding(dp(8), dp(20), dp(8), dp(20))
+                        textSize = 12.5f
+                        setTextColor(Color.rgb(91, 112, 132))
+                        gravity = Gravity.CENTER
+                        setLineSpacing(dp(3).toFloat(), 1f)
+                        setPadding(dp(14), dp(22), dp(14), dp(22))
+                        background = GradientDrawable(
+                            GradientDrawable.Orientation.TL_BR,
+                            intArrayOf(Color.rgb(248, 251, 255), Color.rgb(241, 247, 253))
+                        ).apply {
+                            cornerRadius = dp(13).toFloat()
+                            setStroke(dp(1), Color.rgb(211, 224, 240))
+                        }
                     })
                     return@addSnapshotListener
                 }
