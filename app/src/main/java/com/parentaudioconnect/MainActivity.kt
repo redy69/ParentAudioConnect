@@ -6149,14 +6149,16 @@ private var receivedMp3File: File? = null
         val serverOptions = labels.mapIndexed { index, label ->
             label to if (index == selectedIndex) "Sedang dipilih" else "Pilih untuk koneksi audio"
         }
-        val dialog = SantetHpDialogBuilder()
+        lateinit var serverDialog: AlertDialog
+        serverDialog = SantetHpDialogBuilder()
             .setTitle("Pilih Server LiveKit")
             .setView(popupContentCard(popupChoiceCards(serverOptions, selectedIndex) { which ->
+                serverDialog.dismiss()
                 applyLiveKitTestServer(code, serverIds[which], labels[which])
             }))
             .setNegativeButton("Batal", null)
             .create()
-        dialog.show()
+        serverDialog.show()
     }
 
     private fun applyLiveKitTestServer(code: String, serverId: String, serverLabel: String) {
