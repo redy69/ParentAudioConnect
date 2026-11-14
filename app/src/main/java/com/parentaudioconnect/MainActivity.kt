@@ -3136,9 +3136,14 @@ private var receivedMp3File: File? = null
     private fun watchChildPairingRemoval(code: String) {
         pairingListener?.remove()
         pairingListener = db.collection("pairings").document(code)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null || snapshot.metadata.isFromCache) return@addSnapshotListener
-                if (!snapshot.exists()) handleChildPairingRemoved(code)
+            // Include metadata-only updates so a cached snapshot is followed by the
+            // server-confirmed state. This is important when the parent unlinks while
+            // the child app is already open.
+            .addSnapshotListener(com.google.firebase.firestore.MetadataChanges.INCLUDE) { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                if (!snapshot.metadata.isFromCache && !snapshot.exists()) {
+                    handleChildPairingRemoved(code)
+                }
             }
     }
 
