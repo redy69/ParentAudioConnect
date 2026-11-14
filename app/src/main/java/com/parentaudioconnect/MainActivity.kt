@@ -4235,7 +4235,7 @@ private var receivedMp3File: File? = null
                     1 -> showSendMediaToChildInfo()
                     2 -> showGoogleDriveBackupSettings()
                 }
-            }))
+            })
             .setNegativeButton("Tutup", null).create()
         dialog.show()
     }
@@ -6164,7 +6164,7 @@ private var receivedMp3File: File? = null
             .setView(popupChoiceCards(serverOptions, selectedIndex) { which ->
                 serverDialog.dismiss()
                 applyLiveKitTestServer(code, serverIds[which], labels[which])
-            }))
+            })
             .setNegativeButton("Batal", null)
             .create()
         serverDialog.show()
