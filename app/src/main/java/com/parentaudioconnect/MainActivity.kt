@@ -1450,10 +1450,12 @@ private var receivedMp3File: File? = null
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(12), dp(9), dp(12), dp(9))
-                background = GradientDrawable().apply {
-                    setColor(Color.rgb(250, 253, 251))
+                background = GradientDrawable(
+                    GradientDrawable.Orientation.TL_BR,
+                    intArrayOf(Color.rgb(255, 255, 255), Color.rgb(241, 249, 244))
+                ).apply {
                     cornerRadius = dp(15).toFloat()
-                    setStroke(dp(1), Color.rgb(198, 222, 207))
+                    setStroke(dp(1), Color.rgb(191, 219, 203))
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -1477,10 +1479,13 @@ private var receivedMp3File: File? = null
                 isAllCaps = false
                 textSize = 12f
                 setTextColor(Color.rgb(24, 96, 70))
-                background = GradientDrawable().apply {
-                    setColor(Color.rgb(235, 245, 239))
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                background = GradientDrawable(
+                    GradientDrawable.Orientation.LEFT_RIGHT,
+                    intArrayOf(Color.rgb(233, 247, 238), Color.rgb(239, 247, 255))
+                ).apply {
                     cornerRadius = dp(10).toFloat()
-                    setStroke(dp(1), Color.rgb(197, 222, 207))
+                    setStroke(dp(1), Color.rgb(190, 220, 205))
                 }
                 stateListAnimator = null
                 setOnClickListener {
@@ -1492,11 +1497,14 @@ private var receivedMp3File: File? = null
                 text = "Hapus"
                 isAllCaps = false
                 textSize = 12f
-                setTextColor(Color.rgb(166, 55, 61))
-                background = GradientDrawable().apply {
-                    setColor(Color.rgb(255, 243, 243))
+                setTextColor(Color.rgb(157, 48, 60))
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                background = GradientDrawable(
+                    GradientDrawable.Orientation.TL_BR,
+                    intArrayOf(Color.rgb(255, 249, 249), Color.rgb(255, 237, 239))
+                ).apply {
                     cornerRadius = dp(10).toFloat()
-                    setStroke(dp(1), Color.rgb(239, 205, 207))
+                    setStroke(dp(1), Color.rgb(231, 190, 195))
                 }
                 stateListAnimator = null
                 setOnClickListener {
