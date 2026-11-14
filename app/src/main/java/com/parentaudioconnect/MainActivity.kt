@@ -331,13 +331,13 @@ private var receivedMp3File: File? = null
             setPadding(dp(12), dp(6), dp(12), dp(6))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(242, 249, 244))
+                intArrayOf(Color.rgb(255, 255, 255), Color.rgb(242, 249, 247))
             ).apply {
                 cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.rgb(205, 226, 211))
+                setStroke(dp(1), Color.rgb(194, 220, 211))
             }
             elevation = dp(2).toFloat()
-            minHeight = dp(40)
+            minHeight = dp(42)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { setMargins(0, dp(2), 0, dp(4)) }
@@ -352,10 +352,12 @@ private var receivedMp3File: File? = null
             gravity = Gravity.CENTER
             includeFontPadding = false
             setPadding(dp(9), dp(4), dp(9), dp(4))
-            background = GradientDrawable().apply {
-                setColor(Color.rgb(239, 243, 249))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf(Color.rgb(241, 246, 253), Color.rgb(235, 243, 250))
+            ).apply {
                 cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.rgb(218, 226, 239))
+                setStroke(dp(1), Color.rgb(207, 220, 237))
             }
             maxLines = 1
             layoutParams = LinearLayout.LayoutParams(
