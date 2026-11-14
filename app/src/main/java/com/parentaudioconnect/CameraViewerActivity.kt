@@ -1,6 +1,7 @@
 package com.santethp
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.os.Bundle
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
@@ -144,10 +145,18 @@ class CameraViewerActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
-        val switch = createCameraControl("GANTI KAMERA", Color.rgb(54, 94, 190))
-        switch.setOnClickListener { switchCamera() }
+        val switch = createCameraControl("BELAKANG AKTIF ✓", Color.rgb(20, 116, 91))
+        switch.setOnClickListener {
+            facing = if (facing == "back") "front" else "back"
+            cameraFacingLabel.text = if (facing == "front") "KAMERA DEPAN" else "KAMERA BELAKANG"
+            switch.text = if (facing == "front") "DEPAN AKTIF ✓" else "BELAKANG AKTIF ✓"
+            switch.background = cameraControlBackground(
+                if (facing == "front") Color.rgb(31, 139, 103) else Color.rgb(20, 116, 91)
+            )
+            sendCameraCommand("switch", facing, closeAfter = false)
+        }
         val stop = createCameraControl("HENTIKAN", Color.rgb(176, 57, 68))
-        stop.setOnClickListener { stopCameraAndClose() }
+        stop.setOnClickListener { confirmStopCamera() }
         controls.addView(switch, LinearLayout.LayoutParams(0, dp(50), 1f).apply {
             marginEnd = dp(6)
         })
@@ -278,10 +287,16 @@ class CameraViewerActivity : Activity() {
         }
     }
 
-    private fun switchCamera() {
-        facing = if (facing == "back") "front" else "back"
-        cameraFacingLabel.text = if (facing == "front") "KAMERA DEPAN" else "KAMERA BELAKANG"
-        sendCameraCommand("switch", facing, closeAfter = false)
+    private fun confirmStopCamera() {
+        if (stopping || isFinishing) return
+        AlertDialog.Builder(this)
+            .setTitle("Hentikan Camera Live?")
+            .setMessage("Tayangan kamera akan dihentikan dan halaman Camera Live akan ditutup.")
+            .setNegativeButton("BATAL", null)
+            .setPositiveButton("YA, HENTIKAN") { _, _ ->
+                stopCameraAndClose()
+            }
+            .show()
     }
 
     private fun stopCameraAndClose() {
@@ -348,13 +363,16 @@ class CameraViewerActivity : Activity() {
         includeFontPadding = false
         minHeight = dp(50)
         setPadding(dp(10), dp(8), dp(10), dp(8))
-        background = GradientDrawable().apply {
-            setColor(color)
-            cornerRadius = dp(14).toFloat()
-            setStroke(dp(1), Color.argb(75, 255, 255, 255))
-        }
+        background = cameraControlBackground(color)
         elevation = dp(2).toFloat()
         stateListAnimator = null
+    }
+
+
+    private fun cameraControlBackground(color: Int) = GradientDrawable().apply {
+        setColor(color)
+        cornerRadius = dp(14).toFloat()
+        setStroke(dp(1), Color.argb(100, 255, 255, 255))
     }
 
     private fun dp(value: Int): Int =
@@ -362,7 +380,7 @@ class CameraViewerActivity : Activity() {
 
     @Deprecated("Deprecated in Android API")
     override fun onBackPressed() {
-        stopCameraAndClose()
+        confirmStopCamera()
     }
 
     override fun onDestroy() {
