@@ -4569,10 +4569,12 @@ private var receivedMp3File: File? = null
                                     orientation = LinearLayout.HORIZONTAL
                                     gravity = Gravity.CENTER_VERTICAL
                                     setPadding(dp(7), dp(6), dp(7), dp(6))
-                                    background = GradientDrawable().apply {
-                                        setColor(Color.rgb(250, 253, 251))
+                                    background = GradientDrawable(
+                                        GradientDrawable.Orientation.LEFT_RIGHT,
+                                        intArrayOf(Color.rgb(255, 255, 255), Color.rgb(241, 248, 244))
+                                    ).apply {
                                         cornerRadius = dp(13).toFloat()
-                                        setStroke(dp(1), Color.rgb(216, 231, 222))
+                                        setStroke(dp(1), Color.rgb(207, 226, 215))
                                     }
                                     layoutParams = LinearLayout.LayoutParams(
                                         ViewGroup.LayoutParams.MATCH_PARENT, dp(80)
@@ -4588,7 +4590,9 @@ private var receivedMp3File: File? = null
                                         item.name + "\n" +
                                         android.text.format.Formatter.formatFileSize(this@MainActivity, item.sizeBytes)
                                     textSize = 12f
-                                    setTextColor(Color.rgb(31, 57, 43))
+                                    setTypeface(null, android.graphics.Typeface.BOLD)
+                                    setTextColor(Color.rgb(31, 68, 49))
+                                    setLineSpacing(dp(2).toFloat(), 1f)
                                     setPadding(dp(10), 0, dp(4), 0)
                                     maxLines = 2
                                     layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
