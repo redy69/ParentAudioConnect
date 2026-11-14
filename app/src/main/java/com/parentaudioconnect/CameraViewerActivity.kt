@@ -94,16 +94,16 @@ class CameraViewerActivity : Activity() {
 
             cameraFacingLabel = TextView(this@CameraViewerActivity).apply {
                 text = "KAMERA BELAKANG"
-                setTextColor(Color.WHITE)
+                setTextColor(Color.rgb(232, 250, 240))
                 textSize = 10.5f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 letterSpacing = 0.06f
                 includeFontPadding = false
                 setPadding(dp(10), dp(8), dp(10), dp(8))
                 background = GradientDrawable().apply {
-                    setColor(Color.argb(190, 17, 31, 57))
+                    setColor(Color.argb(218, 9, 29, 24))
                     cornerRadius = dp(10).toFloat()
-                    setStroke(dp(1), Color.rgb(67, 105, 151))
+                    setStroke(dp(1), Color.rgb(43, 112, 83))
                 }
             }
             addView(cameraFacingLabel, FrameLayout.LayoutParams(
@@ -117,19 +117,19 @@ class CameraViewerActivity : Activity() {
                 gravity = Gravity.END
                 setPadding(dp(10), dp(8), dp(10), dp(8))
                 background = GradientDrawable().apply {
-                    setColor(Color.argb(190, 17, 31, 57))
+                    setColor(Color.argb(218, 9, 29, 24))
                     cornerRadius = dp(10).toFloat()
-                    setStroke(dp(1), Color.rgb(67, 105, 151))
+                    setStroke(dp(1), Color.rgb(43, 112, 83))
                 }
                 addView(TextView(this@CameraViewerActivity).apply {
                     text = "Camera by:"
-                    setTextColor(Color.rgb(190, 205, 225))
+                    setTextColor(Color.rgb(177, 205, 190))
                     textSize = 9f
                     includeFontPadding = false
                 })
                 addView(TextView(this@CameraViewerActivity).apply {
                     text = "lim45ekawan"
-                    setTextColor(Color.WHITE)
+                    setTextColor(Color.rgb(117, 224, 166))
                     textSize = 11f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                     includeFontPadding = false
@@ -289,14 +289,21 @@ class CameraViewerActivity : Activity() {
 
     private fun confirmStopCamera() {
         if (stopping || isFinishing) return
-        AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this)
             .setTitle("Hentikan Camera Live?")
             .setMessage("Tayangan kamera akan dihentikan dan halaman Camera Live akan ditutup.")
             .setNegativeButton("BATAL", null)
             .setPositiveButton("YA, HENTIKAN") { _, _ ->
                 stopCameraAndClose()
             }
-            .show()
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+                .setTextColor(Color.rgb(105, 211, 155))
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                .setTextColor(Color.rgb(235, 112, 112))
+        }
+        dialog.show()
     }
 
     private fun stopCameraAndClose() {
