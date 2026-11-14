@@ -143,12 +143,12 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
               .leaflet-container{font-family:Arial,sans-serif}
               .child-pin{width:18px;height:18px;border-radius:50%;background:#2878ed;border:4px solid white;box-shadow:0 2px 12px #17345b88}
               .leaflet-control-attribution{font-size:9px}
-              #searchPanel{display:none;position:absolute;z-index:1000;top:10px;left:10px;right:10px;background:#fff;padding:9px;border-radius:13px;box-shadow:0 2px 12px #17345b44}
-              #placeSearch{width:100%;box-sizing:border-box;border:1px solid #d5deeb;border-radius:9px;padding:11px;font-size:14px;outline:none}
+              #searchPanel{display:none;position:absolute;z-index:1000;top:10px;left:10px;right:10px;background:#fff;padding:10px;border:1px solid #dce6f5;border-radius:14px;box-shadow:0 4px 16px #17345b33}
+              #placeSearch{width:100%;box-sizing:border-box;border:1px solid #d5deeb;border-radius:10px;padding:12px;font-size:14px;outline:none;color:#243b60}#placeSearch:focus{border-color:#5278c7;box-shadow:0 0 0 2px #5278c722}
               #searchResults{max-height:150px;overflow:auto}
               .searchResult{padding:10px 6px;border-bottom:1px solid #edf1f6;font-size:12px;color:#243b60}
               #selectionPanel{display:none;position:absolute;z-index:1000;bottom:18px;left:12px;right:12px;text-align:center}
-              #confirmPoint{border:0;border-radius:22px;background:#245ba9;color:white;padding:13px 22px;font-weight:bold;box-shadow:0 2px 10px #17345b55}
+              #confirmPoint{border:0;border-radius:22px;background:#315fb8;color:white;padding:13px 24px;font-weight:bold;letter-spacing:.2px;box-shadow:0 3px 12px #17345b44}
               #searchHint{font-size:10px;color:#68758c;padding:5px 2px}
             </style></head><body>
             <div id="searchPanel">
