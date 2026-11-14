@@ -15,12 +15,12 @@
         <item name="alertDialogTheme">@style/SantetHpAlertDialogTheme</item>
     </style>
 
-    <style name="SantetHpAlertDialogTheme" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
+    <style name="SantetHpAlertDialogTheme" parent="Theme.MaterialComponents.Light.Dialog.Alert">
         <item name="android:windowBackground">@drawable/bg_santethp_popup</item>
-        <item name="android:textColorPrimary">#F2F8F5</item>
-        <item name="android:textColorSecondary">#B8C9C1</item>
-        <item name="colorAccent">#58B88D</item>
-        <item name="android:colorAccent">#58B88D</item>
+        <item name="android:textColorPrimary">#203653</item>
+        <item name="android:textColorSecondary">#60738C</item>
+        <item name="colorAccent">#425FEB</item>
+        <item name="android:colorAccent">#425FEB</item>
         <item name="android:windowMinWidthMajor">88%</item>
         <item name="android:windowMinWidthMinor">88%</item>
     </style>
