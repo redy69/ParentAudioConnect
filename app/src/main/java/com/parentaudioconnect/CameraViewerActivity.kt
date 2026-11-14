@@ -376,10 +376,19 @@ class CameraViewerActivity : Activity() {
     }
 
 
-    private fun cameraControlBackground(color: Int) = GradientDrawable().apply {
-        setColor(color)
+    private fun cameraControlBackground(color: Int) = GradientDrawable(
+        GradientDrawable.Orientation.TOP_BOTTOM,
+        intArrayOf(
+            Color.rgb(
+                (Color.red(color) * 0.84f + 255 * 0.16f).toInt(),
+                (Color.green(color) * 0.84f + 255 * 0.16f).toInt(),
+                (Color.blue(color) * 0.84f + 255 * 0.16f).toInt()
+            ),
+            color
+        )
+    ).apply {
         cornerRadius = dp(14).toFloat()
-        setStroke(dp(1), Color.argb(100, 255, 255, 255))
+        setStroke(dp(1), Color.argb(115, 255, 255, 255))
     }
 
     private fun dp(value: Int): Int =
