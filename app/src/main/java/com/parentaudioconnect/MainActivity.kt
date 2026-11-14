@@ -5191,11 +5191,18 @@ private var receivedMp3File: File? = null
         })
         row.addView(TextView(this).apply {
             text = value
-            textSize = 11f
+            textSize = 10.8f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(31, 101, 68))
-            gravity = Gravity.CENTER_VERTICAL or Gravity.END
+            setTextColor(Color.rgb(27, 105, 68))
+            gravity = Gravity.CENTER
             maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setPadding(dp(8), dp(4), dp(8), dp(4))
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(231, 244, 235))
+                cornerRadius = dp(8).toFloat()
+                setStroke(dp(1), Color.rgb(205, 228, 211))
+            }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { marginStart = dp(8) }
