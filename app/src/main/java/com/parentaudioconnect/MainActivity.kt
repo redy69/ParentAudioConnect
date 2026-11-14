@@ -3177,11 +3177,14 @@ private var receivedMp3File: File? = null
                     watchChildPairingRemoval(code)
                 }
             }
-            .addOnFailureListener {
-                // A temporary network/server error must not erase a valid local pairing.
-                // Keep the existing screen and let the realtime listener retry updates.
+            .addOnFailureListener { error ->
+                // Never enter the simplified paired-child screen based only on local
+                // preferences. That allowed a stale pairing to reappear after unlink
+                // when the server verification failed or was temporarily unavailable.
                 if (currentRole == "child" && prefs.getString("pair_code", null) == code) {
-                    showChildConnectedScreen()
+                    showRoleSelection()
+                    statusText.text = "Belum dapat memverifikasi hubungan. Periksa koneksi lalu coba lagi."
+                    android.util.Log.w("ParentAudio", "Pairing verification failed for child", error)
                 }
             }
     }
