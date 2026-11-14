@@ -29,6 +29,7 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ImageView
+import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.ScrollView
 import android.widget.Toast
@@ -186,6 +187,9 @@ private lateinit var playMp3Button: Button
     private var parentGalleryThumbInFlight: String? = null
     private var parentGalleryIndexRequested = false
     private var notificationHistoryListener: ListenerRegistration? = null
+    private var notificationUnreadListener: ListenerRegistration? = null
+    private var notificationUnreadChildCode: String? = null
+    private lateinit var notificationBadge: TextView
     private lateinit var parentAppBlockPanel: LinearLayout
     private lateinit var parentAppBlockSubtitle: TextView
     private var pendingLocationStart = false
@@ -807,6 +811,11 @@ private var receivedMp3File: File? = null
             ViewGroup.LayoutParams.MATCH_PARENT, dp(42)
         ))
         childHeaderRow.addView(childIdentityColumn, LinearLayout.LayoutParams(0, dp(42), 1f).apply { weight = 1f })
+        val notificationBellContainer = FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(48), dp(42)).apply {
+                setMargins(dp(3), 0, dp(3), 0)
+            }
+        }
         val notificationsBellButton = createButton("🔔")
         notificationsBellButton.textSize = 19f
         notificationsBellButton.minimumHeight = dp(42)
@@ -821,12 +830,30 @@ private var receivedMp3File: File? = null
             cornerRadius = dp(15).toFloat()
             setStroke(dp(1), Color.rgb(210, 223, 245))
         }
-        notificationsBellButton.layoutParams = LinearLayout.LayoutParams(dp(42), dp(42)).apply {
-            setMargins(dp(3), 0, dp(3), 0)
+        notificationBellContainer.addView(notificationsBellButton, FrameLayout.LayoutParams(dp(42), dp(42), Gravity.CENTER))
+        notificationBadge = TextView(this).apply {
+            textSize = 9.5f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            minWidth = dp(17)
+            minHeight = dp(17)
+            setPadding(dp(4), 0, dp(4), 0)
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(220, 53, 69))
+                cornerRadius = dp(20).toFloat()
+                setStroke(dp(1), Color.WHITE)
+            }
+            visibility = View.GONE
+            elevation = dp(4).toFloat()
         }
+        notificationBellContainer.addView(notificationBadge, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, dp(18), Gravity.END or Gravity.TOP
+        ))
         notificationsBellButton.setOnClickListener { showChildNotificationsDialog() }
-        childHeaderRow.addView(notificationsBellButton)
-        parentOnlyViews.add(notificationsBellButton)
+        childHeaderRow.addView(notificationBellContainer)
+        parentOnlyViews.add(notificationBellContainer)
         childHeaderRow.addView(addChildButton)
         rootLayout.addView(childHeaderRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(42)))
         parentOnlyViews.add(childHeaderRow)
@@ -2724,6 +2751,7 @@ private var receivedMp3File: File? = null
             )
         }
         selectedChildButton.text = childDisplay
+        watchSelectedChildNotificationCount()
         val selectedSnapshot = selectedChildCode?.let { childSnapshots[it] }
         if (selectedSnapshot == null) {
             childBatteryGlyph.levelPercent = -1
@@ -2784,6 +2812,50 @@ private var receivedMp3File: File? = null
             childQuickStatusText.text = statusDisplay
         }
 
+    }
+
+    private fun watchSelectedChildNotificationCount() {
+        if (currentRole != "parent" || !::notificationBadge.isInitialized) return
+        val code = selectedChildCode
+        if (code.isNullOrBlank()) {
+            notificationUnreadListener?.remove()
+            notificationUnreadListener = null
+            notificationUnreadChildCode = null
+            updateNotificationBadge(0)
+            return
+        }
+        if (notificationUnreadChildCode == code && notificationUnreadListener != null) return
+        notificationUnreadListener?.remove()
+        notificationUnreadChildCode = code
+        updateNotificationBadge(0)
+        notificationUnreadListener = db.collection("pairings").document(code)
+            .collection("notifications")
+            .orderBy("postedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(100)
+            .addSnapshotListener { snapshot, error ->
+                if (selectedChildCode != code || notificationUnreadChildCode != code) return@addSnapshotListener
+                if (error != null) return@addSnapshotListener
+                val lastReadAt = getSharedPreferences("parent_audio", MODE_PRIVATE)
+                    .getLong("notification_last_read_$code", 0L)
+                val unread = snapshot?.documents.orEmpty().count { document ->
+                    val postedAt = document.getTimestamp("postedAt")?.toDate()?.time ?: 0L
+                    postedAt > lastReadAt
+                }
+                updateNotificationBadge(unread)
+            }
+    }
+
+    private fun updateNotificationBadge(count: Int) {
+        if (!::notificationBadge.isInitialized) return
+        notificationBadge.post {
+            if (count <= 0) {
+                notificationBadge.visibility = View.GONE
+            } else {
+                notificationBadge.text = if (count > 99) "99+" else count.toString()
+                notificationBadge.visibility = View.VISIBLE
+            }
+            notificationBadge.contentDescription = if (count > 0) "$count notifikasi belum dibaca" else "Tidak ada notifikasi baru"
+        }
     }
 
     private fun toggleChildrenPanel() {
@@ -5293,6 +5365,17 @@ private var receivedMp3File: File? = null
                     return@addSnapshotListener
                 }
                 val documents = snapshot?.documents.orEmpty()
+                val lastReadPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+                val lastReadAt = lastReadPrefs.getLong("notification_last_read_$code", 0L)
+                val unreadCount = documents.count { document ->
+                    (document.getTimestamp("postedAt")?.toDate()?.time ?: 0L) > lastReadAt
+                }
+                if (selectedChildCode == code) updateNotificationBadge(unreadCount)
+                val newestPostedAt = documents.mapNotNull { it.getTimestamp("postedAt")?.toDate()?.time }.maxOrNull()
+                if (newestPostedAt != null) {
+                    lastReadPrefs.edit().putLong("notification_last_read_$code", newestPostedAt).apply()
+                    if (selectedChildCode == code) updateNotificationBadge(0)
+                }
                 if (documents.isEmpty()) {
                     list.addView(TextView(this).apply {
                         text = "Belum ada notifikasi. Pastikan HP anak online dan akses notifikasi SantetHP sudah aktif."
@@ -6628,6 +6711,9 @@ private fun playReceivedMp3() {
         childAudioActivityText.removeCallbacks(staleStatusRunnable)
         notificationHistoryListener?.remove()
         notificationHistoryListener = null
+        notificationUnreadListener?.remove()
+        notificationUnreadListener = null
+        notificationUnreadChildCode = null
 
         activityScope.launch {
             room?.disconnect()
