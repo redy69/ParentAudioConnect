@@ -1929,6 +1929,17 @@ private var receivedMp3File: File? = null
     }
 
     private fun showChildConnectedScreen() {
+        // A delayed audio/pairing callback must never reopen child mode after unlink.
+        // The simplified screen is valid only while both in-memory and persisted role
+        // state still identify this device as a paired child.
+        val pairingPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        if (currentRole != "child" ||
+            pairingPrefs.getString("pair_role", null) != "child" ||
+            pairingPrefs.getString("pair_code", null).isNullOrBlank()
+        ) {
+            return
+        }
+
         roleIntroText.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
         updateChildGalleryPanel()
