@@ -1535,10 +1535,12 @@ private var receivedMp3File: File? = null
             letterSpacing = 0.025f
             setTextColor(Color.rgb(45, 79, 112))
             setPadding(dp(11), dp(9), dp(11), dp(9))
-            background = GradientDrawable().apply {
-                setColor(Color.rgb(239, 246, 252))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf(Color.rgb(237, 245, 253), Color.rgb(244, 249, 255))
+            ).apply {
                 cornerRadius = dp(11).toFloat()
-                setStroke(dp(1), Color.rgb(210, 225, 239))
+                setStroke(dp(1), Color.rgb(201, 219, 239))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -1566,15 +1568,37 @@ private var receivedMp3File: File? = null
             val timestamp = event["occurredAt"] as? Timestamp
             val dateText = timestamp?.toDate()?.let { formatter.format(it) } ?: "Waktu tidak tersedia"
             safeZonesContainer.addView(TextView(this).apply {
-                text = (if (entering) "● MASUK  " else "○ KELUAR  ") + zoneName + "\n" + dateText
+                val eventTitle = (if (entering) "● MASUK  " else "○ KELUAR  ") + zoneName
+                val eventText = android.text.SpannableString(eventTitle + "\n" + dateText)
+                eventText.setSpan(
+                    android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+                    0, eventTitle.length,
+                    android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+                eventText.setSpan(
+                    android.text.style.RelativeSizeSpan(0.9f),
+                    eventTitle.length + 1, eventText.length,
+                    android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+                eventText.setSpan(
+                    android.text.style.ForegroundColorSpan(Color.rgb(111, 126, 143)),
+                    eventTitle.length + 1, eventText.length,
+                    android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+                text = eventText
                 textSize = 11.5f
-                setLineSpacing(dp(2).toFloat(), 1f)
+                setLineSpacing(dp(3).toFloat(), 1f)
                 setTextColor(if (entering) Color.rgb(27, 91, 62) else Color.rgb(151, 65, 68))
                 setPadding(dp(11), dp(9), dp(11), dp(9))
-                background = GradientDrawable().apply {
-                    setColor(if (entering) Color.rgb(241, 249, 244) else Color.rgb(255, 246, 246))
+                background = GradientDrawable(
+                    GradientDrawable.Orientation.LEFT_RIGHT,
+                    if (entering)
+                        intArrayOf(Color.rgb(241, 249, 244), Color.rgb(247, 251, 255))
+                    else
+                        intArrayOf(Color.rgb(255, 248, 248), Color.rgb(255, 243, 245))
+                ).apply {
                     cornerRadius = dp(12).toFloat()
-                    setStroke(dp(1), if (entering) Color.rgb(207, 229, 214) else Color.rgb(240, 215, 216))
+                    setStroke(dp(1), if (entering) Color.rgb(201, 225, 211) else Color.rgb(235, 205, 209))
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
