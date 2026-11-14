@@ -865,7 +865,7 @@ private var receivedMp3File: File? = null
         parentAppBlockSubtitle = ((parentAppBlockPanel.getChildAt(1) as LinearLayout).getChildAt(1) as TextView)
         parentAppBlockPanel.setOnClickListener { showParentAppBlockDialog() }
 
-        val parentGalleryButton = createActionButton("🖼️", "GALLERY", Color.rgb(25, 91, 67)).apply {
+        val parentGalleryButton = createActionButton("🖼️", "GALERI", Color.rgb(25, 91, 67)).apply {
             setOnClickListener { showGaleriBackupMenu() }
         }
         parentGalleryButton.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
@@ -2221,7 +2221,7 @@ private var receivedMp3File: File? = null
                     // Active playback uses a vivid, animated green equalizer.
                     Color.rgb(28, 150 + (wave * 75).toInt(), 55 + (wave * 22).toInt())
                 } else {
-                    Color.rgb(174, 198, 228)
+                    Color.argb(112, 174, 194, 211)
                 }
                 canvas.drawRoundRect(
                     x, centerY - barHeight / 2f, x + barWidth, centerY + barHeight / 2f,
@@ -2459,7 +2459,7 @@ private var receivedMp3File: File? = null
             "PUTAR MP3" -> "Kirim audio ke perangkat"
             "KAMERA LIVE" -> "Lihat kamera perangkat"
             "BLOKIR APLIKASI" -> "Atur aplikasi HP anak"
-            "GALLERY" -> "Galeri dan backup"
+            "GALERI" -> "Galeri dan backup"
             "SERVER" -> "Server utama dan cadangan"
             "MAPS" -> "Lokasi dan geo-fence"
             "CHAT ADMIN" -> "Bantuan dan dukungan"
