@@ -559,10 +559,12 @@ private var receivedMp3File: File? = null
         selectedChildButton.maxLines = 1
         selectedChildButton.ellipsize = android.text.TextUtils.TruncateAt.END
         selectedChildButton.contentDescription = "Pilih perangkat anak"
-        selectedChildButton.background = GradientDrawable().apply {
-            setColor(Color.rgb(250, 253, 250))
+        selectedChildButton.background = GradientDrawable(
+            GradientDrawable.Orientation.LEFT_RIGHT,
+            intArrayOf(Color.rgb(255, 255, 255), Color.rgb(240, 248, 243))
+        ).apply {
             cornerRadius = dp(13).toFloat()
-            setStroke(dp(1), Color.rgb(202, 224, 209))
+            setStroke(dp(1), Color.rgb(192, 219, 204))
         }
         selectedChildButton.setPadding(dp(13), dp(2), dp(10), dp(2))
         selectedChildButton.elevation = dp(1).toFloat()
