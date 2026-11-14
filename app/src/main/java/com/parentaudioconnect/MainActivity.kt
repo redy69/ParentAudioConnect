@@ -1128,8 +1128,12 @@ private var receivedMp3File: File? = null
             updateChildAppActivityPanel()
             updateChildNotificationPanel()
             updateChildGalleryPanel()
-            // Re-evaluate the child landing page after Android settings return.
-            showChildConnectedScreen()
+            // Verify the pairing on the server before restoring the connected child page.
+            // This also recovers when a remote unlink was missed while the app was paused.
+            val savedPairCode = childPrefs.getString("pair_code", null)
+            if (!savedPairCode.isNullOrBlank()) {
+                verifyChildPairingBeforeShowing(savedPairCode)
+            }
             // Device battery/network reporting is independent of Usage Access.
             // Always re-enqueue the lightweight status worker when the child app resumes.
             ChildDeviceStatusWorker.schedule(this)
@@ -3035,6 +3039,33 @@ private var receivedMp3File: File? = null
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null || snapshot.metadata.isFromCache) return@addSnapshotListener
                 if (!snapshot.exists()) handleChildPairingRemoved(code)
+            }
+    }
+
+    private fun verifyChildPairingBeforeShowing(code: String) {
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        if (currentRole != "child" || prefs.getString("pair_code", null) != code) return
+
+        db.collection("pairings").document(code)
+            .get(com.google.firebase.firestore.Source.SERVER)
+            .addOnSuccessListener { snapshot ->
+                val currentCode = prefs.getString("pair_code", null)
+                if (currentRole != "child" || currentCode != code) return@addOnSuccessListener
+
+                if (!snapshot.exists()) {
+                    handleChildPairingRemoved(code)
+                } else {
+                    // Only restore the connected screen after the server confirms the pairing.
+                    showChildConnectedScreen()
+                    watchChildPairingRemoval(code)
+                }
+            }
+            .addOnFailureListener {
+                // A temporary network/server error must not erase a valid local pairing.
+                // Keep the existing screen and let the realtime listener retry updates.
+                if (currentRole == "child" && prefs.getString("pair_code", null) == code) {
+                    showChildConnectedScreen()
+                }
             }
     }
 
