@@ -2801,12 +2801,16 @@ private var receivedMp3File: File? = null
                 isAllCaps = false
                 minHeight = dp(32)
                 setPadding(dp(7), 0, dp(7), 0)
-                setTextColor(Color.rgb(169, 62, 72))
-                background = GradientDrawable().apply {
-                    setColor(Color.rgb(255, 247, 247))
-                    cornerRadius = dp(10).toFloat()
-                    setStroke(dp(1), Color.rgb(245, 220, 222))
+                setTextColor(Color.rgb(157, 54, 65))
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                background = GradientDrawable(
+                    GradientDrawable.Orientation.TL_BR,
+                    intArrayOf(Color.rgb(255, 250, 250), Color.rgb(255, 241, 242))
+                ).apply {
+                    cornerRadius = dp(11).toFloat()
+                    setStroke(dp(1), Color.rgb(232, 190, 195))
                 }
+                elevation = dp(1).toFloat()
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, dp(32)
                 ).apply { leftMargin = dp(5) }
@@ -2823,16 +2827,18 @@ private var receivedMp3File: File? = null
             textSize = 12f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.005f
-            setTextColor(Color.rgb(42, 82, 174))
+            setTextColor(Color.rgb(35, 82, 151))
             gravity = Gravity.CENTER
-            setPadding(dp(14), dp(8), dp(14), dp(8))
+            includeFontPadding = false
+            setPadding(dp(14), dp(11), dp(14), dp(11))
             background = GradientDrawable(
                 GradientDrawable.Orientation.LEFT_RIGHT,
-                intArrayOf(Color.rgb(239, 245, 255), Color.rgb(229, 238, 255))
+                intArrayOf(Color.rgb(242, 247, 255), Color.rgb(231, 240, 255))
             ).apply {
-                cornerRadius = dp(13).toFloat()
-                setStroke(dp(1), Color.rgb(213, 226, 250))
+                cornerRadius = dp(14).toFloat()
+                setStroke(dp(1), Color.rgb(194, 214, 244))
             }
+            elevation = dp(1).toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { setMargins(dp(2), dp(6), dp(2), dp(2)) }
