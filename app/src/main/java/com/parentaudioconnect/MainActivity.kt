@@ -4486,9 +4486,22 @@ private var receivedMp3File: File? = null
         stopParentGalleryP2p()
         val status = TextView(this).apply {
             text = "Menyiapkan koneksi P2P langsung…"
-            textSize = 13f
-            setTextColor(Color.rgb(65, 82, 110))
+            textSize = 12.5f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(48, 83, 72))
+            gravity = Gravity.CENTER_VERTICAL
+            setLineSpacing(dp(2).toFloat(), 1f)
             setPadding(dp(12), dp(10), dp(12), dp(10))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf(Color.rgb(241, 249, 244), Color.rgb(243, 248, 255))
+            ).apply {
+                cornerRadius = dp(13).toFloat()
+                setStroke(dp(1), Color.rgb(207, 225, 218))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(dp(8), dp(4), dp(8), dp(5)) }
         }
         val list = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
