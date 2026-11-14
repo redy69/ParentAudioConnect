@@ -233,7 +233,7 @@ private var receivedMp3File: File? = null
             setPadding(dp(11), dp(7), dp(11), dp(11))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.rgb(231, 239, 255), Color.rgb(247, 249, 255), Color.rgb(229, 238, 253))
+                intArrayOf(Color.rgb(244, 249, 246), Color.rgb(250, 252, 250), Color.rgb(238, 246, 241))
             )
         }
 
@@ -243,7 +243,7 @@ private var receivedMp3File: File? = null
             setPadding(dp(14), dp(9), dp(14), dp(9))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.rgb(15, 29, 64), Color.rgb(35, 69, 139), Color.rgb(67, 104, 183))
+                intArrayOf(Color.rgb(16, 43, 33), Color.rgb(25, 91, 67), Color.rgb(40, 116, 84))
             ).apply {
                 cornerRadius = dp(19).toFloat()
                 setStroke(dp(1), Color.argb(68, 255, 255, 255))
@@ -255,7 +255,7 @@ private var receivedMp3File: File? = null
                 textSize = 10f
                 letterSpacing = 0.13f
                 setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(Color.rgb(190, 211, 255))
+                setTextColor(Color.rgb(202, 229, 213))
             })
 
             val brandRow = LinearLayout(this@MainActivity).apply {
@@ -290,7 +290,7 @@ private var receivedMp3File: File? = null
             addView(TextView(this@MainActivity).apply {
                 text = "Ruang kendali bersama"
                 textSize = 13.5f
-                setTextColor(Color.rgb(224, 234, 255))
+                setTextColor(Color.rgb(225, 240, 230))
                 letterSpacing = 0.015f
             })
         }
@@ -302,16 +302,16 @@ private var receivedMp3File: File? = null
             textSize = 13.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.01f
-            setTextColor(Color.rgb(34, 57, 96))
+            setTextColor(Color.rgb(36, 69, 52))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(2).toFloat(), 1f)
             setPadding(dp(12), dp(6), dp(12), dp(6))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
+                intArrayOf(Color.WHITE, Color.rgb(242, 249, 244))
             ).apply {
                 cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.rgb(195, 215, 245))
+                setStroke(dp(1), Color.rgb(205, 226, 211))
             }
             elevation = dp(2).toFloat()
             minHeight = dp(40)
@@ -1042,7 +1042,7 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.rgb(231, 239, 255), Color.rgb(247, 249, 255), Color.rgb(229, 238, 253))
+                intArrayOf(Color.rgb(244, 249, 246), Color.rgb(250, 252, 250), Color.rgb(238, 246, 241))
             )
             addView(stickyHeader, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -1841,7 +1841,7 @@ private var receivedMp3File: File? = null
                     message.setPadding(dp(12), dp(11), dp(12), dp(11))
                     message.background = GradientDrawable(
                         GradientDrawable.Orientation.TL_BR,
-                        intArrayOf(Color.rgb(247, 250, 255), Color.rgb(235, 243, 255))
+                        intArrayOf(Color.rgb(247, 250, 255), Color.rgb(235, 245, 239))
                     ).apply {
                         cornerRadius = dp(13).toFloat()
                         setStroke(dp(1), Color.rgb(177, 202, 238))
@@ -2229,7 +2229,7 @@ private var receivedMp3File: File? = null
                 textSize = if (label == "SERVER") 20f else 19f
                 gravity = Gravity.CENTER
                 setTextColor(Color.WHITE)
-                val tileAccent = if (label == "CHAT ADMIN") accent else Color.rgb(24, 105, 77)
+                val tileAccent = Color.rgb(24, 105, 77)
                 background = GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
                     intArrayOf(blendWithWhite(tileAccent, 0.12f), tileAccent, blendWithWhite(tileAccent, 0.28f))
@@ -2478,7 +2478,7 @@ private var receivedMp3File: File? = null
         childrenContainer.setPadding(dp(6), dp(6), dp(6), dp(6))
         childrenContainer.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
-            intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
+            intArrayOf(Color.WHITE, Color.rgb(242, 249, 244))
         ).apply {
             cornerRadius = dp(18).toFloat()
             setStroke(dp(1), Color.rgb(215, 226, 245))
@@ -2532,7 +2532,7 @@ private var receivedMp3File: File? = null
                 background = GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
                     if (selectedChildCode == code)
-                        intArrayOf(Color.rgb(235, 243, 255), Color.rgb(248, 251, 255))
+                        intArrayOf(Color.rgb(235, 245, 239), Color.rgb(248, 251, 255))
                     else
                         intArrayOf(Color.WHITE, Color.rgb(247, 250, 255))
                 ).apply {
@@ -4836,6 +4836,7 @@ private var receivedMp3File: File? = null
                     val appName = document.getString("appName") ?: document.getString("packageName") ?: "Aplikasi"
                     val title = document.getString("title").orEmpty()
                     val body = document.getString("text").orEmpty()
+                    if (title.isBlank() && body.isBlank()) return@forEach
                     val timestamp = document.getTimestamp("postedAt")
                     val whenText = timestamp?.toDate()?.let { formatter.format(it) } ?: "Waktu tidak tersedia"
                     val card = LinearLayout(this).apply {
@@ -4914,7 +4915,7 @@ private var receivedMp3File: File? = null
             background = GradientDrawable().apply {
                 setColor(Color.WHITE)
                 cornerRadius = dp(16).toFloat()
-                setStroke(dp(1), Color.rgb(211, 224, 245))
+                setStroke(dp(1), Color.rgb(211, 230, 221))
             }
             elevation = dp(1).toFloat()
             layoutParams = LinearLayout.LayoutParams(
@@ -4929,9 +4930,9 @@ private var receivedMp3File: File? = null
                 text = icon
                 textSize = 15f
                 gravity = Gravity.CENTER
-                setTextColor(Color.rgb(42, 87, 170))
+                setTextColor(Color.rgb(25, 91, 67))
                 background = GradientDrawable().apply {
-                    setColor(Color.rgb(235, 243, 255))
+                    setColor(Color.rgb(235, 245, 239))
                     cornerRadius = dp(9).toFloat()
                 }
                 layoutParams = LinearLayout.LayoutParams(dp(29), dp(29)).apply {
@@ -4943,7 +4944,7 @@ private var receivedMp3File: File? = null
                 textSize = 12f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 letterSpacing = 0.035f
-                setTextColor(Color.rgb(40, 69, 119))
+                setTextColor(Color.rgb(36, 86, 62))
                 gravity = Gravity.CENTER_VERTICAL
             })
             addView(headingRow)
@@ -4959,9 +4960,9 @@ private var receivedMp3File: File? = null
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(9), dp(6), dp(9), dp(6))
             background = GradientDrawable().apply {
-                setColor(if (muted) Color.rgb(248, 250, 254) else Color.rgb(245, 248, 255))
+                setColor(if (muted) Color.rgb(248, 250, 254) else Color.rgb(246, 250, 247))
                 cornerRadius = dp(10).toFloat()
-                setStroke(dp(1), if (muted) Color.rgb(239, 243, 249) else Color.rgb(234, 240, 250))
+                setStroke(dp(1), if (muted) Color.rgb(239, 243, 249) else Color.rgb(225, 237, 229))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
