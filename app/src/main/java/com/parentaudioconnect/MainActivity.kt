@@ -5207,10 +5207,18 @@ private var receivedMp3File: File? = null
             setTextColor(if (muted) Color.rgb(112, 128, 119) else Color.rgb(43, 67, 51))
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(9), dp(6), dp(9), dp(6))
-            background = GradientDrawable().apply {
-                setColor(if (muted) Color.rgb(248, 251, 249) else Color.rgb(246, 250, 247))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                if (muted)
+                    intArrayOf(Color.rgb(249, 251, 253), Color.rgb(245, 248, 251))
+                else
+                    intArrayOf(Color.rgb(242, 249, 245), Color.rgb(247, 250, 255))
+            ).apply {
                 cornerRadius = dp(10).toFloat()
-                setStroke(dp(1), if (muted) Color.rgb(229, 237, 231) else Color.rgb(225, 237, 229))
+                setStroke(
+                    dp(1),
+                    if (muted) Color.rgb(222, 230, 238) else Color.rgb(211, 229, 220)
+                )
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -5224,10 +5232,12 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(9), dp(6), dp(9), dp(6))
-            background = GradientDrawable().apply {
-                setColor(Color.rgb(244, 249, 245))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf(Color.rgb(239, 248, 243), Color.rgb(247, 250, 255))
+            ).apply {
                 cornerRadius = dp(10).toFloat()
-                setStroke(dp(1), Color.rgb(227, 237, 229))
+                setStroke(dp(1), Color.rgb(211, 228, 220))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
