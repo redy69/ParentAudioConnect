@@ -78,6 +78,29 @@ class MainActivity : Activity(), LifecycleOwner {
     private val activityScope =
         CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    // Refresh presence labels locally so stale ONLINE states expire even without
+    // a new Firestore snapshot arriving while the parent dashboard is open.
+    private val childPresenceRefreshRunnable = object : Runnable {
+        override fun run() {
+            if (currentRole != "parent" || isFinishing) return
+            if (::childrenContainer.isInitialized && isChildrenPanelExpanded) {
+                renderChildrenList()
+            }
+            if (::selectedChildButton.isInitialized) updateSelectedChildButton()
+            if (::rootLayout.isInitialized) rootLayout.postDelayed(this, 30_000L)
+        }
+    }
+
+    private fun startChildPresenceRefresh() {
+        if (currentRole != "parent" || !::rootLayout.isInitialized) return
+        rootLayout.removeCallbacks(childPresenceRefreshRunnable)
+        rootLayout.postDelayed(childPresenceRefreshRunnable, 30_000L)
+    }
+
+    private fun stopChildPresenceRefresh() {
+        if (::rootLayout.isInitialized) rootLayout.removeCallbacks(childPresenceRefreshRunnable)
+    }
+
     private lateinit var auth: FirebaseAuth
     private val db = FirebaseFirestore.getInstance()
 
@@ -1058,6 +1081,7 @@ private var receivedMp3File: File? = null
 
     override fun onResume() {
         super.onResume()
+        startChildPresenceRefresh()
         AppUpdateManager.resumePendingInstall(this)
         reauthorizeParentDriveBackupIfNeeded()
         // Retry registration whenever the child app returns to foreground.
@@ -1104,6 +1128,7 @@ private var receivedMp3File: File? = null
     }
 
     override fun onPause() {
+        stopChildPresenceRefresh()
         if (currentRole == "parent" && parentGalleryDialog?.isShowing == true) {
             parentGalleryDialog?.dismiss()
         }
@@ -6219,6 +6244,7 @@ private fun playReceivedMp3() {
     }
 
     override fun onDestroy() {
+        stopChildPresenceRefresh()
         stopParentMediaTransfer()
         pairingListener?.remove()
         childListeners.values.forEach { it.remove() }
