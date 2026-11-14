@@ -2723,15 +2723,15 @@ private var receivedMp3File: File? = null
                 background = GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
                     if (selectedChildCode == code)
-                        intArrayOf(Color.rgb(231, 245, 236), Color.rgb(246, 251, 247))
+                        intArrayOf(Color.rgb(231, 246, 238), Color.rgb(242, 248, 255))
                     else
-                        intArrayOf(Color.WHITE, Color.rgb(248, 251, 249))
+                        intArrayOf(Color.WHITE, Color.rgb(247, 250, 248))
                 ).apply {
                     cornerRadius = dp(17).toFloat()
                     setStroke(
                         dp(if (selectedChildCode == code) 1.5f.toInt() else 1),
-                        if (selectedChildCode == code) Color.rgb(105, 161, 134)
-                        else Color.rgb(218, 232, 222)
+                        if (selectedChildCode == code) Color.rgb(111, 164, 157)
+                        else Color.rgb(216, 230, 221)
                     )
                 }
                 isClickable = true
