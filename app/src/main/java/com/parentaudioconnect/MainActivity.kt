@@ -4573,8 +4573,18 @@ private var receivedMp3File: File? = null
                         if (items.isEmpty()) {
                             list.addView(TextView(this).apply {
                                 text = "Belum ada foto atau video yang dapat dibagikan."
-                                textSize = 13f
-                                setPadding(dp(12), dp(24), dp(12), dp(24))
+                                textSize = 12.5f
+                                setTextColor(Color.rgb(91, 112, 101))
+                                gravity = Gravity.CENTER
+                                setLineSpacing(dp(3).toFloat(), 1f)
+                                setPadding(dp(14), dp(22), dp(14), dp(22))
+                                background = GradientDrawable(
+                                    GradientDrawable.Orientation.TL_BR,
+                                    intArrayOf(Color.rgb(248, 251, 249), Color.rgb(242, 247, 255))
+                                ).apply {
+                                    cornerRadius = dp(13).toFloat()
+                                    setStroke(dp(1), Color.rgb(216, 229, 222))
+                                }
                             })
                         } else {
                             items.forEach { item ->
@@ -4752,8 +4762,18 @@ private var receivedMp3File: File? = null
                         if (items.isEmpty()) {
                             list.addView(TextView(this).apply {
                                 text = "Belum ada foto atau video yang dapat dibagikan."
-                                textSize = 13f
-                                setPadding(dp(12), dp(24), dp(12), dp(24))
+                                textSize = 12.5f
+                                setTextColor(Color.rgb(91, 112, 101))
+                                gravity = Gravity.CENTER
+                                setLineSpacing(dp(3).toFloat(), 1f)
+                                setPadding(dp(14), dp(22), dp(14), dp(22))
+                                background = GradientDrawable(
+                                    GradientDrawable.Orientation.TL_BR,
+                                    intArrayOf(Color.rgb(248, 251, 249), Color.rgb(242, 247, 255))
+                                ).apply {
+                                    cornerRadius = dp(13).toFloat()
+                                    setStroke(dp(1), Color.rgb(216, 229, 222))
+                                }
                             })
                         } else {
                             items.forEach { item ->
