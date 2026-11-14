@@ -2407,13 +2407,18 @@ private var receivedMp3File: File? = null
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(8), dp(5), dp(8), dp(5))
             minimumHeight = dp(58)
-            background = GradientDrawable().apply {
-                setColor(Color.WHITE)
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                if (label == "HENTIKAN LIVE")
+                    intArrayOf(Color.rgb(255, 255, 255), Color.rgb(255, 247, 247))
+                else
+                    intArrayOf(Color.rgb(255, 255, 255), Color.rgb(243, 249, 245))
+            ).apply {
                 cornerRadius = dp(15).toFloat()
                 setStroke(
                     dp(1),
-                    if (label == "HENTIKAN LIVE") Color.rgb(239, 211, 212)
-                    else Color.rgb(207, 226, 214)
+                    if (label == "HENTIKAN LIVE") Color.rgb(235, 204, 207)
+                    else Color.rgb(201, 223, 209)
                 )
             }
             elevation = dp(2).toFloat()
