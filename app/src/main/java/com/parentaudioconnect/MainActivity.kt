@@ -2470,12 +2470,22 @@ private var receivedMp3File: File? = null
         renderChildrenList()
     }
 
+    private fun childPresence(code: String): Pair<String, Boolean> {
+        val statusAt = childSnapshots[code]?.getTimestamp("deviceStatusAt")
+            ?: return "○ STATUS BELUM TERSEDIA" to false
+        val age = System.currentTimeMillis() - statusAt.toDate().time
+        val recentlySeen = age in -60_000L..35 * 60 * 1000L
+        return if (recentlySeen) "● ONLINE" to true else "○ OFFLINE" to false
+    }
+
     private fun updateSelectedChildButton() {
         val name = selectedChildCode?.let { childNames[it] }
         val arrow = if (isChildrenPanelExpanded) "▴" else "▾"
-        val connected = selectedChildCode?.let { childConnected[it] == true } == true
+        val presence = selectedChildCode?.let { childPresence(it) }
+            ?: ("○ STATUS BELUM TERSEDIA" to false)
+        val connected = presence.second
         val childLabel = if (name.isNullOrBlank()) "Pilih perangkat anak" else name
-        val connectionLabel = if (connected) "● ONLINE" else "○ OFFLINE"
+        val connectionLabel = presence.first
         val childDisplay = android.text.SpannableString("🧒  $childLabel   $connectionLabel   $arrow")
         val nameStart = 4
         val nameEnd = (nameStart + childLabel.length).coerceAtMost(childDisplay.length)
@@ -2624,7 +2634,8 @@ private var receivedMp3File: File? = null
         }
 
         childNames.forEach { (code, name) ->
-            val connected = childConnected[code] == true
+            val presence = childPresence(code)
+            val connected = presence.second
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -2670,7 +2681,7 @@ private var receivedMp3File: File? = null
                 ellipsize = android.text.TextUtils.TruncateAt.END
             })
             details.addView(TextView(this).apply {
-                text = if (connected) "● ONLINE" else "○ OFFLINE"
+                text = presence.first
                 textSize = 9f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 letterSpacing = 0.005f
@@ -5305,15 +5316,19 @@ private var receivedMp3File: File? = null
                 }
 
                 if (snapshot != null && snapshot.exists()) {
+                    val previousStatusAt = childSnapshots[code]?.getTimestamp("deviceStatusAt")
                     childSnapshots[code] = snapshot
                     maybeStartParentDriveBackupForChild(code, snapshot)
                     val childUid = snapshot.getString("childUid")
                     val connected = !childUid.isNullOrEmpty()
                     val connectionStateChanged = childConnected[code] != connected
+                    val currentStatusAt = snapshot.getTimestamp("deviceStatusAt")
+                    val deviceStatusChanged = previousStatusAt?.seconds != currentStatusAt?.seconds ||
+                        previousStatusAt?.nanoseconds != currentStatusAt?.nanoseconds
                     childConnected[code] = connected
-                    // Avoid tearing down and rebuilding the child list on every
-                    // Firestore cache/reconnect snapshot, which can cause visible flicker.
-                    if (connectionStateChanged) renderChildrenList()
+                    // Refresh presence labels only when pairing or the device heartbeat changes.
+                    // This avoids rebuilding the list for unrelated Firestore updates.
+                    if (connectionStateChanged || deviceStatusChanged) renderChildrenList()
                     if (selectedChildCode == code) updateSelectedChildButton()
                     if (selectedChildCode == code) {
                         latestPairingSnapshot = snapshot
