@@ -80,10 +80,15 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
         }
         map.isVerticalScrollBarEnabled = false
         map.isHorizontalScrollBarEnabled = false
-        map.setBackgroundColor(Color.rgb(226, 235, 248))
+        map.background = GradientDrawable().apply {
+            setColor(Color.rgb(226, 235, 248))
+            cornerRadius = dp(14).toFloat()
+            setStroke(dp(1), Color.rgb(205, 220, 239))
+        }
+        map.clipToOutline = true
         map.isFocusable = true
         addView(map, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(390)).apply {
-            topMargin = dp(2)
+            topMargin = dp(8)
         })
         loadMapPage()
     }
