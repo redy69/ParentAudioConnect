@@ -1855,6 +1855,52 @@ private var receivedMp3File: File? = null
         })
     }
 
+    private fun popupInfoCards(sections: List<Pair<String, String>>): LinearLayout =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(2), dp(2), dp(2), dp(2))
+            sections.forEachIndexed { index, section ->
+                val card = LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(13), dp(11), dp(13), dp(11))
+                    background = GradientDrawable(
+                        GradientDrawable.Orientation.TL_BR,
+                        intArrayOf(Color.rgb(249, 252, 255), Color.rgb(239, 246, 255))
+                    ).apply {
+                        cornerRadius = dp(13).toFloat()
+                        setStroke(dp(1), Color.rgb(190, 210, 238))
+                    }
+                    val heading = TextView(this@MainActivity).apply {
+                        text = section.first
+                        setTextColor(Color.rgb(25, 91, 67))
+                        setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12f)
+                        setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    }
+                    val body = TextView(this@MainActivity).apply {
+                        text = section.second
+                        setTextColor(Color.rgb(35, 55, 91))
+                        setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f)
+                        setLineSpacing(dp(2).toFloat(), 1f)
+                        setPadding(0, dp(5), 0, 0)
+                    }
+                    addView(heading, LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ))
+                    addView(body, LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ))
+                }
+                addView(card, LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    if (index < sections.lastIndex) bottomMargin = dp(9)
+                })
+            }
+        }
+
     private fun popupContentCard(content: View): LinearLayout = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(12), dp(10), dp(12), dp(10))
@@ -3068,9 +3114,11 @@ private var receivedMp3File: File? = null
         val enabled = prefs.getBoolean("child_app_block_consent", false)
         SantetHpDialogBuilder()
             .setTitle("Kontrol blokir aplikasi")
-            .setMessage(
-                "Jika disetujui, HP anak mengirim daftar nama aplikasi yang tersedia agar orang tua dapat memilih aplikasi yang dibatasi. Saat aplikasi yang diblokir dibuka, SantetHP akan mengembalikan ke layar utama.\n\nUntuk menjalankannya Android meminta Accessibility Service diaktifkan secara manual. Layanan hanya memeriksa nama paket aplikasi yang sedang tampil; tidak membaca isi layar, pesan, foto, kata sandi, atau mengetik untuk pengguna. Anak dapat mencabut akses kapan saja dari Pengaturan Android."
-            )
+            .setView(popupInfoCards(listOf(
+                "CARA KERJA" to "HP anak mengirim daftar nama aplikasi yang tersedia agar orang tua dapat memilih aplikasi yang dibatasi. Saat aplikasi yang diblokir dibuka, SantetHP mengembalikan ke layar utama.",
+                "BATASAN AKSES" to "Android meminta Accessibility Service diaktifkan secara manual. Layanan hanya memeriksa nama paket aplikasi yang sedang tampil; tidak membaca isi layar, pesan, foto, kata sandi, atau mengetik untuk pengguna.",
+                "KENDALI DAN PRIVASI" to "Persetujuan ini dapat dimatikan kapan saja dari HP anak atau aksesnya dicabut melalui Pengaturan Android."
+            )))
             .setNegativeButton("Tutup", null)
             .setNeutralButton(if (enabled) "Matikan fitur" else "Setuju") { _, _ ->
                 prefs.edit().putBoolean("child_app_block_consent", !enabled).apply()
@@ -3128,14 +3176,18 @@ private var receivedMp3File: File? = null
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         val enabled = prefs.getBoolean("child_app_activity_consent", false)
         val serviceEnabled = isAppBlockAccessibilityEnabled()
-        val message = if (enabled) {
-            "Pemantauan aplikasi aktif sedang diizinkan. SantetHP hanya membagikan nama aplikasi yang tampil ketika berpindah aplikasi dan waktu deteksinya. SantetHP tidak membaca isi layar, pesan, foto, kata sandi, atau ketikan. Anda dapat menghentikannya kapan saja."
-        } else {
-            "Jika disetujui, SantetHP mengirim nama aplikasi yang sedang tampil ke HP orang tua setiap kali aplikasi berganti. Data dikirim melalui layanan Aksesibilitas Android yang diaktifkan secara manual. SantetHP hanya membaca nama paket aplikasi, bukan isi layar, pesan, foto, kata sandi, atau ketikan. Fitur ini terpisah dari blokir aplikasi dan dapat dihentikan kapan saja dari HP anak."
-        }
+        val infoCards = if (enabled) listOf(
+            "STATUS" to "Pemantauan aplikasi aktif sedang diizinkan.",
+            "DATA YANG DIBAGIKAN" to "SantetHP hanya membagikan nama aplikasi yang tampil ketika berpindah aplikasi dan waktu deteksinya.",
+            "PRIVASI DAN KENDALI" to "SantetHP tidak membaca isi layar, pesan, foto, kata sandi, atau ketikan. Anda dapat menghentikannya kapan saja."
+        ) else listOf(
+            "CARA KERJA" to "Jika disetujui, SantetHP mengirim nama aplikasi yang sedang tampil ke HP orang tua setiap kali aplikasi berganti melalui layanan Aksesibilitas Android.",
+            "BATASAN AKSES" to "SantetHP hanya membaca nama paket aplikasi, bukan isi layar, pesan, foto, kata sandi, atau ketikan. Fitur ini terpisah dari blokir aplikasi.",
+            "KENDALI DAN PRIVASI" to "Layanan Aksesibilitas harus diaktifkan secara manual. Pemantauan dapat dihentikan kapan saja dari HP anak."
+        )
         val dialog = SantetHpDialogBuilder()
             .setTitle("Pemantauan aplikasi aktif")
-            .setMessage(message)
+            .setView(popupInfoCards(infoCards))
             .setNegativeButton("Tutup", null)
         if (enabled) {
             dialog.setPositiveButton("Hentikan pemantauan") { _, _ ->
@@ -3565,9 +3617,11 @@ private var receivedMp3File: File? = null
         }
         SantetHpDialogBuilder()
             .setTitle("Pemantauan semua notifikasi")
-            .setMessage(
-                "Jika diaktifkan, SantetHP dapat membaca nama aplikasi, judul, dan isi notifikasi yang ditampilkan Android pada HP ini, lalu menyimpannya agar dapat dilihat dari HP orang tua. Termasuk notifikasi pesan dan kode verifikasi jika aplikasi menampilkannya. Jangan aktifkan jika tidak setuju membagikan informasi tersebut. Izin khusus tetap harus diaktifkan secara manual pada Pengaturan Android."
-            )
+            .setView(popupInfoCards(listOf(
+                "DATA YANG DIBAGIKAN" to "SantetHP dapat membaca nama aplikasi, judul, dan isi notifikasi yang ditampilkan Android pada HP ini, lalu menyimpannya agar dapat dilihat dari HP orang tua.",
+                "PERHATIAN PRIVASI" to "Data dapat mencakup isi pesan dan kode verifikasi jika aplikasi menampilkannya. Jangan aktifkan jika Anda tidak setuju membagikan informasi tersebut.",
+                "CARA MENGAKTIFKAN" to "Izin khusus harus diaktifkan secara manual melalui Pengaturan Android. Akses dapat dikelola kembali dari pengaturan tersebut."
+            )))
             .setNegativeButton("Batal", null)
             .setPositiveButton("Saya setuju • Lanjutkan") { _, _ ->
                 prefs.edit().putBoolean("child_notification_monitoring_enabled", true).apply()
@@ -3704,14 +3758,18 @@ private var receivedMp3File: File? = null
         if (currentRole != "child") return
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         val enabled = prefs.getBoolean("child_parent_media_receive_consent", false)
-        val message = if (enabled) {
-            "Penerimaan foto dan video dari HP orang tua sedang aktif. File yang dikirim melalui perangkat yang sudah dipasangkan akan otomatis disimpan ke galeri HP ini tanpa persetujuan per file. Persetujuan dapat dicabut kapan saja."
-        } else {
-            "Jika diaktifkan, HP orang tua yang sudah dipasangkan dapat mengirim foto dan video ke HP ini. File akan otomatis disimpan ke Galeri setelah transfer selesai dan lolos pemeriksaan. Tidak ada persetujuan berulang per file. Anda dapat menonaktifkannya kapan saja."
-        }
+        val infoCards = if (enabled) listOf(
+            "STATUS" to "Penerimaan foto dan video dari HP orang tua sedang aktif.",
+            "CARA KERJA" to "File yang dikirim melalui perangkat yang sudah dipasangkan akan otomatis disimpan ke galeri HP ini tanpa persetujuan per file.",
+            "KENDALI" to "Persetujuan dapat dicabut kapan saja dari HP anak."
+        ) else listOf(
+            "CARA KERJA" to "Jika diaktifkan, HP orang tua yang sudah dipasangkan dapat mengirim foto dan video ke HP ini.",
+            "PENYIMPANAN" to "File otomatis disimpan ke Galeri setelah transfer selesai dan lolos pemeriksaan. Tidak ada persetujuan berulang untuk setiap file.",
+            "KENDALI" to "Anda dapat menonaktifkan penerimaan kapan saja dari HP anak."
+        )
         SantetHpDialogBuilder()
             .setTitle(if (enabled) "Penerimaan foto/video aktif" else "Izinkan penerimaan foto/video")
-            .setMessage(message)
+            .setView(popupInfoCards(infoCards))
             .setNegativeButton("Tutup", null)
             .setPositiveButton(if (enabled) "Cabut persetujuan" else "Saya setuju • Aktifkan") { _, _ ->
                 if (enabled) {
@@ -3741,10 +3799,18 @@ private var receivedMp3File: File? = null
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         val enabled = prefs.getBoolean("child_gallery_sharing_enabled", false)
         val backupEnabled = prefs.getBoolean("child_drive_backup_consent", false)
-        val message = "Jika diaktifkan, daftar foto dan video dari HP ini dapat dilihat oleh HP orang tua yang sudah dipasangkan. Thumbnail ditampilkan lebih dulu; file asli/HD baru dikirim saat orang tua memilih item. Anda dapat menghentikan berbagi kapan saja."
+        val infoCards = if (enabled) listOf(
+            "STATUS" to "Berbagi galeri dari HP ini sedang aktif untuk HP orang tua yang sudah dipasangkan.",
+            "CARA KERJA" to "Thumbnail foto dan video ditampilkan lebih dulu. File asli atau kualitas HD baru dikirim saat orang tua memilih item.",
+            "KENDALI" to "Anda dapat menghentikan berbagi kapan saja dari HP anak."
+        ) else listOf(
+            "CARA KERJA" to "Jika diaktifkan, daftar foto dan video dari HP ini dapat dilihat oleh HP orang tua yang sudah dipasangkan.",
+            "PENGIRIMAN FILE" to "Thumbnail ditampilkan lebih dulu. File asli atau kualitas HD baru dikirim saat orang tua memilih item.",
+            "KENDALI DAN PRIVASI" to "Berbagi galeri hanya berjalan setelah persetujuan diberikan dan dapat dihentikan kapan saja dari HP anak."
+        )
         val dialog = SantetHpDialogBuilder()
             .setTitle(if (enabled) "Berbagi galeri sedang aktif" else "Persetujuan berbagi galeri")
-            .setMessage(message)
+            .setView(popupInfoCards(infoCards))
             .setNegativeButton("Tutup", null)
             .setNeutralButton("Pengaturan Backup Drive", null)
             .setPositiveButton(if (enabled) "Hentikan berbagi" else "Saya setuju • Lanjutkan") { _, _ ->
