@@ -610,10 +610,10 @@ private var receivedMp3File: File? = null
             setPadding(dp(18), dp(22), dp(18), dp(22))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(231, 239, 255))
+                intArrayOf(Color.WHITE, Color.rgb(239, 247, 242))
             ).apply {
                 cornerRadius = dp(19).toFloat()
-                setStroke(dp(1), Color.rgb(207, 222, 248))
+                setStroke(dp(1), Color.rgb(201, 222, 210))
             }
             elevation = dp(3).toFloat()
             layoutParams = LinearLayout.LayoutParams(
@@ -646,16 +646,16 @@ private var receivedMp3File: File? = null
             text = "📍  BERBAGI LOKASI HP INI\nNonaktif • Ketuk untuk membaca penjelasan dan mengaktifkan berbagi lokasi"
             textSize = 12.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(35, 53, 88))
+            setTextColor(Color.rgb(36, 70, 56))
             gravity = Gravity.CENTER
             setLineSpacing(dp(2).toFloat(), 1f)
             setPadding(dp(14), dp(12), dp(14), dp(12))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(236, 246, 255))
+                intArrayOf(Color.WHITE, Color.rgb(239, 247, 242))
             ).apply {
                 cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.rgb(190, 218, 245))
+                setStroke(dp(1), Color.rgb(201, 222, 210))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -668,14 +668,14 @@ private var receivedMp3File: File? = null
             text = "🚫  BLOKIR APLIKASI\nNonaktif • Ketuk untuk membaca penjelasan dan mengaktifkan kontrol aplikasi"
             textSize = 12.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(35, 53, 88))
+            setTextColor(Color.rgb(36, 70, 56))
             gravity = Gravity.CENTER
             setLineSpacing(dp(2).toFloat(), 1f)
             setPadding(dp(14), dp(10), dp(14), dp(10))
             background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(255, 244, 237))).apply {
+                intArrayOf(Color.WHITE, Color.rgb(239, 247, 242))).apply {
                 cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.rgb(245, 205, 180))
+                setStroke(dp(1), Color.rgb(201, 222, 210))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -688,16 +688,16 @@ private var receivedMp3File: File? = null
             text = "📱  PEMANTAUAN APLIKASI AKTIF\nNonaktif • Ketuk untuk membaca penjelasan dan memberi persetujuan"
             textSize = 12.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(35, 53, 88))
+            setTextColor(Color.rgb(36, 70, 56))
             gravity = Gravity.CENTER
             setLineSpacing(dp(2).toFloat(), 1f)
             setPadding(dp(14), dp(10), dp(14), dp(10))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(237, 248, 244))
+                intArrayOf(Color.WHITE, Color.rgb(239, 247, 242))
             ).apply {
                 cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.rgb(190, 225, 208))
+                setStroke(dp(1), Color.rgb(201, 222, 210))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -710,16 +710,16 @@ private var receivedMp3File: File? = null
             text = "🔔  PEMANTAUAN NOTIFIKASI\nNonaktif • Ketuk untuk membaca penjelasan dan mengaktifkan akses notifikasi"
             textSize = 12.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(35, 53, 88))
+            setTextColor(Color.rgb(36, 70, 56))
             gravity = Gravity.CENTER
             setLineSpacing(dp(2).toFloat(), 1f)
             setPadding(dp(14), dp(10), dp(14), dp(10))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(245, 241, 255))
+                intArrayOf(Color.WHITE, Color.rgb(239, 247, 242))
             ).apply {
                 cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.rgb(211, 198, 239))
+                setStroke(dp(1), Color.rgb(201, 222, 210))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -732,16 +732,16 @@ private var receivedMp3File: File? = null
             text = "🖼️  BERBAGI GALERI HP INI\nNonaktif • Ketuk untuk membaca penjelasan dan memilih media yang boleh dibagikan"
             textSize = 12.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(35, 53, 88))
+            setTextColor(Color.rgb(36, 70, 56))
             gravity = Gravity.CENTER
             setLineSpacing(dp(2).toFloat(), 1f)
             setPadding(dp(14), dp(10), dp(14), dp(10))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(239, 246, 255))
+                intArrayOf(Color.WHITE, Color.rgb(239, 247, 242))
             ).apply {
                 cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.rgb(190, 218, 245))
+                setStroke(dp(1), Color.rgb(201, 222, 210))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
