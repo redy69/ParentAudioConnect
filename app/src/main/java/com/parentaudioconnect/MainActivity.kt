@@ -1598,6 +1598,19 @@ private var receivedMp3File: File? = null
         val mapsPage = rootLayout.findViewWithTag<View>("santethp_maps_page")
         if (mapsPage?.visibility == View.VISIBLE) {
             showParentDashboard()
+            return
+        }
+
+        // On the parent home screen, ask before leaving SantetHP.
+        if (currentRole == "parent") {
+            AlertDialog.Builder(this)
+                .setTitle("Keluar dari SantetHP?")
+                .setMessage("Apakah kamu yakin ingin keluar dari aplikasi?")
+                .setNegativeButton("BATAL", null)
+                .setPositiveButton("KELUAR") { _, _ ->
+                    finish()
+                }
+                .show()
         } else {
             super.onBackPressed()
         }
