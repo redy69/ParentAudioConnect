@@ -114,8 +114,27 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
             else -> "Lokasi mungkin sudah lama • terakhir: $timeLabel$accuracyLabel"
         }
         status.setTextColor(
-            if (sharingEnabled && fresh) Color.rgb(28, 130, 83) else Color.rgb(104, 117, 140)
+            when {
+                sharingEnabled && fresh -> Color.rgb(28, 112, 73)
+                sharingEnabled -> Color.rgb(139, 99, 38)
+                else -> Color.rgb(104, 117, 140)
+            }
         )
+        status.background = GradientDrawable().apply {
+            val fill = when {
+                sharingEnabled && fresh -> Color.rgb(239, 249, 242)
+                sharingEnabled -> Color.rgb(255, 249, 237)
+                else -> Color.rgb(246, 249, 255)
+            }
+            val border = when {
+                sharingEnabled && fresh -> Color.rgb(202, 230, 210)
+                sharingEnabled -> Color.rgb(239, 224, 194)
+                else -> Color.rgb(222, 231, 246)
+            }
+            setColor(fill)
+            cornerRadius = dp(11).toFloat()
+            setStroke(dp(1), border)
+        }
         runMapScript(
             "updateMap($latitude,$longitude,${accuracyMeters ?: 0.0},$safeZonesJson);"
         )
@@ -135,7 +154,12 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
         } else {
             "Belum ada lokasi. Aktifkan berbagi lokasi secara sadar dari HP anak untuk menampilkan peta."
         }
-        status.setTextColor(Color.rgb(104, 117, 140))
+        status.setTextColor(if (sharingEnabled) Color.rgb(139, 99, 38) else Color.rgb(104, 117, 140))
+        status.background = GradientDrawable().apply {
+            setColor(if (sharingEnabled) Color.rgb(255, 249, 237) else Color.rgb(246, 249, 255))
+            cornerRadius = dp(11).toFloat()
+            setStroke(dp(1), if (sharingEnabled) Color.rgb(239, 224, 194) else Color.rgb(222, 231, 246))
+        }
         runMapScript("showWaiting();")
     }
 
