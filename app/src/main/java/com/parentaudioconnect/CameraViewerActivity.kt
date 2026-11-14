@@ -299,9 +299,9 @@ class CameraViewerActivity : Activity() {
             .create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
-                .setTextColor(Color.rgb(66, 95, 235))
+                .setTextColor(Color.rgb(30, 105, 76))
             dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-                .setTextColor(Color.rgb(190, 65, 75))
+                .setTextColor(Color.rgb(176, 47, 60))
         }
         dialog.show()
     }
