@@ -1883,16 +1883,16 @@ private var receivedMp3File: File? = null
                         setLineSpacing(dp(2).toFloat(), 1f)
                         setPadding(0, dp(5), 0, 0)
                     }
-                    addView(heading, LayoutParams(
+                    addView(heading, LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                     ))
-                    addView(body, LayoutParams(
+                    addView(body, LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                     ))
                 }
-                addView(card, LayoutParams(
+                addView(card, LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 ).apply {
