@@ -117,9 +117,9 @@ class CameraViewerActivity : Activity() {
                 gravity = Gravity.END
                 setPadding(dp(10), dp(8), dp(10), dp(8))
                 background = GradientDrawable().apply {
-                    setColor(Color.argb(218, 9, 29, 24))
+                    setColor(Color.argb(235, 247, 250, 255))
                     cornerRadius = dp(10).toFloat()
-                    setStroke(dp(1), Color.rgb(43, 112, 83))
+                    setStroke(dp(1), Color.rgb(190, 210, 238))
                 }
                 addView(TextView(this@CameraViewerActivity).apply {
                     text = "Camera by:"
