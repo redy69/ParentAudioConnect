@@ -44,6 +44,7 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
             background = GradientDrawable().apply {
                 setColor(Color.rgb(235, 242, 255))
                 cornerRadius = dp(10).toFloat()
+                setStroke(dp(1), Color.rgb(211, 224, 245))
             }
         })
         status.text = "Menunggu lokasi dari HP anak. Berbagi lokasi harus diaktifkan dari perangkat anak."
@@ -52,10 +53,12 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
         status.setTextColor(Color.rgb(78, 96, 126))
         status.includeFontPadding = false
         status.setPadding(dp(10), dp(9), dp(10), dp(9))
-        status.background = GradientDrawable().apply {
-            setColor(Color.rgb(246, 249, 255))
+        status.background = GradientDrawable(
+            GradientDrawable.Orientation.LEFT_RIGHT,
+            intArrayOf(Color.rgb(248, 251, 255), Color.rgb(241, 247, 253))
+        ).apply {
             cornerRadius = dp(11).toFloat()
-            setStroke(dp(1), Color.rgb(222, 231, 246))
+            setStroke(dp(1), Color.rgb(213, 225, 241))
         }
         addView(status)
 
