@@ -49,6 +49,8 @@ class ParentDriveBackupService : Service() {
     companion object {
         const val ACTION_START = "com.santethp.action.START_PARENT_DRIVE_BACKUP"
         const val ACTION_STOP = "com.santethp.action.STOP_PARENT_DRIVE_BACKUP"
+        const val ACTION_PAUSE_FOR_MEDIA = "com.santethp.action.PAUSE_PARENT_DRIVE_FOR_MEDIA"
+        const val ACTION_RESUME_AFTER_MEDIA = "com.santethp.action.RESUME_PARENT_DRIVE_AFTER_MEDIA"
         const val EXTRA_PAIR_CODE = "pair_code"
         const val EXTRA_ACCESS_TOKEN = "drive_access_token"
         const val EXTRA_CHILD_NAME = "child_name"
@@ -183,6 +185,25 @@ class ParentDriveBackupService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_PAUSE_FOR_MEDIA) {
+            if (!stopping) {
+                stopP2pTransport()
+                updateStatus("Backup dijeda sementara • sedang mengirim media ke HP anak")
+            }
+            return START_STICKY
+        }
+        if (intent?.action == ACTION_RESUME_AFTER_MEDIA) {
+            val resumeCode = pairingCode
+            if (!resumeCode.isNullOrBlank() && stopping &&
+                getSharedPreferences("parent_audio", MODE_PRIVATE)
+                    .getBoolean("parent_drive_backup_service_active", false)
+            ) {
+                updateStatus("Pengiriman selesai • melanjutkan backup Google Drive")
+                startTransport(resumeCode)
+                if (childQueue.size > 1) scheduleChildRotationTimeout()
+            }
+            return START_STICKY
+        }
         if (intent?.action == ACTION_STOP) {
             stopTransport(clearSavedState = true)
             stopSelf()
