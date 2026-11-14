@@ -1737,9 +1737,6 @@ private var receivedMp3File: File? = null
             val fine = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
             val coarse = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
             if (!fine && !coarse) issues.add("Izin lokasi")
-            if (Build.VERSION.SDK_INT >= 33 &&
-                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-            ) issues.add("Izin notifikasi untuk layanan lokasi")
         }
 
         if ((prefs.getBoolean("child_app_block_consent", false) ||
@@ -3057,19 +3054,23 @@ private var receivedMp3File: File? = null
         if (currentRole != "child") return
         val enabled = getSharedPreferences("parent_audio", MODE_PRIVATE)
             .getBoolean("child_location_sharing_enabled", false)
+        val fineGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarseGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val permissionMissing = enabled && !fineGranted && !coarseGranted
         val message = buildString {
-            append(if (enabled) "STATUS: BERBAGI LOKASI AKTIF" else "STATUS: BERBAGI LOKASI NONAKTIF")
+            append(if (permissionMissing) "STATUS: IZIN LOKASI DICABUT" else if (enabled) "STATUS: BERBAGI LOKASI AKTIF" else "STATUS: BERBAGI LOKASI NONAKTIF")
             append("\\n\\nCARA KERJA\\n")
             append("Koordinat perangkat ini dikirim ke HP orang tua yang sudah dipasangkan, kira-kira setiap 15 menit saat layanan aktif. Akurasi mengikuti izin lokasi Android (perkiraan atau presisi).")
             append("\\n\\nKENDALI DAN PRIVASI\\n")
             append("Lokasi tidak dikirim sebelum Anda mengaktifkannya. Notifikasi SantetHP akan terlihat selama berbagi berlangsung, dan Anda dapat menghentikannya kapan saja.")
+            if (permissionMissing) append("\\n\\nAktifkan kembali izin lokasi Android untuk melanjutkan fitur yang sebelumnya Anda setujui.")
         }
         SantetHpDialogBuilder()
-            .setTitle(if (enabled) "Berbagi lokasi sedang aktif" else "Izin berbagi lokasi")
+            .setTitle(if (permissionMissing) "Izin lokasi diperlukan" else if (enabled) "Berbagi lokasi sedang aktif" else "Izin berbagi lokasi")
             .setMessage(message)
             .setNegativeButton("Tutup", null)
-            .setPositiveButton(if (enabled) "Hentikan berbagi" else "Aktifkan berbagi") { _, _ ->
-                if (enabled) stopChildLocationSharing() else requestChildLocationSharing()
+            .setPositiveButton(if (permissionMissing) "Aktifkan izin lokasi" else if (enabled) "Hentikan berbagi" else "Aktifkan berbagi") { _, _ ->
+                if (permissionMissing || !enabled) requestChildLocationSharing() else stopChildLocationSharing()
             }
             .show()
     }
