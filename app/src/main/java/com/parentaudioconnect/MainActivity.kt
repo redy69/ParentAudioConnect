@@ -1551,7 +1551,7 @@ private var receivedMp3File: File? = null
 
         val dialog = AlertDialog.Builder(this)
             .setTitle(if (existing == null) "Tambah titik aman" else "Edit titik aman")
-            .setView(form).setNegativeButton("Batal", null)
+            .setView(popupContentCard(form)).setNegativeButton("Batal", null)
             .setPositiveButton("Simpan", null).create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
@@ -1779,6 +1779,22 @@ private var receivedMp3File: File? = null
             .addOnFailureListener {
                 // Keep the app usable if token retrieval is temporarily unavailable.
             }
+    }
+
+    private fun popupContentCard(content: View): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(12), dp(10), dp(12), dp(10))
+        background = GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            intArrayOf(Color.rgb(248, 251, 255), Color.rgb(232, 241, 255))
+        ).apply {
+            cornerRadius = dp(16).toFloat()
+            setStroke(dp(1), Color.rgb(190, 210, 238))
+        }
+        addView(content, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ))
     }
 
     private fun dp(value: Int): Int =
@@ -2563,7 +2579,7 @@ private var receivedMp3File: File? = null
         }
         AlertDialog.Builder(this)
             .setTitle("Beri nama anak")
-            .setView(input)
+            .setView(popupContentCard(input))
             .setNegativeButton("Batal", null)
             .setPositiveButton("Simpan") { _, _ ->
                 val name = input.text.toString().trim()
@@ -3141,7 +3157,7 @@ private var receivedMp3File: File? = null
                                     "Masukkan durasi blokir dalam menit (1 sampai 10080). Setelah waktunya habis, aplikasi otomatis dapat dibuka kembali."
                                 }
                             )
-                            .setView(durationInput)
+                            .setView(popupContentCard(durationInput))
                             .setNegativeButton("Batal", null)
                             .setPositiveButton("Blokir") { _, _ ->
                                 val minutes = durationInput.text.toString().toLongOrNull()
@@ -3973,7 +3989,7 @@ private var receivedMp3File: File? = null
             })
         }
         val dialog = AlertDialog.Builder(this).setTitle("Backup Google Drive")
-            .setView(content).setPositiveButton("Hubungkan Google Drive", null)
+            .setView(popupContentCard(content)).setPositiveButton("Hubungkan Google Drive", null)
             .setNegativeButton("Hentikan backup", null)
             .setNeutralButton("Simpan nama folder", null).create()
         val statsRefresh = object : Runnable {
@@ -4145,7 +4161,7 @@ private var receivedMp3File: File? = null
         parentGalleryList = list
         val dialog = AlertDialog.Builder(this)
             .setTitle("Galeri • " + name)
-            .setView(content)
+            .setView(popupContentCard(content))
             .setNegativeButton("Tutup", null)
             .setNeutralButton("Muat ulang / sambung", null)
             .create()
@@ -4702,7 +4718,7 @@ private var receivedMp3File: File? = null
         }
         val dialog = AlertDialog.Builder(this)
             .setTitle("Notifikasi • ${childNames[code] ?: "HP Anak"}")
-            .setView(scroll)
+            .setView(popupContentCard(scroll))
             .setNegativeButton("Tutup", null)
             .setNeutralButton("Hapus riwayat", null)
             .create()
@@ -5131,7 +5147,7 @@ private var receivedMp3File: File? = null
         AlertDialog.Builder(this)
             .setTitle("Hubungkan dengan Orang Tua")
             .setMessage("Masukkan kode dari HP orang tua.")
-            .setView(input)
+            .setView(popupContentCard(input))
             .setNegativeButton("Batal", null)
             .setPositiveButton("Hubungkan") { _, _ ->
 
