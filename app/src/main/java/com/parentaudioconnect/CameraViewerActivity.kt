@@ -62,12 +62,12 @@ class CameraViewerActivity : Activity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.rgb(8, 15, 30))
+            setBackgroundColor(Color.rgb(240, 244, 255))
             setPadding(dp(12), dp(12), dp(12), dp(12))
         }
         status = TextView(this).apply {
             text = "Menghubungkan kamera anak…"
-            setTextColor(Color.WHITE)
+            setTextColor(Color.rgb(32, 54, 83))
             textSize = 13.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.025f
@@ -77,10 +77,10 @@ class CameraViewerActivity : Activity() {
             setPadding(dp(12), dp(10), dp(12), dp(10))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.rgb(22, 43, 78), Color.rgb(17, 31, 57))
+                intArrayOf(Color.rgb(255, 255, 255), Color.rgb(241, 246, 255))
             ).apply {
                 cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.rgb(53, 83, 130))
+                setStroke(dp(1), Color.rgb(201, 216, 240))
             }
         }
         renderer = SurfaceViewRenderer(this)
@@ -94,16 +94,16 @@ class CameraViewerActivity : Activity() {
 
             cameraFacingLabel = TextView(this@CameraViewerActivity).apply {
                 text = "KAMERA BELAKANG"
-                setTextColor(Color.rgb(232, 250, 240))
+                setTextColor(Color.rgb(32, 54, 83))
                 textSize = 10.5f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 letterSpacing = 0.06f
                 includeFontPadding = false
                 setPadding(dp(10), dp(8), dp(10), dp(8))
                 background = GradientDrawable().apply {
-                    setColor(Color.argb(218, 9, 29, 24))
+                    setColor(Color.argb(235, 247, 250, 255))
                     cornerRadius = dp(10).toFloat()
-                    setStroke(dp(1), Color.rgb(43, 112, 83))
+                    setStroke(dp(1), Color.rgb(190, 210, 238))
                 }
             }
             addView(cameraFacingLabel, FrameLayout.LayoutParams(
@@ -123,13 +123,13 @@ class CameraViewerActivity : Activity() {
                 }
                 addView(TextView(this@CameraViewerActivity).apply {
                     text = "Camera by:"
-                    setTextColor(Color.rgb(177, 205, 190))
+                    setTextColor(Color.rgb(96, 115, 140))
                     textSize = 9f
                     includeFontPadding = false
                 })
                 addView(TextView(this@CameraViewerActivity).apply {
                     text = "lim45ekawan"
-                    setTextColor(Color.rgb(117, 224, 166))
+                    setTextColor(Color.rgb(53, 91, 190))
                     textSize = 11f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                     includeFontPadding = false
@@ -155,7 +155,7 @@ class CameraViewerActivity : Activity() {
             )
             sendCameraCommand("switch", facing, closeAfter = false)
         }
-        val stop = createCameraControl("HENTIKAN", Color.rgb(176, 57, 68))
+        val stop = createCameraControl("HENTIKAN", Color.rgb(255, 235, 238)).apply { setTextColor(Color.rgb(173, 52, 65)) }
         stop.setOnClickListener { confirmStopCamera() }
         controls.addView(switch, LinearLayout.LayoutParams(0, dp(50), 1f).apply {
             marginEnd = dp(6)
@@ -299,9 +299,9 @@ class CameraViewerActivity : Activity() {
             .create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
-                .setTextColor(Color.rgb(105, 211, 155))
+                .setTextColor(Color.rgb(66, 95, 235))
             dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-                .setTextColor(Color.rgb(235, 112, 112))
+                .setTextColor(Color.rgb(190, 65, 75))
         }
         dialog.show()
     }
