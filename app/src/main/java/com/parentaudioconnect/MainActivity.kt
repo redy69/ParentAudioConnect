@@ -32,6 +32,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.ScrollView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
 import androidx.work.WorkManager
 
@@ -69,6 +70,8 @@ import java.security.MessageDigest
 import java.util.Date
 
 class MainActivity : Activity(), LifecycleOwner {
+
+    private lateinit var mapsBackCallback: OnBackPressedCallback
 
     private val lifecycleRegistry = LifecycleRegistry(this)
 
@@ -221,6 +224,13 @@ private var receivedMp3File: File? = null
 }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        mapsBackCallback = object : OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() {
+                showParentDashboard()
+            }
+        }
+        onBackPressedDispatcher.addCallback(this, mapsBackCallback)
 
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
         lifecycleRegistry.currentState = Lifecycle.State.STARTED
@@ -1594,6 +1604,7 @@ private var receivedMp3File: File? = null
 
     private fun showMapsPage() {
         if (currentRole != "parent") return
+        mapsBackCallback.isEnabled = true
         for (index in 0 until rootLayout.childCount) {
             rootLayout.getChildAt(index).visibility = View.GONE
         }
@@ -1624,6 +1635,7 @@ private var receivedMp3File: File? = null
     }
 
     private fun showParentDashboard() {
+        mapsBackCallback.isEnabled = false
         rootLayout.findViewWithTag<View>("santethp_brand_header")?.visibility = View.VISIBLE
         requestParentNotificationPermission()
         childLocationMapView.setMapTapMode(false)
