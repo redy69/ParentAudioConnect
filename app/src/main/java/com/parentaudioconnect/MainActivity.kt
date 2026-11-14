@@ -379,10 +379,12 @@ private var receivedMp3File: File? = null
             compoundDrawablePadding = dp(7)
             // Keep battery at the leading edge; network glyph is placed inline before its label. 
             setCompoundDrawablesRelativeWithIntrinsicBounds(childBatteryGlyph, null, null, null)
-            background = GradientDrawable().apply {
-                setColor(Color.WHITE)
+            background = GradientDrawable(
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf(Color.rgb(247, 251, 255), Color.rgb(239, 248, 244))
+            ).apply {
                 cornerRadius = dp(13).toFloat()
-                setStroke(dp(1), Color.rgb(204, 220, 244))
+                setStroke(dp(1), Color.rgb(197, 218, 231))
             }
         }
 
@@ -393,10 +395,12 @@ private var receivedMp3File: File? = null
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(2).toFloat(), 1f)
             setPadding(dp(14), dp(10), dp(14), dp(10))
-            background = GradientDrawable().apply {
-                setColor(Color.rgb(247, 249, 253))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(249, 251, 255), Color.rgb(241, 247, 253))
+            ).apply {
                 cornerRadius = dp(14).toFloat()
-                setStroke(dp(1), Color.rgb(222, 230, 243))
+                setStroke(dp(1), Color.rgb(211, 224, 240))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
