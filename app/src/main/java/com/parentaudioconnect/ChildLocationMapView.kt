@@ -180,7 +180,8 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
               #searchPanel{display:none;position:absolute;z-index:1000;top:10px;left:10px;right:10px;background:#fff;padding:10px;border:1px solid #dce6f5;border-radius:14px;box-shadow:0 4px 16px #17345b33}
               #placeSearch{width:100%;box-sizing:border-box;border:1px solid #d5deeb;border-radius:10px;padding:12px;font-size:14px;outline:none;color:#243b60}#placeSearch:focus{border-color:#3d936b;box-shadow:0 0 0 2px #3d936b22}
               #searchResults{max-height:150px;overflow:auto}
-              .searchResult{padding:10px 6px;border-bottom:1px solid #edf1f6;font-size:12px;color:#243b60}
+              .searchResult{padding:10px 8px;border-bottom:1px solid #edf1f6;border-radius:7px;font-size:12px;color:#294536;line-height:1.4}
+              .searchResult:active{background:#eef7f1;color:#205c40}
               #selectionPanel{display:none;position:absolute;z-index:1000;bottom:18px;left:12px;right:12px;text-align:center}
               #confirmPoint{border:0;border-radius:22px;background:#207754;color:white;padding:13px 24px;font-weight:bold;letter-spacing:.2px;box-shadow:0 3px 12px #174b3540}
               #confirmPoint:active{background:#185f41}
