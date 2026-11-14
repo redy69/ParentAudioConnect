@@ -2491,12 +2491,13 @@ private var receivedMp3File: File? = null
             textSize = 14f
             isAllCaps = false
             setTextColor(Color.WHITE)
+            setTypeface(null, android.graphics.Typeface.BOLD)
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.rgb(75, 111, 229), Color.rgb(43, 78, 190), Color.rgb(92, 133, 235))
+                intArrayOf(Color.rgb(35, 132, 91), Color.rgb(24, 99, 69), Color.rgb(31, 119, 84))
             ).apply {
                 cornerRadius = dp(16).toFloat()
-                setStroke(dp(1), Color.argb(110, 255, 255, 255))
+                setStroke(dp(1), Color.argb(115, 255, 255, 255))
             }
             elevation = dp(2).toFloat()
             minHeight = dp(52)
