@@ -370,7 +370,7 @@ private var receivedMp3File: File? = null
             textSize = 11.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.008f
-            setTextColor(Color.rgb(48, 70, 108))
+            setTextColor(Color.rgb(43, 76, 54))
             gravity = Gravity.CENTER_VERTICAL
             includeFontPadding = false
             maxLines = 1
@@ -548,15 +548,15 @@ private var receivedMp3File: File? = null
         selectedChildButton = createButton("Pilih anak  ▾")
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
         selectedChildButton.setOnClickListener { toggleChildrenPanel() }
-        selectedChildButton.setTextColor(Color.rgb(35, 65, 125))
+        selectedChildButton.setTextColor(Color.rgb(31, 83, 56))
         selectedChildButton.textSize = 14.5f
         selectedChildButton.maxLines = 1
         selectedChildButton.ellipsize = android.text.TextUtils.TruncateAt.END
         selectedChildButton.contentDescription = "Pilih perangkat anak"
         selectedChildButton.background = GradientDrawable().apply {
-            setColor(Color.WHITE)
+            setColor(Color.rgb(250, 253, 250))
             cornerRadius = dp(13).toFloat()
-            setStroke(dp(1), Color.rgb(210, 223, 245))
+            setStroke(dp(1), Color.rgb(202, 224, 209))
         }
         selectedChildButton.setPadding(dp(13), dp(2), dp(10), dp(2))
         selectedChildButton.elevation = dp(1).toFloat()
@@ -565,8 +565,11 @@ private var receivedMp3File: File? = null
         addChildButton.setTextColor(Color.WHITE)
         addChildButton.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
-            intArrayOf(Color.rgb(73, 112, 235), Color.rgb(43, 76, 190))
-        ).apply { cornerRadius = dp(16).toFloat() }
+            intArrayOf(Color.rgb(31, 105, 73), Color.rgb(25, 91, 67), Color.rgb(48, 128, 91))
+        ).apply {
+            cornerRadius = dp(16).toFloat()
+            setStroke(dp(1), Color.argb(90, 255, 255, 255))
+        }
         addChildButton.elevation = dp(3).toFloat()
         cancelPairingButton = createButton("BATALKAN KODE")
         updateButton = createButton("PERIKSA PEMBARUAN")
@@ -2335,7 +2338,11 @@ private var receivedMp3File: File? = null
             background = GradientDrawable().apply {
                 setColor(Color.WHITE)
                 cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.rgb(211, 228, 219))
+                setStroke(
+                    dp(1),
+                    if (label == "HENTIKAN LIVE") Color.rgb(239, 211, 212)
+                    else Color.rgb(207, 226, 214)
+                )
             }
             elevation = dp(2).toFloat()
             isClickable = true
@@ -2354,7 +2361,7 @@ private var receivedMp3File: File? = null
                 textSize = if (label == "SERVER") 20f else 19f
                 gravity = Gravity.CENTER
                 setTextColor(Color.WHITE)
-                val tileAccent = Color.rgb(24, 105, 77)
+                val tileAccent = if (label == "HENTIKAN LIVE") Color.rgb(177, 55, 58) else Color.rgb(24, 105, 77)
                 background = GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
                     intArrayOf(blendWithWhite(tileAccent, 0.12f), tileAccent, blendWithWhite(tileAccent, 0.28f))
@@ -2529,7 +2536,7 @@ private var receivedMp3File: File? = null
         val nameStart = 4
         val nameEnd = (nameStart + childLabel.length).coerceAtMost(childDisplay.length)
         childDisplay.setSpan(
-            android.text.style.ForegroundColorSpan(Color.rgb(35, 65, 125)),
+            android.text.style.ForegroundColorSpan(Color.rgb(31, 83, 56)),
             nameStart, nameEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
         )
         childDisplay.setSpan(
@@ -2627,10 +2634,10 @@ private var receivedMp3File: File? = null
         childrenContainer.setPadding(dp(6), dp(6), dp(6), dp(6))
         childrenContainer.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
-            intArrayOf(Color.WHITE, Color.rgb(242, 249, 244))
+            intArrayOf(Color.WHITE, Color.rgb(244, 250, 246))
         ).apply {
             cornerRadius = dp(18).toFloat()
-            setStroke(dp(1), Color.rgb(215, 226, 245))
+            setStroke(dp(1), Color.rgb(207, 226, 214))
         }
         childrenContainer.elevation = dp(2).toFloat()
 
@@ -2641,10 +2648,10 @@ private var receivedMp3File: File? = null
                 setPadding(dp(14), dp(16), dp(14), dp(16))
                 background = GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
-                    intArrayOf(Color.WHITE, Color.rgb(247, 250, 255))
+                    intArrayOf(Color.WHITE, Color.rgb(245, 250, 247))
                 ).apply {
                     cornerRadius = dp(16).toFloat()
-                    setStroke(dp(1), Color.rgb(225, 233, 247))
+                    setStroke(dp(1), Color.rgb(216, 232, 221))
                 }
             }
             empty.addView(TextView(this).apply {
@@ -2658,14 +2665,14 @@ private var receivedMp3File: File? = null
                 text = "Belum ada perangkat anak"
                 textSize = 13f
                 setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(Color.rgb(48, 68, 105))
+                setTextColor(Color.rgb(36, 76, 56))
                 gravity = Gravity.CENTER
             })
             empty.addView(TextView(this).apply {
                 text = "Tekan tombol + untuk mulai menghubungkan HP anak."
                 textSize = 11f
                 setLineSpacing(dp(2).toFloat(), 1f)
-                setTextColor(Color.rgb(105, 120, 146))
+                setTextColor(Color.rgb(104, 123, 111))
                 setPadding(0, dp(5), 0, 0)
                 gravity = Gravity.CENTER
             })
@@ -2682,15 +2689,15 @@ private var receivedMp3File: File? = null
                 background = GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
                     if (selectedChildCode == code)
-                        intArrayOf(Color.rgb(235, 245, 239), Color.rgb(248, 251, 255))
+                        intArrayOf(Color.rgb(231, 245, 236), Color.rgb(246, 251, 247))
                     else
-                        intArrayOf(Color.WHITE, Color.rgb(247, 250, 255))
+                        intArrayOf(Color.WHITE, Color.rgb(248, 251, 249))
                 ).apply {
                     cornerRadius = dp(17).toFloat()
                     setStroke(
                         dp(if (selectedChildCode == code) 1.5f.toInt() else 1),
                         if (selectedChildCode == code) Color.rgb(105, 161, 134)
-                        else Color.rgb(218, 229, 246)
+                        else Color.rgb(218, 232, 222)
                     )
                 }
                 isClickable = true
@@ -2715,7 +2722,7 @@ private var receivedMp3File: File? = null
                 textSize = 13.5f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 letterSpacing = 0.005f
-                setTextColor(Color.rgb(27, 43, 73))
+                setTextColor(Color.rgb(34, 62, 46))
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
             })
@@ -2736,7 +2743,7 @@ private var receivedMp3File: File? = null
             details.addView(TextView(this).apply {
                 text = childLastSeen(code)
                 textSize = 9.5f
-                setTextColor(Color.rgb(111, 125, 148))
+                setTextColor(Color.rgb(111, 128, 116))
                 setPadding(dp(1), dp(3), 0, 0)
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
@@ -5165,8 +5172,9 @@ private var receivedMp3File: File? = null
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(9), dp(6), dp(9), dp(6))
             background = GradientDrawable().apply {
-                setColor(Color.rgb(244, 248, 255))
+                setColor(Color.rgb(244, 249, 245))
                 cornerRadius = dp(10).toFloat()
+                setStroke(dp(1), Color.rgb(227, 237, 229))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -5175,7 +5183,7 @@ private var receivedMp3File: File? = null
         row.addView(TextView(this).apply {
             text = label
             textSize = 11.5f
-            setTextColor(Color.rgb(48, 65, 96))
+            setTextColor(Color.rgb(43, 67, 51))
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
             gravity = Gravity.CENTER_VERTICAL
@@ -5185,7 +5193,7 @@ private var receivedMp3File: File? = null
             text = value
             textSize = 11f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(43, 76, 139))
+            setTextColor(Color.rgb(31, 101, 68))
             gravity = Gravity.CENTER_VERTICAL or Gravity.END
             maxLines = 1
             layoutParams = LinearLayout.LayoutParams(
