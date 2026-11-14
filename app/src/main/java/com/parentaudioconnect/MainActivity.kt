@@ -92,6 +92,30 @@ class MainActivity : Activity(), LifecycleOwner {
         }
     }
 
+    // Firestore's realtime listener remains the primary unlink signal. This
+    // foreground-only server check is a fallback for devices that miss it.
+    private var childPairingVerificationInFlight = false
+    private val childPairingVerificationRunnable = object : Runnable {
+        override fun run() {
+            if (currentRole != "child" || isFinishing || isDestroyed) return
+            val code = getSharedPreferences("parent_audio", MODE_PRIVATE)
+                .getString("pair_code", null)
+            if (code.isNullOrBlank()) return
+            verifyChildPairingBeforeShowing(code)
+            rootLayout.postDelayed(this, 30_000L)
+        }
+    }
+
+    private fun startChildPairingVerification() {
+        if (currentRole != "child" || !::rootLayout.isInitialized) return
+        rootLayout.removeCallbacks(childPairingVerificationRunnable)
+        rootLayout.postDelayed(childPairingVerificationRunnable, 30_000L)
+    }
+
+    private fun stopChildPairingVerification() {
+        if (::rootLayout.isInitialized) rootLayout.removeCallbacks(childPairingVerificationRunnable)
+    }
+
     private fun startChildPresenceRefresh() {
         if (currentRole != "parent" || !::rootLayout.isInitialized) return
         rootLayout.removeCallbacks(childPresenceRefreshRunnable)
@@ -1161,6 +1185,7 @@ private var receivedMp3File: File? = null
             val savedPairCode = childPrefs.getString("pair_code", null)
             if (!savedPairCode.isNullOrBlank()) {
                 verifyChildPairingBeforeShowing(savedPairCode)
+                startChildPairingVerification()
             }
             // Device battery/network reporting is independent of Usage Access.
             // Always re-enqueue the lightweight status worker when the child app resumes.
@@ -1172,6 +1197,7 @@ private var receivedMp3File: File? = null
 
     override fun onPause() {
         stopChildPresenceRefresh()
+        stopChildPairingVerification()
         if (currentRole == "parent" && parentGalleryDialog?.isShowing == true) {
             parentGalleryDialog?.dismiss()
         }
@@ -3162,10 +3188,13 @@ private var receivedMp3File: File? = null
     private fun verifyChildPairingBeforeShowing(code: String) {
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         if (currentRole != "child" || prefs.getString("pair_code", null) != code) return
+        if (childPairingVerificationInFlight) return
+        childPairingVerificationInFlight = true
 
         db.collection("pairings").document(code)
             .get(com.google.firebase.firestore.Source.SERVER)
             .addOnSuccessListener { snapshot ->
+                childPairingVerificationInFlight = false
                 val currentCode = prefs.getString("pair_code", null)
                 if (currentRole != "child" || currentCode != code) return@addOnSuccessListener
 
@@ -3178,6 +3207,7 @@ private var receivedMp3File: File? = null
                 }
             }
             .addOnFailureListener { error ->
+                childPairingVerificationInFlight = false
                 // Never enter the simplified paired-child screen based only on local
                 // preferences. That allowed a stale pairing to reappear after unlink
                 // when the server verification failed or was temporarily unavailable.
@@ -3194,6 +3224,8 @@ private var receivedMp3File: File? = null
         val savedCode = prefs.getString("pair_code", null)
         if (currentRole != "child" || (!savedCode.isNullOrBlank() && savedCode != code)) return
 
+        stopChildPairingVerification()
+        childPairingVerificationInFlight = false
         pairingListener?.remove()
         pairingListener = null
         prefs.edit()
@@ -3834,11 +3866,15 @@ private var receivedMp3File: File? = null
     }
 
     private fun updateCameraStandbyButton() {
-        val armed = getSharedPreferences("parent_audio", MODE_PRIVATE)
-            .getBoolean("remote_camera_armed", false)
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        val isPairedChild = currentRole == "child" &&
+            prefs.getString("pair_role", null) == "child" &&
+            !prefs.getString("pair_code", null).isNullOrBlank()
+        val armed = prefs.getBoolean("remote_camera_armed", false)
         cameraStandbyButton.text = "AKTIFKAN SIAGA KAMERA"
-        // Once standby is active, restore the original child screen without the camera menu.
-        cameraStandbyButton.visibility = if (armed) View.GONE else View.VISIBLE
+        // Delayed service callbacks must not reveal this child-only control on
+        // the role-selection or parent screens after an unlink.
+        cameraStandbyButton.visibility = if (isPairedChild && !armed) View.VISIBLE else View.GONE
     }
 
     private fun toggleRemoteCameraStandby() {
@@ -6688,8 +6724,21 @@ private fun playReceivedMp3() {
         }
 
         if (requestCode == LOCATION_NOTIFICATION_PERMISSION) {
-            // Location sharing remains user-visible through its foreground-service notification.
-            continueStartingChildLocationSharing()
+            val notificationsGranted = Build.VERSION.SDK_INT < 33 ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+            if (notificationsGranted) {
+                // Location sharing remains user-visible through its foreground-service notification.
+                continueStartingChildLocationSharing()
+            } else {
+                // Do not immediately request the same denied permission again.
+                pendingLocationStart = false
+                Toast.makeText(
+                    this,
+                    "Izin notifikasi tidak diberikan. Berbagi lokasi belum dimulai; Anda dapat mengaktifkannya nanti melalui menu lokasi.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
 
         if (requestCode == OPERATOR_PERMISSION) {
