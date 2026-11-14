@@ -46,6 +46,7 @@ class CameraViewerActivity : Activity() {
     private var connecting = false
     private lateinit var renderer: SurfaceViewRenderer
     private lateinit var status: TextView
+    private lateinit var cameraFacingLabel: TextView
     private var code: String = ""
     private var facing = "back"
     private var stopping = false
@@ -89,6 +90,55 @@ class CameraViewerActivity : Activity() {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             ))
+
+            cameraFacingLabel = TextView(this@CameraViewerActivity).apply {
+                text = "KAMERA BELAKANG"
+                setTextColor(Color.WHITE)
+                textSize = 10.5f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                letterSpacing = 0.06f
+                includeFontPadding = false
+                setPadding(dp(10), dp(8), dp(10), dp(8))
+                background = GradientDrawable().apply {
+                    setColor(Color.argb(190, 17, 31, 57))
+                    cornerRadius = dp(10).toFloat()
+                    setStroke(dp(1), Color.rgb(67, 105, 151))
+                }
+            }
+            addView(cameraFacingLabel, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP or Gravity.START
+            ).apply { setMargins(dp(10), dp(10), dp(10), dp(10)) })
+
+            val cameraCredit = LinearLayout(this@CameraViewerActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.END
+                setPadding(dp(10), dp(8), dp(10), dp(8))
+                background = GradientDrawable().apply {
+                    setColor(Color.argb(190, 17, 31, 57))
+                    cornerRadius = dp(10).toFloat()
+                    setStroke(dp(1), Color.rgb(67, 105, 151))
+                }
+                addView(TextView(this@CameraViewerActivity).apply {
+                    text = "Camera by:"
+                    setTextColor(Color.rgb(190, 205, 225))
+                    textSize = 9f
+                    includeFontPadding = false
+                })
+                addView(TextView(this@CameraViewerActivity).apply {
+                    text = "lim45ekawan"
+                    setTextColor(Color.WHITE)
+                    textSize = 11f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    includeFontPadding = false
+                })
+            }
+            addView(cameraCredit, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP or Gravity.END
+            ).apply { setMargins(dp(10), dp(10), dp(10), dp(10)) })
         }
         val controls = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -230,6 +280,7 @@ class CameraViewerActivity : Activity() {
 
     private fun switchCamera() {
         facing = if (facing == "back") "front" else "back"
+        cameraFacingLabel.text = if (facing == "front") "KAMERA DEPAN" else "KAMERA BELAKANG"
         sendCameraCommand("switch", facing, closeAfter = false)
     }
 
