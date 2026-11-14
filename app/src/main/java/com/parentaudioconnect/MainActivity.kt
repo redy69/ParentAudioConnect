@@ -1790,6 +1790,41 @@ private var receivedMp3File: File? = null
             .show()
     }
 
+    private fun returnParentToRoleSelection() {
+        // No linked child devices remain: leave the parent dashboard and reset
+        // only the pairing/role state, preserving unrelated app preferences.
+        childListeners.values.forEach { it.remove() }
+        childListeners.clear()
+        childNames.clear()
+        childConnected.clear()
+        childSnapshots.clear()
+        renamePromptedCodes.clear()
+        selectedChildCode = null
+        pendingPairingCode = null
+        invalidatePendingRoomConnection()
+        getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+            .remove("pair_role")
+            .remove("pair_code")
+            .remove("selected_child_code")
+            .putString("parent_children", "{}")
+            .apply()
+        currentRole = ""
+        isMicrophoneActive = false
+        activeRoomCode = null
+        activityScope.launch {
+            try {
+                room?.localParticipant?.setMicrophoneEnabled(false)
+                room?.disconnect()
+                room?.release()
+            } catch (_: Exception) { }
+            room = null
+            mp3TransferManager = null
+        }
+        showRoleSelection()
+        statusText.text = "Tidak ada perangkat anak yang terhubung. Silakan pilih peran."
+        Toast.makeText(this, "Semua perangkat anak telah dilepaskan.", Toast.LENGTH_LONG).show()
+    }
+
     private fun showParentDashboard() {
         rootLayout.findViewWithTag<View>("santethp_brand_header")?.visibility = View.VISIBLE
         requestParentNotificationPermission()
@@ -3002,22 +3037,14 @@ private var receivedMp3File: File? = null
 
                         if (wasSelected) selectedChildCode = childNames.keys.firstOrNull()
                         if (childNames.isEmpty()) {
-                            selectedChildCode = null
-                            getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
-                                .putString("pair_role", "parent")
-                                .remove("pair_code")
-                                .putString("parent_children", "{}")
-                                .apply()
-                        }
-                        showParentDashboard()
-                        val nextCode = selectedChildCode
-                        if (nextCode != null && childConnected[nextCode] == true) {
-                            selectChild(nextCode)
+                            returnParentToRoleSelection()
                         } else {
-                            statusText.text = if (childNames.isEmpty()) {
-                                "Hubungan anak berhasil dilepaskan. Belum ada perangkat anak yang terhubung."
+                            showParentDashboard()
+                            val nextCode = selectedChildCode
+                            if (nextCode != null && childConnected[nextCode] == true) {
+                                selectChild(nextCode)
                             } else {
-                                "Hubungan dengan $childName berhasil dilepaskan."
+                                statusText.text = "Hubungan dengan $childName berhasil dilepaskan."
                             }
                         }
                         Toast.makeText(this, "Hubungan $childName berhasil dilepaskan", Toast.LENGTH_LONG).show()
@@ -5656,6 +5683,30 @@ private var receivedMp3File: File? = null
                 if (error != null) {
                     if (statusText.text != "Gagal memeriksa pasangan") {
                         statusText.text = "Gagal memeriksa pasangan"
+                    }
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null && !snapshot.exists()) {
+                    childListeners.remove(code)?.remove()
+                    childNames.remove(code)
+                    childConnected.remove(code)
+                    childSnapshots.remove(code)
+                    renamePromptedCodes.remove(code)
+                    persistChildren()
+                    if (selectedChildCode == code) {
+                        selectedChildCode = childNames.keys.firstOrNull()
+                        getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                            .putString("selected_child_code", selectedChildCode).apply()
+                    }
+                    if (childNames.isEmpty()) {
+                        returnParentToRoleSelection()
+                    } else {
+                        renderChildrenList()
+                        updateSelectedChildButton()
+                        selectedChildCode?.let { nextCode ->
+                            if (childConnected[nextCode] == true) selectChild(nextCode)
+                        }
                     }
                     return@addSnapshotListener
                 }
