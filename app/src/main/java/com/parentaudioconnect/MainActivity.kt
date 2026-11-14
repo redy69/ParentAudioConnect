@@ -174,6 +174,7 @@ private lateinit var playMp3Button: Button
     private var parentSendP2pManager: GalleryP2pManager? = null
     private var parentSendProtocol: ParentToChildMediaProtocol? = null
     private var parentSendStarted = false
+    private var parentDriveBackupPausedForMedia = false
     private var pendingParentSendUri: Uri? = null
     private var pendingParentSendName: String = ""
     private var pendingParentSendMime: String = ""
@@ -4278,12 +4279,6 @@ private var receivedMp3File: File? = null
             Toast.makeText(this, "Pilih HP anak terlebih dahulu.", Toast.LENGTH_LONG).show()
             return
         }
-        if (getSharedPreferences("parent_audio", MODE_PRIVATE)
-                .getBoolean("parent_drive_backup_service_active", false)
-        ) {
-            Toast.makeText(this, "Hentikan Backup Google Drive terlebih dahulu agar koneksi P2P tidak bertabrakan.", Toast.LENGTH_LONG).show()
-            return
-        }
         if (childSnapshots[code]?.getBoolean("parentMediaReceiveEnabled") != true) {
             SantetHpDialogBuilder().setTitle("Penerimaan belum diaktifkan")
                 .setMessage("Aktifkan dan setujui terlebih dahulu menu Penerimaan dari HP Orang Tua pada HP anak. Setelah aktif, foto/video dapat disimpan otomatis tanpa persetujuan per file.")
@@ -4309,15 +4304,19 @@ private var receivedMp3File: File? = null
             statusText.text = "Penerimaan dari orang tua sudah tidak aktif di HP anak"
             return
         }
-        if (getSharedPreferences("parent_audio", MODE_PRIVATE)
-                .getBoolean("parent_drive_backup_service_active", false)
-        ) {
-            statusText.text = "Hentikan Backup Google Drive terlebih dahulu"
-            return
-        }
+        val backupWasActive = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            .getBoolean("parent_drive_backup_service_active", false)
         parentGalleryDialog?.dismiss()
         stopParentGalleryP2p()
         stopParentMediaTransfer()
+        if (backupWasActive) {
+            // Temporarily release the shared P2P transport; the backup service
+            // retains its queue/token and will resume automatically after sending.
+            parentDriveBackupPausedForMedia = true
+            startService(Intent(this, ParentDriveBackupService::class.java).apply {
+                action = ParentDriveBackupService.ACTION_PAUSE_FOR_MEDIA
+            })
+        }
         parentSendStarted = false
         pendingParentSendUri = uri
         val resolver = contentResolver
@@ -4379,7 +4378,12 @@ private var receivedMp3File: File? = null
             onData = { bytes, binary -> protocol.onFrame(bytes, binary) }
         )
         parentSendP2pManager = manager
-        manager.start()
+        if (backupWasActive) {
+            // Let the service process its pause command before opening the send transport.
+            rootLayout.postDelayed({ if (parentSendP2pManager === manager) manager.start() }, 350L)
+        } else {
+            manager.start()
+        }
     }
 
     private fun stopParentMediaTransfer() {
@@ -4389,6 +4393,12 @@ private var receivedMp3File: File? = null
         parentSendP2pManager = null
         parentSendStarted = false
         pendingParentSendUri = null
+        if (parentDriveBackupPausedForMedia) {
+            parentDriveBackupPausedForMedia = false
+            startService(Intent(this, ParentDriveBackupService::class.java).apply {
+                action = ParentDriveBackupService.ACTION_RESUME_AFTER_MEDIA
+            })
+        }
     }
 
     private fun showGoogleDriveBackupSettings() {
