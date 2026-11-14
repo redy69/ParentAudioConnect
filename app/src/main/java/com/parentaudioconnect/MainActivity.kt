@@ -5151,13 +5151,13 @@ private var receivedMp3File: File? = null
         val row = TextView(this).apply {
             text = value
             textSize = 11.8f
-            setTextColor(if (muted) Color.rgb(112, 125, 148) else Color.rgb(48, 65, 96))
+            setTextColor(if (muted) Color.rgb(112, 128, 119) else Color.rgb(43, 67, 51))
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(9), dp(6), dp(9), dp(6))
             background = GradientDrawable().apply {
-                setColor(if (muted) Color.rgb(248, 250, 254) else Color.rgb(246, 250, 247))
+                setColor(if (muted) Color.rgb(248, 251, 249) else Color.rgb(246, 250, 247))
                 cornerRadius = dp(10).toFloat()
-                setStroke(dp(1), if (muted) Color.rgb(239, 243, 249) else Color.rgb(225, 237, 229))
+                setStroke(dp(1), if (muted) Color.rgb(229, 237, 231) else Color.rgb(225, 237, 229))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
