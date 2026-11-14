@@ -822,7 +822,7 @@ private var receivedMp3File: File? = null
         val featureHeading = TextView(this).apply {
             text = "8 FITUR UTAMA"
             textSize = 11.5f
-            setTextColor(Color.rgb(49, 82, 145))
+            setTextColor(Color.rgb(25, 91, 67))
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.085f
             setPadding(dp(4), dp(8), dp(4), dp(4))
@@ -871,9 +871,9 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.VERTICAL
             setPadding(dp(10), dp(9), dp(10), dp(9))
             background = GradientDrawable().apply {
-                setColor(Color.WHITE)
-                cornerRadius = dp(17).toFloat()
-                setStroke(dp(1), Color.rgb(210, 224, 246))
+                setColor(Color.rgb(251, 253, 252))
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), Color.rgb(211, 230, 221))
             }
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
@@ -918,7 +918,7 @@ private var receivedMp3File: File? = null
         val mapsPage = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), dp(10), dp(12), dp(18))
-            setBackgroundColor(Color.rgb(244, 247, 252))
+            setBackgroundColor(Color.rgb(244, 249, 246))
             visibility = View.GONE
         }
         val mapsHeader = LinearLayout(this).apply {
@@ -929,9 +929,14 @@ private var receivedMp3File: File? = null
         val mapsBack = TextView(this).apply {
             text = "‹"
             textSize = 34f
-            setTextColor(Color.rgb(35, 65, 125))
+            setTextColor(Color.rgb(24, 96, 70))
             gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(dp(48), dp(48))
+            background = GradientDrawable().apply {
+                setColor(Color.WHITE)
+                cornerRadius = dp(15).toFloat()
+                setStroke(dp(1), Color.rgb(211, 230, 221))
+            }
+            layoutParams = LinearLayout.LayoutParams(dp(44), dp(44))
             setOnClickListener { showParentDashboard() }
             contentDescription = "Kembali ke dashboard"
         }
@@ -942,7 +947,7 @@ private var receivedMp3File: File? = null
             text = "Maps"
             textSize = 23f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(27, 48, 84))
+            setTextColor(Color.rgb(24, 86, 64))
         })
         mapsTitle.addView(TextView(this@MainActivity).apply {
             text = "Lokasi perangkat anak"
@@ -964,7 +969,15 @@ private var receivedMp3File: File? = null
             isAllCaps = false
             textSize = 13f
             setTextColor(Color.WHITE)
-            backgroundTintList = android.content.res.ColorStateList.valueOf(Color.rgb(36, 91, 169))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(32, 119, 84), Color.rgb(20, 91, 65))
+            ).apply {
+                cornerRadius = dp(14).toFloat()
+                setStroke(dp(1), Color.rgb(104, 166, 137))
+            }
+            elevation = dp(2).toFloat()
+            stateListAnimator = null
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(48)
             ).apply { setMargins(0, dp(9), 0, dp(6)) }
@@ -973,9 +986,14 @@ private var receivedMp3File: File? = null
         mapsPage.addView(addSafeZoneButton)
         mapsPage.addView(TextView(this).apply {
             text = "Pilih lokasi langsung pada peta. Setiap titik dapat diberi nama dan radius 50–5.000 meter."
-            textSize = 11f
-            setTextColor(Color.rgb(104, 117, 140))
-            setPadding(dp(4), dp(2), dp(4), dp(8))
+            textSize = 11.5f
+            setTextColor(Color.rgb(77, 105, 91))
+            setPadding(dp(11), dp(9), dp(11), dp(9))
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(235, 245, 239))
+                cornerRadius = dp(12).toFloat()
+                setStroke(dp(1), Color.rgb(211, 230, 221))
+            }
         })
         safeZonesContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         mapsPage.addView(safeZonesContainer)
@@ -1362,7 +1380,7 @@ private var receivedMp3File: File? = null
             text = "TITIK AMAN TERSIMPAN (" + zones.size + "/10)"
             textSize = 12f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(39, 70, 122))
+            setTextColor(Color.rgb(25, 91, 67))
             setPadding(dp(3), dp(10), dp(3), dp(7))
         })
         if (zones.isEmpty()) {
@@ -1380,8 +1398,8 @@ private var receivedMp3File: File? = null
                 setPadding(dp(12), dp(9), dp(12), dp(9))
                 background = GradientDrawable().apply {
                     setColor(Color.WHITE)
-                    cornerRadius = dp(14).toFloat()
-                    setStroke(dp(1), Color.rgb(218, 228, 242))
+                    cornerRadius = dp(15).toFloat()
+                    setStroke(dp(1), Color.rgb(211, 230, 221))
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -1391,7 +1409,7 @@ private var receivedMp3File: File? = null
                 text = zone.name + "  •  radius " + zone.radiusM + " m"
                 textSize = 13f
                 setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(Color.rgb(36, 59, 96))
+                setTextColor(Color.rgb(27, 65, 48))
             })
             card.addView(TextView(this).apply {
                 text = String.format(java.util.Locale.US, "%.5f, %.5f", zone.latitude, zone.longitude)
@@ -1403,6 +1421,14 @@ private var receivedMp3File: File? = null
             row.addView(Button(this).apply {
                 text = "Edit"
                 isAllCaps = false
+                textSize = 12f
+                setTextColor(Color.rgb(24, 96, 70))
+                background = GradientDrawable().apply {
+                    setColor(Color.rgb(235, 245, 239))
+                    cornerRadius = dp(10).toFloat()
+                    setStroke(dp(1), Color.rgb(197, 222, 207))
+                }
+                stateListAnimator = null
                 setOnClickListener {
                     childLocationMapView.focusLocation(zone.latitude, zone.longitude)
                     showSafeZoneEditor(zone)
@@ -1411,6 +1437,14 @@ private var receivedMp3File: File? = null
             row.addView(Button(this).apply {
                 text = "Hapus"
                 isAllCaps = false
+                textSize = 12f
+                setTextColor(Color.rgb(166, 55, 61))
+                background = GradientDrawable().apply {
+                    setColor(Color.rgb(255, 243, 243))
+                    cornerRadius = dp(10).toFloat()
+                    setStroke(dp(1), Color.rgb(239, 205, 207))
+                }
+                stateListAnimator = null
                 setOnClickListener {
                     SantetHpDialogBuilder()
                         .setTitle("Hapus titik aman?")
@@ -1436,7 +1470,7 @@ private var receivedMp3File: File? = null
             text = "RIWAYAT AKTIVITAS ZONA AMAN"
             textSize = 12f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(39, 70, 122))
+            setTextColor(Color.rgb(25, 91, 67))
             setPadding(dp(3), dp(12), dp(3), dp(6))
         })
         if (events.isEmpty()) {
@@ -1460,9 +1494,9 @@ private var receivedMp3File: File? = null
                 setTextColor(Color.rgb(48, 68, 105))
                 setPadding(dp(11), dp(9), dp(11), dp(9))
                 background = GradientDrawable().apply {
-                    setColor(Color.WHITE)
-                    cornerRadius = dp(11).toFloat()
-                    setStroke(dp(1), Color.rgb(225, 233, 247))
+                    setColor(Color.rgb(250, 253, 251))
+                    cornerRadius = dp(12).toFloat()
+                    setStroke(dp(1), Color.rgb(216, 231, 222))
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -2175,10 +2209,10 @@ private var receivedMp3File: File? = null
             minimumHeight = dp(58)
             background = GradientDrawable().apply {
                 setColor(Color.WHITE)
-                cornerRadius = dp(13).toFloat()
-                setStroke(dp(1), Color.rgb(218, 228, 245))
+                cornerRadius = dp(15).toFloat()
+                setStroke(dp(1), Color.rgb(211, 228, 219))
             }
-            elevation = dp(1).toFloat()
+            elevation = dp(2).toFloat()
             isClickable = true
             isFocusable = true
             contentDescription = label
@@ -2195,15 +2229,16 @@ private var receivedMp3File: File? = null
                 textSize = if (label == "SERVER") 20f else 19f
                 gravity = Gravity.CENTER
                 setTextColor(Color.WHITE)
+                val tileAccent = if (label == "CHAT ADMIN") accent else Color.rgb(24, 105, 77)
                 background = GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
-                    intArrayOf(blendWithWhite(accent, 0.12f), accent, blendWithWhite(accent, 0.28f))
+                    intArrayOf(blendWithWhite(tileAccent, 0.12f), tileAccent, blendWithWhite(tileAccent, 0.28f))
                 ).apply {
                     cornerRadius = dp(11).toFloat()
-                    setStroke(dp(1), Color.argb(95, 255, 255, 255))
+                    setStroke(dp(1), Color.argb(105, 255, 255, 255))
                 }
-                layoutParams = LinearLayout.LayoutParams(dp(30), dp(30)).apply {
-                    marginEnd = dp(6)
+                layoutParams = LinearLayout.LayoutParams(dp(32), dp(32)).apply {
+                    marginEnd = dp(7)
                 }
             }
         }
@@ -2226,17 +2261,17 @@ private var receivedMp3File: File? = null
         }
         textStack.addView(TextView(this).apply {
             text = label
-            textSize = 11f
+            textSize = 11.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.01f
-            setTextColor(Color.rgb(31, 48, 79))
+            letterSpacing = 0.012f
+            setTextColor(Color.rgb(28, 48, 42))
             maxLines = 2
             setLineSpacing(dp(1).toFloat(), 1f)
         })
         textStack.addView(TextView(this).apply {
             text = helper
-            textSize = 9f
-            setTextColor(Color.rgb(94, 109, 135))
+            textSize = 9.5f
+            setTextColor(Color.rgb(91, 111, 101))
             setPadding(0, dp(2), 0, 0)
             maxLines = 2
             setLineSpacing(dp(1).toFloat(), 1f)
@@ -4262,9 +4297,9 @@ private var receivedMp3File: File? = null
                                     gravity = Gravity.CENTER_VERTICAL
                                     setPadding(dp(7), dp(6), dp(7), dp(6))
                                     background = GradientDrawable().apply {
-                                        setColor(Color.WHITE)
-                                        cornerRadius = dp(12).toFloat()
-                                        setStroke(dp(1), Color.rgb(226, 233, 243))
+                                        setColor(Color.rgb(250, 253, 251))
+                                        cornerRadius = dp(13).toFloat()
+                                        setStroke(dp(1), Color.rgb(216, 231, 222))
                                     }
                                     layoutParams = LinearLayout.LayoutParams(
                                         ViewGroup.LayoutParams.MATCH_PARENT, dp(80)
@@ -4272,7 +4307,7 @@ private var receivedMp3File: File? = null
                                 }
                                 val image = ImageView(this).apply {
                                     scaleType = ImageView.ScaleType.CENTER_CROP
-                                    setBackgroundColor(Color.rgb(235, 240, 247))
+                                    setBackgroundColor(Color.rgb(235, 245, 239))
                                     layoutParams = LinearLayout.LayoutParams(dp(66), dp(66))
                                 }
                                 val info = TextView(this).apply {
@@ -4280,7 +4315,7 @@ private var receivedMp3File: File? = null
                                         item.name + "\n" +
                                         android.text.format.Formatter.formatFileSize(this@MainActivity, item.sizeBytes)
                                     textSize = 12f
-                                    setTextColor(Color.rgb(39, 53, 78))
+                                    setTextColor(Color.rgb(31, 57, 43))
                                     setPadding(dp(10), 0, dp(4), 0)
                                     maxLines = 2
                                     layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
