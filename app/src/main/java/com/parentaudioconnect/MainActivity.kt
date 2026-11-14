@@ -1896,9 +1896,10 @@ private var receivedMp3File: File? = null
                 val wave = if (audioActive) {
                     (kotlin.math.sin(now / 175.0 + i * 0.72) * 0.5 + 0.5).toFloat()
                 } else {
-                    0.12f + (i % 3) * 0.025f
+                    // Keep a gentle equalizer silhouette while idle, not a row of loading dots.
+                    listOf(0.18f, 0.30f, 0.48f, 0.34f, 0.66f, 0.43f, 0.24f, 0.58f, 0.78f, 0.46f, 0.29f, 0.62f, 0.40f, 0.22f, 0.50f)[i]
                 }
-                val barHeight = dp(5).toFloat() + wave * dp(if (audioActive) 31 else 4)
+                val barHeight = dp(5).toFloat() + wave * dp(if (audioActive) 31 else 14)
                 val x = startX + i * (barWidth + gap)
                 barPaint.color = if (audioActive) {
                     // Active playback uses a vivid, animated green equalizer.
