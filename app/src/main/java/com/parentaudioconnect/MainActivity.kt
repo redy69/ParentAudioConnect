@@ -500,10 +500,10 @@ private var receivedMp3File: File? = null
         ).apply { cornerRadius = dp(18).toFloat() }
         startButton = createActionButton("🎙", "BICARA LIVE", Color.rgb(25, 91, 67))
         stopButton = createActionButton("⏹", "HENTIKAN LIVE", Color.rgb(190, 55, 55))
-        sendMp3Button = createActionButton("♫", "PUTAR MP3", Color.rgb(55, 80, 220))
+        sendMp3Button = createActionButton("♫", "PUTAR MP3", Color.rgb(25, 91, 67))
         playMp3Button = createButton("PUTAR MP3 DITERIMA")
         adminWhatsAppButton = createActionButton("WA", "CHAT ADMIN", Color.rgb(37, 211, 102))
-        cameraLiveButton = createActionButton("📷", "KAMERA LIVE", Color.rgb(45, 91, 210))
+        cameraLiveButton = createActionButton("📷", "KAMERA LIVE", Color.rgb(40, 116, 84))
         actionButtonsRow = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -571,7 +571,7 @@ private var receivedMp3File: File? = null
         cancelPairingButton = createButton("BATALKAN KODE")
         updateButton = createButton("PERIKSA PEMBARUAN")
         cameraStandbyButton = createButton("AKTIFKAN SIAGA KAMERA")
-        liveKitTestButton = createActionButton("▤", "SERVER", Color.rgb(55, 80, 220))
+        liveKitTestButton = createActionButton("▤", "SERVER", Color.rgb(25, 91, 67))
         listOf(playMp3Button, cameraStandbyButton).forEach { button ->
             button.textSize = 12.5f
             button.minHeight = dp(44)
@@ -850,11 +850,11 @@ private var receivedMp3File: File? = null
             letterSpacing = 0.085f
             setPadding(dp(4), dp(8), dp(4), dp(4))
         }
-        parentAppBlockPanel = createActionButton("🚫", "BLOKIR APLIKASI", Color.rgb(55, 80, 220))
+        parentAppBlockPanel = createActionButton("🚫", "BLOKIR APLIKASI", Color.rgb(25, 91, 67))
         parentAppBlockSubtitle = ((parentAppBlockPanel.getChildAt(1) as LinearLayout).getChildAt(1) as TextView)
         parentAppBlockPanel.setOnClickListener { showParentAppBlockDialog() }
 
-        val parentGalleryButton = createActionButton("🖼️", "GALLERY", Color.rgb(55, 80, 220)).apply {
+        val parentGalleryButton = createActionButton("🖼️", "GALLERY", Color.rgb(25, 91, 67)).apply {
             setOnClickListener { showGaleriBackupMenu() }
         }
         parentGalleryButton.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
@@ -862,7 +862,7 @@ private var receivedMp3File: File? = null
         }
         secondActionRow.addView(parentGalleryButton, LinearLayout.LayoutParams(actionParams))
 
-        val mapsButton = createActionButton("🗺️", "MAPS", Color.rgb(55, 80, 220)).apply {
+        val mapsButton = createActionButton("🗺️", "MAPS", Color.rgb(25, 91, 67)).apply {
             setOnClickListener { showMapsPage() }
         }
         mapsButton.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
