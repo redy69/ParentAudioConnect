@@ -236,15 +236,15 @@ private var receivedMp3File: File? = null
             letterSpacing = 0.02f
             setTextColor(Color.rgb(105, 116, 137))
             gravity = Gravity.CENTER
-            setPadding(dp(7), dp(5), dp(7), dp(5))
+            setPadding(dp(8), dp(4), dp(8), dp(4))
             background = GradientDrawable().apply {
-                setColor(Color.rgb(239, 243, 249))
+                setColor(Color.rgb(242, 245, 249))
                 cornerRadius = dp(14).toFloat()
-                setStroke(dp(1), Color.rgb(215, 223, 235))
+                setStroke(dp(1), Color.rgb(218, 225, 234))
             }
             minWidth = dp(72)
-            minHeight = dp(36)
-            maxLines = 2
+            minHeight = dp(34)
+            maxLines = 1
             setLineSpacing(dp(1).toFloat(), 1f)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -273,20 +273,20 @@ private var receivedMp3File: File? = null
         childAudioActivityText = TextView(this).apply {
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             text = "○ Tidak sedang memutar audio"
-            textSize = 13f
+            textSize = 12.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            letterSpacing = 0.012f
-            setTextColor(Color.rgb(32, 55, 92))
+            letterSpacing = 0.008f
+            setTextColor(Color.rgb(93, 105, 123))
             gravity = Gravity.CENTER_VERTICAL
-            setLineSpacing(dp(3).toFloat(), 1f)
+            setLineSpacing(dp(2).toFloat(), 1f)
             setPadding(dp(12), dp(6), dp(12), dp(6))
-            minHeight = dp(46)
+            minHeight = dp(44)
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.WHITE, Color.rgb(237, 245, 255))
+                intArrayOf(Color.WHITE, Color.rgb(245, 247, 250))
             ).apply {
                 cornerRadius = dp(18).toFloat()
-                setStroke(dp(1), Color.rgb(190, 211, 242))
+                setStroke(dp(1), Color.rgb(218, 225, 234))
             }
             elevation = dp(2).toFloat()
             layoutParams = LinearLayout.LayoutParams(
@@ -1030,13 +1030,13 @@ private var receivedMp3File: File? = null
             "Status koneksi: offline"
         }
         connectionStatusText.setTextColor(
-            if (connected) Color.rgb(24, 128, 82) else Color.rgb(105, 116, 137)
+            if (connected) Color.rgb(22, 113, 77) else Color.rgb(98, 110, 128)
         )
         (connectionStatusText.background as? GradientDrawable)?.apply {
-            setColor(if (connected) Color.rgb(226, 247, 237) else Color.rgb(239, 243, 249))
+            setColor(if (connected) Color.rgb(230, 246, 237) else Color.rgb(242, 245, 249))
             setStroke(
                 dp(1),
-                if (connected) Color.rgb(196, 230, 211) else Color.rgb(215, 223, 235)
+                if (connected) Color.rgb(192, 226, 204) else Color.rgb(218, 225, 234)
             )
         }
     }
@@ -1779,21 +1779,21 @@ private var receivedMp3File: File? = null
         }
         val audioIsActive = liveAudioActive || mp3AudioActive
         childAudioActivityText.setTextColor(
-            if (audioIsActive) Color.rgb(23, 107, 67)
-            else Color.rgb(82, 98, 122)
+            if (audioIsActive) Color.rgb(22, 113, 77)
+            else Color.rgb(93, 105, 123)
         )
         (childAudioActivityText.background as? GradientDrawable)?.apply {
             setColors(
                 if (audioIsActive) {
-                    intArrayOf(Color.rgb(249, 255, 251), Color.rgb(231, 247, 237))
+                    intArrayOf(Color.rgb(248, 255, 250), Color.rgb(230, 246, 237))
                 } else {
-                    intArrayOf(Color.WHITE, Color.rgb(237, 245, 255))
+                    intArrayOf(Color.WHITE, Color.rgb(245, 247, 250))
                 }
             )
             setStroke(
                 dp(1),
-                if (audioIsActive) Color.rgb(194, 230, 207)
-                else Color.rgb(194, 215, 246)
+                if (audioIsActive) Color.rgb(192, 226, 204)
+                else Color.rgb(218, 225, 234)
             )
         }
     }
