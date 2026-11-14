@@ -5119,7 +5119,15 @@ private var receivedMp3File: File? = null
             val headingRow = LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, 0, 0, dp(7))
+                setPadding(dp(7), dp(6), dp(7), dp(6))
+                background = GradientDrawable().apply {
+                    setColor(Color.rgb(244, 249, 245))
+                    cornerRadius = dp(11).toFloat()
+                    setStroke(dp(1), Color.rgb(225, 237, 229))
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, 0, 0, dp(8)) }
             }
             headingRow.addView(TextView(this@MainActivity).apply {
                 text = icon
