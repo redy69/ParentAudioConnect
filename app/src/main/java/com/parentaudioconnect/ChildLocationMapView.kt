@@ -26,10 +26,10 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
         setPadding(dp(14), dp(14), dp(14), dp(12))
         background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
-            intArrayOf(Color.WHITE, Color.rgb(244, 248, 255))
+            intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
         ).apply {
-            cornerRadius = dp(22).toFloat()
-            setStroke(dp(1), Color.rgb(218, 228, 245))
+            cornerRadius = dp(20).toFloat()
+            setStroke(dp(1), Color.rgb(211, 225, 246)
         }
         elevation = dp(3).toFloat()
 
@@ -38,14 +38,25 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
             textSize = 11f
             letterSpacing = 0.12f
             setTypeface(null, Typeface.BOLD)
-            setTextColor(Color.rgb(75, 98, 139))
-            setPadding(0, 0, 0, dp(8))
+            setTextColor(Color.rgb(48, 78, 133))
+            includeFontPadding = false
+            setPadding(dp(10), dp(7), dp(10), dp(9))
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(235, 242, 255))
+                cornerRadius = dp(10).toFloat()
+            }
         })
         status.text = "Menunggu lokasi dari HP anak. Berbagi lokasi harus diaktifkan dari perangkat anak."
-        status.textSize = 12f
+        status.textSize = 11.5f
         status.setLineSpacing(dp(2).toFloat(), 1f)
-        status.setTextColor(Color.rgb(104, 117, 140))
-        status.setPadding(0, 0, 0, dp(12))
+        status.setTextColor(Color.rgb(78, 96, 126))
+        status.includeFontPadding = false
+        status.setPadding(dp(10), dp(9), dp(10), dp(9))
+        status.background = GradientDrawable().apply {
+            setColor(Color.rgb(246, 249, 255))
+            cornerRadius = dp(11).toFloat()
+            setStroke(dp(1), Color.rgb(222, 231, 246))
+        }
         addView(status)
 
         map.settings.javaScriptEnabled = true
@@ -69,8 +80,11 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
         }
         map.isVerticalScrollBarEnabled = false
         map.isHorizontalScrollBarEnabled = false
-        map.setBackgroundColor(Color.rgb(232, 239, 248))
-        addView(map, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(390)))
+        map.setBackgroundColor(Color.rgb(226, 235, 248))
+        map.isFocusable = true
+        addView(map, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(390)).apply {
+            topMargin = dp(2)
+        })
         loadMapPage()
     }
 
