@@ -1515,17 +1515,33 @@ private var receivedMp3File: File? = null
             ?.filterIsInstance<Map<String, Any>>()
             ?.takeLast(30)?.reversed() ?: emptyList()
         safeZonesContainer.addView(TextView(this).apply {
-            text = "RIWAYAT AKTIVITAS ZONA AMAN"
-            textSize = 12f
+            text = "🕘  RIWAYAT AKTIVITAS ZONA AMAN"
+            textSize = 11.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(25, 91, 67))
-            setPadding(dp(3), dp(12), dp(3), dp(6))
+            letterSpacing = 0.025f
+            setTextColor(Color.rgb(45, 79, 112))
+            setPadding(dp(11), dp(9), dp(11), dp(9))
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(239, 246, 252))
+                cornerRadius = dp(11).toFloat()
+                setStroke(dp(1), Color.rgb(210, 225, 239))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(8), 0, dp(6)) }
         })
         if (events.isEmpty()) {
             safeZonesContainer.addView(TextView(this).apply {
                 text = "Belum ada aktivitas masuk atau keluar zona aman."
                 textSize = 11.5f
-                setTextColor(Color.rgb(104, 117, 140))
+                setTextColor(Color.rgb(91, 108, 124))
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(11), dp(10), dp(11), dp(10))
+                background = GradientDrawable().apply {
+                    setColor(Color.rgb(249, 251, 253))
+                    cornerRadius = dp(11).toFloat()
+                    setStroke(dp(1), Color.rgb(222, 231, 239))
+                }
             })
             return
         }
@@ -1539,12 +1555,12 @@ private var receivedMp3File: File? = null
                 text = (if (entering) "● MASUK  " else "○ KELUAR  ") + zoneName + "\n" + dateText
                 textSize = 11.5f
                 setLineSpacing(dp(2).toFloat(), 1f)
-                setTextColor(Color.rgb(48, 68, 105))
+                setTextColor(if (entering) Color.rgb(27, 91, 62) else Color.rgb(151, 65, 68))
                 setPadding(dp(11), dp(9), dp(11), dp(9))
                 background = GradientDrawable().apply {
-                    setColor(Color.rgb(250, 253, 251))
+                    setColor(if (entering) Color.rgb(241, 249, 244) else Color.rgb(255, 246, 246))
                     cornerRadius = dp(12).toFloat()
-                    setStroke(dp(1), Color.rgb(216, 231, 222))
+                    setStroke(dp(1), if (entering) Color.rgb(207, 229, 214) else Color.rgb(240, 215, 216))
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
