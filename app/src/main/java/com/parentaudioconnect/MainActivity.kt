@@ -2689,7 +2689,7 @@ private var receivedMp3File: File? = null
                     cornerRadius = dp(17).toFloat()
                     setStroke(
                         dp(if (selectedChildCode == code) 1.5f.toInt() else 1),
-                        if (selectedChildCode == code) Color.rgb(133, 169, 235)
+                        if (selectedChildCode == code) Color.rgb(105, 161, 134)
                         else Color.rgb(218, 229, 246)
                     )
                 }
@@ -2750,7 +2750,7 @@ private var receivedMp3File: File? = null
                 setTextColor(Color.WHITE)
                 setPadding(dp(6), dp(3), dp(6), dp(3))
                 background = GradientDrawable().apply {
-                    setColor(Color.rgb(55, 100, 210))
+                    setColor(Color.rgb(25, 91, 67))
                     cornerRadius = dp(20).toFloat()
                 }
             })
