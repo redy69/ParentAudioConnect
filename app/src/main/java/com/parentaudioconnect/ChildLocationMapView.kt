@@ -29,7 +29,7 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
             intArrayOf(Color.WHITE, Color.rgb(242, 247, 255))
         ).apply {
             cornerRadius = dp(20).toFloat()
-            setStroke(dp(1), Color.rgb(211, 225, 246)
+            setStroke(dp(1), Color.rgb(211, 225, 246))
         }
         elevation = dp(3).toFloat()
 
