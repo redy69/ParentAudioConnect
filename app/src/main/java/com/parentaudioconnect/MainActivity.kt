@@ -3531,7 +3531,7 @@ private var receivedMp3File: File? = null
                         val active = labels[position].contains("• diblokir sampai")
                         return LinearLayout(this@MainActivity).apply {
                             orientation = LinearLayout.VERTICAL
-                            setPadding(dp(14), dp(10), dp(14), dp(10))
+                            setPadding(dp(11), dp(7), dp(11), dp(7))
                             background = GradientDrawable(
                                 GradientDrawable.Orientation.TL_BR,
                                 if (active) intArrayOf(Color.rgb(225, 245, 235), Color.rgb(238, 249, 243))
@@ -3543,13 +3543,13 @@ private var receivedMp3File: File? = null
                             addView(TextView(this@MainActivity).apply {
                                 text = labels[position]
                                 setTextColor(if (active) Color.rgb(29, 112, 76) else Color.rgb(35, 55, 72))
-                                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f)
+                                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 13.5f)
                                 setTypeface(typeface, android.graphics.Typeface.BOLD)
                             })
                         }
                     }
                 }
-                SantetHpDialogBuilder()
+                val appDialog = SantetHpDialogBuilder()
                     .setTitle("Pilih aplikasi • atur durasi masing-masing")
                     .setAdapter(appAdapter) { _, which ->
                         val (pkg, name) = apps[which]
@@ -3627,7 +3627,14 @@ private var receivedMp3File: File? = null
                         }
                     }
                     .setPositiveButton("Tutup", null)
-                    .show()
+                    .create()
+                appDialog.setOnShowListener {
+                    appDialog.listView?.apply {
+                        divider = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                        dividerHeight = dp(6)
+                    }
+                }
+                appDialog.show()
             }
             .addOnFailureListener {
                 Toast.makeText(this, "Gagal mengambil daftar aplikasi anak.", Toast.LENGTH_LONG).show()
