@@ -1841,7 +1841,7 @@ private var receivedMp3File: File? = null
                     message.setPadding(dp(12), dp(11), dp(12), dp(11))
                     message.background = GradientDrawable(
                         GradientDrawable.Orientation.TL_BR,
-                        intArrayOf(Color.rgb(247, 250, 255), Color.rgb(235, 245, 239))
+                        intArrayOf(Color.rgb(247, 250, 255), Color.rgb(235, 243, 255))
                     ).apply {
                         cornerRadius = dp(13).toFloat()
                         setStroke(dp(1), Color.rgb(177, 202, 238))
