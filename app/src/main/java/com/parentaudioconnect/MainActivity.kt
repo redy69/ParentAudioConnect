@@ -5265,10 +5265,12 @@ private var receivedMp3File: File? = null
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
             setPadding(dp(8), dp(4), dp(8), dp(4))
-            background = GradientDrawable().apply {
-                setColor(Color.rgb(231, 244, 235))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf(Color.rgb(228, 245, 236), Color.rgb(235, 244, 255))
+            ).apply {
                 cornerRadius = dp(8).toFloat()
-                setStroke(dp(1), Color.rgb(205, 228, 211))
+                setStroke(dp(1), Color.rgb(197, 222, 216))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
