@@ -2091,7 +2091,7 @@ private var receivedMp3File: File? = null
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(7), dp(5), dp(7), dp(5))
+            setPadding(dp(8), dp(5), dp(8), dp(5))
             minimumHeight = dp(58)
             background = GradientDrawable().apply {
                 setColor(Color.WHITE)
@@ -2105,8 +2105,8 @@ private var receivedMp3File: File? = null
         }
         val iconView: View = if (label == "CHAT ADMIN") {
             WhatsAppBrandIconView().apply {
-                layoutParams = LinearLayout.LayoutParams(dp(30), dp(30)).apply {
-                    marginEnd = dp(6)
+                layoutParams = LinearLayout.LayoutParams(dp(31), dp(31)).apply {
+                    marginEnd = dp(7)
                 }
             }
         } else {
@@ -2146,7 +2146,7 @@ private var receivedMp3File: File? = null
         }
         textStack.addView(TextView(this).apply {
             text = label
-            textSize = 10.8f
+            textSize = 11f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.01f
             setTextColor(Color.rgb(31, 48, 79))
@@ -2155,7 +2155,7 @@ private var receivedMp3File: File? = null
         })
         textStack.addView(TextView(this).apply {
             text = helper
-            textSize = 8.5f
+            textSize = 9f
             setTextColor(Color.rgb(94, 109, 135))
             setPadding(0, dp(2), 0, 0)
             maxLines = 2
@@ -4823,7 +4823,7 @@ private var receivedMp3File: File? = null
             })
             headingRow.addView(TextView(this@MainActivity).apply {
                 text = title
-                textSize = 11.5f
+                textSize = 12f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 letterSpacing = 0.035f
                 setTextColor(Color.rgb(40, 69, 119))
@@ -4837,7 +4837,7 @@ private var receivedMp3File: File? = null
     private fun addChildActivityRow(container: LinearLayout, value: String, muted: Boolean = false) {
         val row = TextView(this).apply {
             text = value
-            textSize = 11.5f
+            textSize = 11.8f
             setTextColor(if (muted) Color.rgb(112, 125, 148) else Color.rgb(48, 65, 96))
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(9), dp(6), dp(9), dp(6))
