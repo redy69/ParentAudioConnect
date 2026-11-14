@@ -177,8 +177,8 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
               .leaflet-popup-content-wrapper{border-radius:12px;box-shadow:0 3px 14px #17345b22}
               .leaflet-popup-content{font-size:12px;line-height:1.45;color:#294536}
               .leaflet-popup-tip{box-shadow:0 2px 8px #17345b18}
-              #searchPanel{display:none;position:absolute;z-index:1000;top:10px;left:10px;right:10px;background:#fff;padding:10px;border:1px solid #dce6f5;border-radius:14px;box-shadow:0 4px 16px #17345b33}
-              #placeSearch{width:100%;box-sizing:border-box;border:1px solid #d5deeb;border-radius:10px;padding:12px;font-size:14px;outline:none;color:#243b60}#placeSearch:focus{border-color:#3d936b;box-shadow:0 0 0 2px #3d936b22}
+              #searchPanel{display:none;position:absolute;z-index:1000;top:10px;left:10px;right:10px;background:#fff;padding:10px;border:1px solid #d7e7dc;border-radius:14px;box-shadow:0 4px 16px #174b3526}
+              #placeSearch{width:100%;box-sizing:border-box;border:1px solid #d9e5dd;border-radius:10px;padding:12px;font-size:14px;outline:none;color:#294536;background:#fcfefc}#placeSearch:focus{border-color:#3d936b;box-shadow:0 0 0 2px #3d936b22}
               #searchResults{max-height:150px;overflow:auto}
               .searchResult{padding:10px 8px;border-bottom:1px solid #edf1f6;border-radius:7px;font-size:12px;color:#294536;line-height:1.4}
               .searchResult:active{background:#eef7f1;color:#205c40}
