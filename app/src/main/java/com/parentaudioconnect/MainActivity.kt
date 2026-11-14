@@ -475,8 +475,8 @@ private var receivedMp3File: File? = null
             GradientDrawable.Orientation.TL_BR,
             intArrayOf(Color.rgb(20, 135, 163), Color.rgb(34, 105, 190))
         ).apply { cornerRadius = dp(18).toFloat() }
-        startButton = createActionButton("🎙", "BICARA LIVE", Color.rgb(55, 80, 220))
-        stopButton = createActionButton("🎙", "HENTIKAN LIVE", Color.rgb(220, 75, 75))
+        startButton = createActionButton("🎙", "BICARA LIVE", Color.rgb(25, 91, 67))
+        stopButton = createActionButton("⏹", "HENTIKAN LIVE", Color.rgb(190, 55, 55))
         sendMp3Button = createActionButton("♫", "PUTAR MP3", Color.rgb(55, 80, 220))
         playMp3Button = createButton("PUTAR MP3 DITERIMA")
         adminWhatsAppButton = createActionButton("WA", "CHAT ADMIN", Color.rgb(37, 211, 102))
@@ -2954,7 +2954,13 @@ private var receivedMp3File: File? = null
         if (currentRole != "child") return
         val enabled = getSharedPreferences("parent_audio", MODE_PRIVATE)
             .getBoolean("child_location_sharing_enabled", false)
-        val message = "Berbagi lokasi mengirim koordinat perangkat ini ke HP orang tua yang sudah dipasangkan, kira-kira setiap 15 menit saat layanan aktif. Akurasi mengikuti izin lokasi Android (perkiraan atau presisi). Notifikasi SantetHP akan terlihat selama berbagi berlangsung. Lokasi tidak dikirim sebelum Anda mengaktifkannya dan Anda dapat menghentikannya kapan saja."
+        val message = buildString {
+            append(if (enabled) "STATUS: BERBAGI LOKASI AKTIF" else "STATUS: BERBAGI LOKASI NONAKTIF")
+            append("\\n\\nCARA KERJA\\n")
+            append("Koordinat perangkat ini dikirim ke HP orang tua yang sudah dipasangkan, kira-kira setiap 15 menit saat layanan aktif. Akurasi mengikuti izin lokasi Android (perkiraan atau presisi).")
+            append("\\n\\nKENDALI DAN PRIVASI\\n")
+            append("Lokasi tidak dikirim sebelum Anda mengaktifkannya. Notifikasi SantetHP akan terlihat selama berbagi berlangsung, dan Anda dapat menghentikannya kapan saja.")
+        }
         SantetHpDialogBuilder()
             .setTitle(if (enabled) "Berbagi lokasi sedang aktif" else "Izin berbagi lokasi")
             .setMessage(message)
