@@ -172,6 +172,11 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
               .leaflet-container{font-family:Arial,sans-serif}
               .child-pin{width:18px;height:18px;border-radius:50%;background:#2878ed;border:4px solid white;box-shadow:0 2px 12px #17345b88}
               .leaflet-control-attribution{font-size:9px}
+              .leaflet-control-zoom a{color:#245b43;border-color:#d7e6dc}
+              .leaflet-control-zoom a:hover{background:#eef7f1;color:#17452f}
+              .leaflet-popup-content-wrapper{border-radius:12px;box-shadow:0 3px 14px #17345b22}
+              .leaflet-popup-content{font-size:12px;line-height:1.45;color:#294536}
+              .leaflet-popup-tip{box-shadow:0 2px 8px #17345b18}
               #searchPanel{display:none;position:absolute;z-index:1000;top:10px;left:10px;right:10px;background:#fff;padding:10px;border:1px solid #dce6f5;border-radius:14px;box-shadow:0 4px 16px #17345b33}
               #placeSearch{width:100%;box-sizing:border-box;border:1px solid #d5deeb;border-radius:10px;padding:12px;font-size:14px;outline:none;color:#243b60}#placeSearch:focus{border-color:#5278c7;box-shadow:0 0 0 2px #5278c722}
               #searchResults{max-height:150px;overflow:auto}
