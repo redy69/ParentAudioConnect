@@ -622,7 +622,7 @@ private var receivedMp3File: File? = null
             visibility = View.GONE
         }
         childModePanel.setOnClickListener {
-            AlertDialog.Builder(this)
+            SantetHpDialogBuilder()
                 .setTitle("Riwayat penggunaan aplikasi")
                 .setMessage(
                     "SantetHP perlu izin khusus Android bernama Akses penggunaan aplikasi (Usage Access). Ketuk Buka pengaturan, cari SantetHP, lalu aktifkan sakelarnya. Setelah kembali ke SantetHP, status izin akan diperiksa langsung oleh Android. Yang dibagikan hanya nama aplikasi dan perkiraan durasi penggunaan 24 jam terakhir."
@@ -1193,7 +1193,7 @@ private var receivedMp3File: File? = null
         ) return
         if (prefs.getBoolean("child_schedule_notification_prompted", false)) return
 
-        AlertDialog.Builder(this)
+        SantetHpDialogBuilder()
             .setTitle("Aktifkan notifikasi jadwal")
             .setMessage(
                 "Jadwal penggunaan HP dari orang tua sudah tersimpan. Izinkan notifikasi agar SantetHP dapat memberi pengingat saat waktu belajar atau istirahat dimulai dan berakhir. Pengingat ini hanya berjalan sesuai jadwal yang tersimpan di HP anak."
@@ -1224,7 +1224,7 @@ private var receivedMp3File: File? = null
         ) return
         if (prefs.getBoolean("child_operator_permission_prompted", false)) return
 
-        AlertDialog.Builder(this)
+        SantetHpDialogBuilder()
             .setTitle("Izin nama operator seluler")
             .setMessage(
                 "SantetHP dapat menampilkan nama operator SIM pada HP orang tua, misalnya Telkomsel atau Indosat. Izin ini hanya digunakan untuk membaca nama operator jaringan. SantetHP tidak membaca nomor telepon, SMS, atau isi komunikasi. Izin ini opsional; pemantauan baterai dan jenis jaringan tetap berjalan jika ditolak."
@@ -1412,7 +1412,7 @@ private var receivedMp3File: File? = null
                 text = "Hapus"
                 isAllCaps = false
                 setOnClickListener {
-                    AlertDialog.Builder(this@MainActivity)
+                    SantetHpDialogBuilder()
                         .setTitle("Hapus titik aman?")
                         .setMessage("Area " + zone.name + " akan dihapus.")
                         .setNegativeButton("Batal", null)
@@ -1549,7 +1549,7 @@ private var receivedMp3File: File? = null
             setPadding(0, dp(8), 0, 0)
         })
 
-        val dialog = AlertDialog.Builder(this)
+        val dialog = SantetHpDialogBuilder()
             .setTitle(if (existing == null) "Tambah titik aman" else "Edit titik aman")
             .setView(popupContentCard(form)).setNegativeButton("Batal", null)
             .setPositiveButton("Simpan", null).create()
@@ -1603,7 +1603,7 @@ private var receivedMp3File: File? = null
 
         // On the parent home screen, ask before leaving SantetHP.
         if (currentRole == "parent") {
-            AlertDialog.Builder(this)
+            SantetHpDialogBuilder()
                 .setTitle("Keluar dari SantetHP?")
                 .setMessage("Apakah kamu yakin ingin keluar dari aplikasi?")
                 .setNegativeButton("BATAL", null)
@@ -1631,7 +1631,7 @@ private var receivedMp3File: File? = null
         ) return
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         if (prefs.getBoolean("safe_zone_notification_prompted", false)) return
-        AlertDialog.Builder(this)
+        SantetHpDialogBuilder()
             .setTitle("Aktifkan notifikasi zona aman")
             .setMessage("Izinkan SantetHP menampilkan pemberitahuan saat HP anak masuk atau keluar dari titik aman.")
             .setNegativeButton("Nanti") { _, _ ->
@@ -1779,6 +1779,46 @@ private var receivedMp3File: File? = null
             .addOnFailureListener {
                 // Keep the app usable if token retrieval is temporarily unavailable.
             }
+    }
+
+    private inner class SantetHpDialogBuilder : AlertDialog.Builder(this@MainActivity) {
+        override fun create(): AlertDialog {
+            val dialog = super.create()
+            styleDialogWhenLaidOut(dialog)
+            return dialog
+        }
+
+        override fun show(): AlertDialog {
+            val dialog = super.show()
+            styleDialogWhenLaidOut(dialog)
+            return dialog
+        }
+    }
+
+    private fun styleDialogWhenLaidOut(dialog: AlertDialog) {
+        dialog.window?.setBackgroundDrawableResource(R.drawable.bg_santethp_popup)
+        val decor = dialog.window?.decorView ?: return
+        val observer = decor.viewTreeObserver
+        observer.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                val message = dialog.findViewById<TextView>(android.R.id.message)
+                if (message != null) {
+                    message.setTextColor(Color.rgb(35, 55, 91))
+                    message.setPadding(dp(12), dp(11), dp(12), dp(11))
+                    message.background = GradientDrawable(
+                        GradientDrawable.Orientation.TL_BR,
+                        intArrayOf(Color.rgb(247, 250, 255), Color.rgb(235, 243, 255))
+                    ).apply {
+                        cornerRadius = dp(13).toFloat()
+                        setStroke(dp(1), Color.rgb(177, 202, 238))
+                    }
+                    val params = message.layoutParams as? ViewGroup.MarginLayoutParams
+                    params?.setMargins(dp(8), dp(5), dp(8), dp(5))
+                    if (params != null) message.layoutParams = params
+                }
+                if (observer.isAlive) observer.removeOnGlobalLayoutListener(this)
+            }
+        })
     }
 
     private fun popupContentCard(content: View): LinearLayout = LinearLayout(this).apply {
@@ -2577,7 +2617,7 @@ private var receivedMp3File: File? = null
             hint = "Nama anak"
             isSingleLine = true
         }
-        AlertDialog.Builder(this)
+        SantetHpDialogBuilder()
             .setTitle("Beri nama anak")
             .setView(popupContentCard(input))
             .setNegativeButton("Batal", null)
@@ -2593,7 +2633,7 @@ private var receivedMp3File: File? = null
 
     private fun promptRemoveChild(code: String) {
         val childName = childNames[code] ?: "Anak"
-        AlertDialog.Builder(this)
+        SantetHpDialogBuilder()
             .setTitle("Lepaskan hubungan anak?")
             .setMessage("Hubungan dengan $childName akan dihapus. Perangkat anak lain tidak akan terpengaruh.")
             .setNegativeButton("Batal", null)
@@ -2880,7 +2920,7 @@ private var receivedMp3File: File? = null
         val enabled = getSharedPreferences("parent_audio", MODE_PRIVATE)
             .getBoolean("child_location_sharing_enabled", false)
         val message = "Berbagi lokasi mengirim koordinat perangkat ini ke HP orang tua yang sudah dipasangkan, kira-kira setiap 15 menit saat layanan aktif. Akurasi mengikuti izin lokasi Android (perkiraan atau presisi). Notifikasi SantetHP akan terlihat selama berbagi berlangsung. Lokasi tidak dikirim sebelum Anda mengaktifkannya dan Anda dapat menghentikannya kapan saja."
-        AlertDialog.Builder(this)
+        SantetHpDialogBuilder()
             .setTitle(if (enabled) "Berbagi lokasi sedang aktif" else "Izin berbagi lokasi")
             .setMessage(message)
             .setNegativeButton("Tutup", null)
@@ -2985,7 +3025,7 @@ private var receivedMp3File: File? = null
         if (currentRole != "child") return
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         val enabled = prefs.getBoolean("child_app_block_consent", false)
-        AlertDialog.Builder(this)
+        SantetHpDialogBuilder()
             .setTitle("Kontrol blokir aplikasi")
             .setMessage(
                 "Jika disetujui, HP anak mengirim daftar nama aplikasi yang tersedia agar orang tua dapat memilih aplikasi yang dibatasi. Saat aplikasi yang diblokir dibuka, SantetHP akan mengembalikan ke layar utama.\n\nUntuk menjalankannya Android meminta Accessibility Service diaktifkan secara manual. Layanan hanya memeriksa nama paket aplikasi yang sedang tampil; tidak membaca isi layar, pesan, foto, kata sandi, atau mengetik untuk pengguna. Anak dapat mencabut akses kapan saja dari Pengaturan Android."
@@ -3052,7 +3092,7 @@ private var receivedMp3File: File? = null
         } else {
             "Jika disetujui, SantetHP mengirim nama aplikasi yang sedang tampil ke HP orang tua setiap kali aplikasi berganti. Data dikirim melalui layanan Aksesibilitas Android yang diaktifkan secara manual. SantetHP hanya membaca nama paket aplikasi, bukan isi layar, pesan, foto, kata sandi, atau ketikan. Fitur ini terpisah dari blokir aplikasi dan dapat dihentikan kapan saja dari HP anak."
         }
-        val dialog = AlertDialog.Builder(this)
+        val dialog = SantetHpDialogBuilder()
             .setTitle("Pemantauan aplikasi aktif")
             .setMessage(message)
             .setNegativeButton("Tutup", null)
@@ -3098,7 +3138,7 @@ private var receivedMp3File: File? = null
         db.collection("pairings").document(code).get()
             .addOnSuccessListener { snapshot ->
                 if (snapshot.getBoolean("appBlockConsent") != true) {
-                    AlertDialog.Builder(this)
+                    SantetHpDialogBuilder()
                         .setTitle("Blokir aplikasi")
                         .setMessage("Fitur ini menunggu persetujuan dari HP anak dan aktivasi Accessibility Service secara manual.")
                         .setPositiveButton("Mengerti", null).show()
@@ -3137,7 +3177,7 @@ private var receivedMp3File: File? = null
                     }
                 }.toTypedArray()
 
-                AlertDialog.Builder(this)
+                SantetHpDialogBuilder()
                     .setTitle("Pilih aplikasi • atur durasi masing-masing")
                     .setItems(labels) { _, which ->
                         val (pkg, name) = apps[which]
@@ -3148,7 +3188,7 @@ private var receivedMp3File: File? = null
                             setText("60")
                             selectAll()
                         }
-                        val durationDialog = AlertDialog.Builder(this)
+                        val durationDialog = SantetHpDialogBuilder()
                             .setTitle("Durasi untuk $name")
                             .setMessage(
                                 if (currentUntil != null) {
@@ -3377,7 +3417,7 @@ private var receivedMp3File: File? = null
             return
         }
 
-        AlertDialog.Builder(this)
+        SantetHpDialogBuilder()
             .setTitle("Batalkan kode anak?")
             .setMessage("Kode $code akan dihapus dan tidak bisa digunakan lagi untuk memasangkan HP anak.")
             .setNegativeButton("Kembali", null)
@@ -3482,7 +3522,7 @@ private var receivedMp3File: File? = null
             }
             return
         }
-        AlertDialog.Builder(this)
+        SantetHpDialogBuilder()
             .setTitle("Pemantauan semua notifikasi")
             .setMessage(
                 "Jika diaktifkan, SantetHP dapat membaca nama aplikasi, judul, dan isi notifikasi yang ditampilkan Android pada HP ini, lalu menyimpannya agar dapat dilihat dari HP orang tua. Termasuk notifikasi pesan dan kode verifikasi jika aplikasi menampilkannya. Jangan aktifkan jika tidak setuju membagikan informasi tersebut. Izin khusus tetap harus diaktifkan secara manual pada Pengaturan Android."
@@ -3584,7 +3624,7 @@ private var receivedMp3File: File? = null
 
     private fun showChildMediaSettingsMenu() {
         if (currentRole != "child") return
-        AlertDialog.Builder(this)
+        SantetHpDialogBuilder()
             .setTitle("Pengaturan Galeri & Backup")
             .setItems(arrayOf("Berbagi Galeri Anak", "Penerimaan dari HP Orang Tua", "Backup Google Drive")) { _, which ->
                 when (which) {
@@ -3628,7 +3668,7 @@ private var receivedMp3File: File? = null
         } else {
             "Jika diaktifkan, HP orang tua yang sudah dipasangkan dapat mengirim foto dan video ke HP ini. File akan otomatis disimpan ke Galeri setelah transfer selesai dan lolos pemeriksaan. Tidak ada persetujuan berulang per file. Anda dapat menonaktifkannya kapan saja."
         }
-        AlertDialog.Builder(this)
+        SantetHpDialogBuilder()
             .setTitle(if (enabled) "Penerimaan foto/video aktif" else "Izinkan penerimaan foto/video")
             .setMessage(message)
             .setNegativeButton("Tutup", null)
@@ -3661,7 +3701,7 @@ private var receivedMp3File: File? = null
         val enabled = prefs.getBoolean("child_gallery_sharing_enabled", false)
         val backupEnabled = prefs.getBoolean("child_drive_backup_consent", false)
         val message = "Jika diaktifkan, daftar foto dan video dari HP ini dapat dilihat oleh HP orang tua yang sudah dipasangkan. Thumbnail ditampilkan lebih dulu; file asli/HD baru dikirim saat orang tua memilih item. Anda dapat menghentikan berbagi kapan saja."
-        val dialog = AlertDialog.Builder(this)
+        val dialog = SantetHpDialogBuilder()
             .setTitle(if (enabled) "Berbagi galeri sedang aktif" else "Persetujuan berbagi galeri")
             .setMessage(message)
             .setNegativeButton("Tutup", null)
@@ -3742,7 +3782,7 @@ private var receivedMp3File: File? = null
         } else {
             "Jika disetujui, hanya foto dan video yang ditambahkan SETELAH persetujuan ini yang akan dipersiapkan untuk backup ke Google Drive orang tua. Semua file lama tetap hanya tampil di Galeri Anak dan tidak akan diunggah. Persetujuan ini terpisah dari Berbagi Galeri dan dapat dicabut kapan saja. Pengiriman dilakukan melalui koneksi P2P dan hanya diunggah setelah akun Google Drive orang tua diotorisasi."
         }
-        AlertDialog.Builder(this)
+        SantetHpDialogBuilder()
             .setTitle(if (enabled) "Persetujuan Backup Drive aktif" else "Persetujuan Backup Google Drive")
             .setMessage(message)
             .setNegativeButton("Tutup", null)
@@ -3789,7 +3829,7 @@ private var receivedMp3File: File? = null
     private fun showGaleriBackupMenu() {
         if (currentRole != "parent") return
         val options = arrayOf("Galeri Anak", "Kirim ke HP Anak", "Backup Google Drive")
-        AlertDialog.Builder(this).setTitle("Galeri & Backup")
+        SantetHpDialogBuilder().setTitle("Galeri & Backup")
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> showParentGalleryStatus()
@@ -3813,7 +3853,7 @@ private var receivedMp3File: File? = null
             return
         }
         if (childSnapshots[code]?.getBoolean("parentMediaReceiveEnabled") != true) {
-            AlertDialog.Builder(this).setTitle("Penerimaan belum diaktifkan")
+            SantetHpDialogBuilder().setTitle("Penerimaan belum diaktifkan")
                 .setMessage("Aktifkan dan setujui terlebih dahulu menu Penerimaan dari HP Orang Tua pada HP anak. Setelah aktif, foto/video dapat disimpan otomatis tanpa persetujuan per file.")
                 .setPositiveButton("Mengerti", null).show()
             return
@@ -3988,7 +4028,7 @@ private var receivedMp3File: File? = null
                 setPadding(dp(4), dp(4), dp(4), dp(8))
             })
         }
-        val dialog = AlertDialog.Builder(this).setTitle("Backup Google Drive")
+        val dialog = SantetHpDialogBuilder().setTitle("Backup Google Drive")
             .setView(popupContentCard(content)).setPositiveButton("Hubungkan Google Drive", null)
             .setNegativeButton("Hentikan backup", null)
             .setNeutralButton("Simpan nama folder", null).create()
@@ -4127,7 +4167,7 @@ private var receivedMp3File: File? = null
         val backupEnabled = childSnapshots[code]?.getBoolean("driveBackupEnabled") == true
         val name = childNames[code] ?: "HP Anak"
         if (!enabled && !backupEnabled) {
-            AlertDialog.Builder(this)
+            SantetHpDialogBuilder()
                 .setTitle(if (enabled) "Galeri • " + name else "Backup Google Drive • " + name)
                 .setMessage("Berbagi galeri belum diaktifkan dari HP anak. Minta anak membuka panel BERBAGI GALERI HP INI, membaca penjelasan, lalu menyetujui izin media Android.")
                 .setPositiveButton("Mengerti", null)
@@ -4159,7 +4199,7 @@ private var receivedMp3File: File? = null
         }
         parentGalleryStatus = status
         parentGalleryList = list
-        val dialog = AlertDialog.Builder(this)
+        val dialog = SantetHpDialogBuilder()
             .setTitle("Galeri • " + name)
             .setView(popupContentCard(content))
             .setNegativeButton("Tutup", null)
@@ -4248,7 +4288,7 @@ private var receivedMp3File: File? = null
                                 row.addView(image)
                                 row.addView(info)
                                 row.setOnClickListener {
-                                    AlertDialog.Builder(this)
+                                    SantetHpDialogBuilder()
                                         .setTitle(item.name)
                                         .setMessage(
                                             "Ukuran asli: " + android.text.format.Formatter.formatFileSize(this, item.sizeBytes) +
@@ -4423,7 +4463,7 @@ private var receivedMp3File: File? = null
                                 row.addView(image)
                                 row.addView(info)
                                 row.setOnClickListener {
-                                    AlertDialog.Builder(this)
+                                    SantetHpDialogBuilder()
                                         .setTitle(item.name)
                                         .setMessage(
                                             "Ukuran asli: " + android.text.format.Formatter.formatFileSize(this, item.sizeBytes) +
@@ -4716,15 +4756,15 @@ private var receivedMp3File: File? = null
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(460)
             )
         }
-        val dialog = AlertDialog.Builder(this)
+        val dialog = SantetHpDialogBuilder()
             .setTitle("Notifikasi • ${childNames[code] ?: "HP Anak"}")
-            .setView(popupContentCard(scroll))
+            .setView(scroll)
             .setNegativeButton("Tutup", null)
             .setNeutralButton("Hapus riwayat", null)
             .create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                AlertDialog.Builder(this)
+                SantetHpDialogBuilder()
                     .setTitle("Hapus semua riwayat?")
                     .setMessage("Notifikasi yang tersimpan untuk perangkat ini akan dihapus permanen.")
                     .setNegativeButton("Batal", null)
@@ -5144,7 +5184,7 @@ private var receivedMp3File: File? = null
             isSingleLine = true
         }
 
-        AlertDialog.Builder(this)
+        SantetHpDialogBuilder()
             .setTitle("Hubungkan dengan Orang Tua")
             .setMessage("Masukkan kode dari HP orang tua.")
             .setView(popupContentCard(input))
@@ -5628,7 +5668,7 @@ private var receivedMp3File: File? = null
             "Server cadangan 5"
         )
         val selectedIndex = serverIds.indexOf(activeLiveKitServerId).coerceAtLeast(0)
-        AlertDialog.Builder(this)
+        SantetHpDialogBuilder()
             .setTitle("Pilih Server LiveKit")
             .setSingleChoiceItems(labels, selectedIndex) { dialog, which ->
                 dialog.dismiss()
