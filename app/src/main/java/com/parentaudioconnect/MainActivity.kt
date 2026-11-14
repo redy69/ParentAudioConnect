@@ -2503,6 +2503,20 @@ private var receivedMp3File: File? = null
         return if (recentlySeen) "● ONLINE" to true else "○ OFFLINE" to false
     }
 
+    private fun childLastSeen(code: String): String {
+        val statusAt = childSnapshots[code]?.getTimestamp("deviceStatusAt")
+            ?: return "Belum ada laporan perangkat"
+        val age = System.currentTimeMillis() - statusAt.toDate().time
+        if (age < -60_000L) return "Waktu perangkat belum sinkron"
+        if (age < 60_000L) return "Terakhir terlihat: baru saja"
+        val minutes = age / 60_000L
+        if (minutes < 60L) return "Terakhir terlihat: $minutes menit lalu"
+        val hours = minutes / 60L
+        if (hours < 24L) return "Terakhir terlihat: $hours jam lalu"
+        val days = hours / 24L
+        return "Terakhir terlihat: $days hari lalu"
+    }
+
     private fun updateSelectedChildButton() {
         val name = selectedChildCode?.let { childNames[it] }
         val arrow = if (isChildrenPanelExpanded) "▴" else "▾"
@@ -2716,6 +2730,14 @@ private var receivedMp3File: File? = null
                     setColor(if (connected) Color.rgb(226, 247, 237) else Color.rgb(239, 243, 249))
                     cornerRadius = dp(8).toFloat()
                 }
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            })
+            details.addView(TextView(this).apply {
+                text = childLastSeen(code)
+                textSize = 9.5f
+                setTextColor(Color.rgb(111, 125, 148))
+                setPadding(dp(1), dp(3), 0, 0)
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
             })
