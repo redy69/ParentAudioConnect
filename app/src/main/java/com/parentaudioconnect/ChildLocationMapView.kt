@@ -185,7 +185,8 @@ class ChildLocationMapView(context: Context) : LinearLayout(context) {
               #selectionPanel{display:none;position:absolute;z-index:1000;bottom:18px;left:12px;right:12px;text-align:center}
               #confirmPoint{border:0;border-radius:22px;background:#207754;color:white;padding:13px 24px;font-weight:bold;letter-spacing:.2px;box-shadow:0 3px 12px #174b3540}
               #confirmPoint:active{background:#185f41}
-              #searchHint{font-size:10px;color:#68758c;padding:5px 2px}
+              #placeSearch::placeholder{color:#89998e}
+              #searchHint{font-size:10px;color:#718579;padding:6px 3px 4px;line-height:1.4}
             </style></head><body>
             <div id="searchPanel">
               <input id="placeSearch" type="search" placeholder="Cari alamat, sekolah, toko, atau tempat..." autocomplete="off">
