@@ -2057,6 +2057,51 @@ private var receivedMp3File: File? = null
             }
         }
 
+    private fun popupChoiceCards(
+        items: List<Pair<String, String>>,
+        selectedIndex: Int = -1,
+        onSelect: (Int) -> Unit
+    ): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(2), dp(2), dp(2), dp(2))
+        items.forEachIndexed { index, item ->
+            val selected = index == selectedIndex
+            val card = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(14), dp(11), dp(14), dp(11))
+                background = GradientDrawable(
+                    GradientDrawable.Orientation.TL_BR,
+                    if (selected) intArrayOf(Color.rgb(225, 245, 235), Color.rgb(238, 249, 243))
+                    else intArrayOf(Color.rgb(247, 250, 255), Color.rgb(235, 243, 255))
+                ).apply {
+                    cornerRadius = dp(13).toFloat()
+                    setStroke(dp(1), if (selected) Color.rgb(91, 174, 132) else Color.rgb(185, 207, 235))
+                }
+                val heading = TextView(this@MainActivity).apply {
+                    text = item.first
+                    setTextColor(Color.rgb(35, 73, 60))
+                    setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f)
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                }
+                val detail = TextView(this@MainActivity).apply {
+                    text = item.second
+                    setTextColor(Color.rgb(91, 111, 126))
+                    setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11.5f)
+                    setPadding(0, dp(3), 0, 0)
+                }
+                addView(heading)
+                if (item.second.isNotBlank()) addView(detail)
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { onSelect(index) }
+            }
+            addView(card, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { if (index < items.lastIndex) bottomMargin = dp(8) })
+        }
+    }
+
     private fun popupContentCard(content: View): LinearLayout = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(12), dp(10), dp(12), dp(10))
@@ -4144,15 +4189,21 @@ private var receivedMp3File: File? = null
 
     private fun showGaleriBackupMenu() {
         if (currentRole != "parent") return
-        val options = arrayOf("Galeri Anak", "Kirim ke HP Anak", "Backup Google Drive")
-        SantetHpDialogBuilder().setTitle("Galeri & Backup")
-            .setItems(options) { _, which ->
+        val options = listOf(
+            "Galeri Anak" to "Lihat foto dan video dari perangkat anak",
+            "Kirim ke HP Anak" to "Pilih media untuk dikirim ke perangkat anak",
+            "Backup Google Drive" to "Atur pencadangan foto dan video"
+        )
+        val dialog = SantetHpDialogBuilder().setTitle("Galeri & Backup")
+            .setView(popupContentCard(popupChoiceCards(options) { which ->
                 when (which) {
                     0 -> showParentGalleryStatus()
                     1 -> showSendMediaToChildInfo()
                     2 -> showGoogleDriveBackupSettings()
                 }
-            }.setNegativeButton("Tutup", null).show()
+            }))
+            .setNegativeButton("Tutup", null).create()
+        dialog.show()
     }
 
     private fun showSendMediaToChildInfo() {
@@ -6070,14 +6121,17 @@ private var receivedMp3File: File? = null
             "Server cadangan 5"
         )
         val selectedIndex = serverIds.indexOf(activeLiveKitServerId).coerceAtLeast(0)
-        SantetHpDialogBuilder()
+        val serverOptions = labels.mapIndexed { index, label ->
+            label to if (index == selectedIndex) "Sedang dipilih" else "Pilih untuk koneksi audio"
+        }
+        val dialog = SantetHpDialogBuilder()
             .setTitle("Pilih Server LiveKit")
-            .setSingleChoiceItems(labels, selectedIndex) { dialog, which ->
-                dialog.dismiss()
+            .setView(popupContentCard(popupChoiceCards(serverOptions, selectedIndex) { which ->
                 applyLiveKitTestServer(code, serverIds[which], labels[which])
-            }
+            }))
             .setNegativeButton("Batal", null)
-            .show()
+            .create()
+        dialog.show()
     }
 
     private fun applyLiveKitTestServer(code: String, serverId: String, serverLabel: String) {
