@@ -3524,9 +3524,34 @@ private var receivedMp3File: File? = null
                     }
                 }.toTypedArray()
 
+                val appAdapter = object : android.widget.ArrayAdapter<String>(
+                    this@MainActivity, android.R.layout.simple_list_item_1, labels
+                ) {
+                    override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                        val active = labels[position].contains("• diblokir sampai")
+                        return LinearLayout(this@MainActivity).apply {
+                            orientation = LinearLayout.VERTICAL
+                            setPadding(dp(14), dp(10), dp(14), dp(10))
+                            background = GradientDrawable(
+                                GradientDrawable.Orientation.TL_BR,
+                                if (active) intArrayOf(Color.rgb(225, 245, 235), Color.rgb(238, 249, 243))
+                                else intArrayOf(Color.rgb(247, 250, 255), Color.rgb(235, 243, 255))
+                            ).apply {
+                                cornerRadius = dp(12).toFloat()
+                                setStroke(dp(1), if (active) Color.rgb(91, 174, 132) else Color.rgb(185, 207, 235))
+                            }
+                            addView(TextView(this@MainActivity).apply {
+                                text = labels[position]
+                                setTextColor(if (active) Color.rgb(29, 112, 76) else Color.rgb(35, 55, 72))
+                                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f)
+                                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                            })
+                        }
+                    }
+                }
                 SantetHpDialogBuilder()
                     .setTitle("Pilih aplikasi • atur durasi masing-masing")
-                    .setItems(labels) { _, which ->
+                    .setAdapter(appAdapter) { _, which ->
                         val (pkg, name) = apps[which]
                         val currentUntil = activeByPackage[pkg]?.third
                         val durationInput = EditText(this).apply {
