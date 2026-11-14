@@ -3136,14 +3136,15 @@ private var receivedMp3File: File? = null
     private fun watchChildPairingRemoval(code: String) {
         pairingListener?.remove()
         pairingListener = db.collection("pairings").document(code)
-            // Include metadata-only updates so a cached snapshot is followed by the
-            // server-confirmed state. This is important when the parent unlinks while
-            // the child app is already open.
+            // A missing cached document is not enough to unlink locally. Confirm it
+            // against the server so both cached and live deletion events are handled.
             .addSnapshotListener(com.google.firebase.firestore.MetadataChanges.INCLUDE) { snapshot, error ->
-                if (error != null || snapshot == null) return@addSnapshotListener
-                if (!snapshot.metadata.isFromCache && !snapshot.exists()) {
-                    handleChildPairingRemoved(code)
-                }
+                if (error != null || snapshot == null || snapshot.exists()) return@addSnapshotListener
+                db.collection("pairings").document(code)
+                    .get(com.google.firebase.firestore.Source.SERVER)
+                    .addOnSuccessListener { serverSnapshot ->
+                        if (!serverSnapshot.exists()) handleChildPairingRemoved(code)
+                    }
             }
     }
 
@@ -3360,9 +3361,9 @@ private var receivedMp3File: File? = null
             val code = prefs.getString("pair_code", null) ?: return
             ChildDeviceStatusWorker.schedule(this)
             codeText.text = code
-            showChildConnectedScreen()
-            watchChildPairingRemoval(code)
-            statusText.text = "Terhubung ke orang tua • menunggu perintah audio"
+            // Never restore the simplified child screen from local preferences alone.
+            // The server must still contain this pairing.
+            verifyChildPairingBeforeShowing(code)
         }
     }
 
