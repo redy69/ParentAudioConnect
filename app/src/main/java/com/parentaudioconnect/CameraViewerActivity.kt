@@ -155,7 +155,7 @@ class CameraViewerActivity : Activity() {
             )
             sendCameraCommand("switch", facing, closeAfter = false)
         }
-        val stop = createCameraControl("HENTIKAN", Color.rgb(255, 235, 238)).apply { setTextColor(Color.rgb(173, 52, 65)) }
+        val stop = createCameraControl("HENTIKAN", Color.rgb(190, 42, 52))
         stop.setOnClickListener { confirmStopCamera() }
         controls.addView(switch, LinearLayout.LayoutParams(0, dp(50), 1f).apply {
             marginEnd = dp(6)
