@@ -4806,10 +4806,12 @@ private var receivedMp3File: File? = null
                     val card = LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL
                         setPadding(dp(11), dp(9), dp(11), dp(9))
-                        background = GradientDrawable().apply {
-                            setColor(Color.WHITE)
+                        background = GradientDrawable(
+                            GradientDrawable.Orientation.TL_BR,
+                            intArrayOf(Color.rgb(248, 251, 255), Color.rgb(237, 245, 255))
+                        ).apply {
                             cornerRadius = dp(13).toFloat()
-                            setStroke(dp(1), Color.rgb(224, 229, 241))
+                            setStroke(dp(1), Color.rgb(177, 202, 238))
                         }
                         layoutParams = LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
