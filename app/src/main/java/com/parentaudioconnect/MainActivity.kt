@@ -1968,6 +1968,7 @@ private var receivedMp3File: File? = null
 
         roleIntroText.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.GONE }
+        updateChildUsageAccessPanel()
         updateChildGalleryPanel()
         updateChildLocationPanel()
         updateChildAppBlockPanel()
@@ -1976,21 +1977,22 @@ private var receivedMp3File: File? = null
 
         val issues = childPermissionIssues()
         val needsSetup = issues.isNotEmpty()
-        additionalControlsHeading.text = if (needsSetup) "PEMERIKSAAN PERIZINAN" else "PERANGKAT SIAP"
+        // Always show the optional feature/settings cards after a successful child pairing.
+        // A fresh install has all opt-in preferences set to false, which must not hide
+        // the setup page and incorrectly make the device look fully configured.
+        additionalControlsHeading.text = "PENGATURAN PERANGKAT ANAK"
         additionalControlsHeading.visibility = View.VISIBLE
-        childModePanel.visibility = if (issues.any { it == "Akses penggunaan aplikasi" }) View.VISIBLE else View.GONE
-        childLocationPanel.visibility = if (issues.any { it.startsWith("Izin lokasi") || it.startsWith("Izin notifikasi untuk layanan lokasi") }) View.VISIBLE else View.GONE
-        childAppBlockPanel.visibility = if (issues.any { it == "Aksesibilitas SantetHP" } &&
-            getSharedPreferences("parent_audio", MODE_PRIVATE).getBoolean("child_app_block_consent", false)) View.VISIBLE else View.GONE
-        childAppActivityPanel.visibility = if (issues.any { it == "Aksesibilitas SantetHP" } &&
-            getSharedPreferences("parent_audio", MODE_PRIVATE).getBoolean("child_app_activity_consent", false)) View.VISIBLE else View.GONE
-        childNotificationPanel.visibility = if (issues.any { it == "Akses pemantauan notifikasi" }) View.VISIBLE else View.GONE
-        childGalleryPanel.visibility = if (issues.any { it == "Akses foto dan video" }) View.VISIBLE else View.GONE
+        childModePanel.visibility = View.VISIBLE
+        childLocationPanel.visibility = View.VISIBLE
+        childAppBlockPanel.visibility = View.VISIBLE
+        childAppActivityPanel.visibility = View.VISIBLE
+        childNotificationPanel.visibility = View.VISIBLE
+        childGalleryPanel.visibility = View.VISIBLE
 
         statusText.text = if (needsSetup) {
-            "Beberapa izin untuk fitur yang diaktifkan perlu diperiksa: " + issues.joinToString(", ") + ". Ketuk kartu terkait untuk membuka pengaturan."
+            "Periksa izin Android untuk fitur yang sudah disetujui: " + issues.joinToString(", ") + ". Kartu pengaturan tetap tersedia untuk mengaktifkan atau mengelola fitur lainnya."
         } else {
-            "Semua izin untuk fitur yang digunakan sudah aktif. Pengaturan perangkat dikelola dari HP orang tua."
+            "Pilih dan atur fitur yang ingin digunakan pada perangkat ini. Semua fitur opsional tetap nonaktif sampai disetujui dari HP anak."
         }
         statusText.visibility = View.VISIBLE
         updateButton.visibility = View.VISIBLE
