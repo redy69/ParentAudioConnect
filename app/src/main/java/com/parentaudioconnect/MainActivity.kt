@@ -156,6 +156,7 @@ private lateinit var playMp3Button: Button
     private lateinit var actionButtonsRow: LinearLayout
     private lateinit var addChildButton: AnimatedGifButton
     private lateinit var selectedChildButton: Button
+    private lateinit var selectedChildAvatar: AnimatedGifIconView
     private lateinit var childQuickStatusText: TextView
     private lateinit var childBatteryGlyph: StatusGlyphDrawable
     private lateinit var childNetworkGlyph: StatusGlyphDrawable
@@ -418,7 +419,7 @@ private var receivedMp3File: File? = null
             setPadding(dp(11), dp(4), dp(11), dp(4))
             compoundDrawablePadding = dp(7)
             // Keep battery at the leading edge; network glyph is placed inline before its label. 
-            setCompoundDrawablesRelativeWithIntrinsicBounds(childBatteryGlyph, null, null, null)
+            setCompoundDrawablesRelativeWithIntrinsicBounds(resources.getDrawable(R.drawable.battery_icon, theme).mutate().apply { setBounds(0, 0, dp(20), dp(20)) }, null, null, null)
             background = GradientDrawable(
                 GradientDrawable.Orientation.LEFT_RIGHT,
                 intArrayOf(Color.rgb(247, 251, 255), Color.rgb(239, 248, 244))
@@ -885,7 +886,7 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        childIdentityRow.addView(AnimatedGifIconView(R.raw.user_icon), LinearLayout.LayoutParams(dp(30), dp(30)).apply {
+        childIdentityRow.addView(selectedChildAvatar, LinearLayout.LayoutParams(dp(30), dp(30)).apply {
             marginEnd = dp(5)
         })
         childIdentityRow.addView(selectedChildButton, LinearLayout.LayoutParams(0, dp(42), 1f))
@@ -2720,7 +2721,7 @@ private var receivedMp3File: File? = null
             super.onDraw(canvas)
             val duration = gif.duration().takeIf { it > 0 } ?: 1000
             gif.setTime(((SystemClock.uptimeMillis() - startedAt) % duration).toInt())
-            val side = dp(27).toFloat()
+            val side = dp(40).toFloat()
             val scale = minOf(side / gif.width().coerceAtLeast(1), side / gif.height().coerceAtLeast(1))
             canvas.save()
             canvas.translate((width - gif.width() * scale) / 2f, (height - gif.height() * scale) / 2f)
@@ -3038,7 +3039,7 @@ private var receivedMp3File: File? = null
                             setBounds(0, 0, dp(20), dp(20))
                         }
                     } else {
-                        childNetworkGlyph.apply { setBounds(0, 0, dp(20), dp(20)) }
+                        resources.getDrawable(R.drawable.signal_icon, theme).mutate().apply { setBounds(0, 0, dp(20), dp(20)) }
                     }
                     statusDisplay.setSpan(
                         android.text.style.ImageSpan(networkIcon, android.text.style.ImageSpan.ALIGN_CENTER),
@@ -3181,7 +3182,7 @@ private var receivedMp3File: File? = null
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
                 ).apply { setMargins(0, dp(3), 0, dp(3)) }
             }
-            val phoneIcon = ChildAvatarView().apply {
+            val phoneIcon = AnimatedGifIconView(R.raw.user_icon).apply {
                 layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
                     rightMargin = dp(8)
                 }
