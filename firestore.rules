@@ -118,6 +118,7 @@ service cloud.firestore {
           'deviceCharging',
           'deviceBatteryTempC',
           'deviceNetworkType',
+          'deviceWifiSsid',
           'deviceInternetValidated',
           'deviceOperatorName',
           'deviceStatusAt',
@@ -172,6 +173,9 @@ service cloud.firestore {
         && (!changed.hasAny(['deviceNetworkType'])
           || (request.resource.data.deviceNetworkType is string
             && request.resource.data.deviceNetworkType.size() <= 40))
+        && (!changed.hasAny(['deviceWifiSsid'])
+          || (request.resource.data.deviceWifiSsid is string
+            && request.resource.data.deviceWifiSsid.size() <= 100))
         && (!changed.hasAny(['deviceInternetValidated'])
           || request.resource.data.deviceInternetValidated is bool)
         && (!changed.hasAny(['deviceOperatorName'])
