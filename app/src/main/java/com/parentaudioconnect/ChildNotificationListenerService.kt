@@ -7,6 +7,7 @@ import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import java.util.UUID
 
 /**
@@ -17,6 +18,9 @@ class ChildNotificationListenerService : NotificationListenerService() {
 
     private var lastStatusCodeReported: String? = null
     private var observedPrefs: android.content.SharedPreferences? = null
+    private var pairingConfigListener: ListenerRegistration? = null
+    private var observedPairingCode: String? = null
+    @Volatile private var allowedNotificationPackages: Set<String>? = null
 
     private val preferenceListener =
         android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -51,6 +55,10 @@ class ChildNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onListenerDisconnected() {
+        pairingConfigListener?.remove()
+        pairingConfigListener = null
+        observedPairingCode = null
+        allowedNotificationPackages = null
         updateListenerConnectionStatus(false)
         observedPrefs?.unregisterOnSharedPreferenceChangeListener(preferenceListener)
         observedPrefs = null
@@ -59,6 +67,10 @@ class ChildNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onDestroy() {
+        pairingConfigListener?.remove()
+        pairingConfigListener = null
+        observedPairingCode = null
+        allowedNotificationPackages = null
         observedPrefs?.unregisterOnSharedPreferenceChangeListener(preferenceListener)
         observedPrefs = null
         FirebaseAuth.getInstance().removeAuthStateListener(authStateListener)
@@ -81,6 +93,7 @@ class ChildNotificationListenerService : NotificationListenerService() {
             return
         }
         if (connected && lastStatusCodeReported == code && !force) return
+        if (connected) observeNotificationFilter(code)
 
         FirebaseFirestore.getInstance()
             .collection("pairings")
@@ -114,6 +127,8 @@ class ChildNotificationListenerService : NotificationListenerService() {
         updateListenerConnectionStatus(true, force = true)
         val packageName = sbn.packageName ?: return
         if (packageName == applicationContext.packageName) return
+        val allowedPackages = allowedNotificationPackages
+        if (allowedPackages != null && packageName !in allowedPackages) return
 
         try {
             val appName = try {
@@ -166,6 +181,20 @@ class ChildNotificationListenerService : NotificationListenerService() {
         } catch (error: Exception) {
             Log.w(TAG, "Unable to capture notification", error)
         }
+    }
+
+    private fun observeNotificationFilter(code: String) {
+        if (observedPairingCode == code && pairingConfigListener != null) return
+        pairingConfigListener?.remove()
+        observedPairingCode = code
+        pairingConfigListener = FirebaseFirestore.getInstance()
+            .collection("pairings")
+            .document(code)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null || !snapshot.exists()) return@addSnapshotListener
+                val configured = snapshot.get("notificationAllowedPackages") as? List<*>
+                allowedNotificationPackages = configured?.mapNotNull { it as? String }?.toSet()
+            }
     }
 
     private fun isInputMethodPrompt(title: String, body: String): Boolean {
