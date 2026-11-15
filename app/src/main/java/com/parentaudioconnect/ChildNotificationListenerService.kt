@@ -131,7 +131,9 @@ class ChildNotificationListenerService : NotificationListenerService() {
 
             // Hide only WhatsApp's aggregate/count-only notifications.
             // Actual message previews and notifications from other apps remain untouched.
-            if (isWhatsAppSummary(packageName, sbn, body)) return
+            if (isWhatsAppSummary(packageName, sbn, body) ||
+                isInputMethodPrompt(title, body)
+            ) return
 
             val eventId = UUID.nameUUIDFromBytes(
                 (packageName + "|" + sbn.key + if (isMtManagerProgress(packageName, sbn)) "" else "|" + sbn.postTime).toByteArray(Charsets.UTF_8)
