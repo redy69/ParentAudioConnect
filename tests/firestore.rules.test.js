@@ -311,6 +311,19 @@ test("child can publish valid battery, network, and Wi-Fi name telemetry", async
   }));
 });
 
+test("child battery and online heartbeat remain valid without the optional Wi-Fi name", async () => {
+  const db = testEnv.authenticatedContext("child-user").firestore();
+  await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    deviceBatteryPercent: 64,
+    deviceCharging: true,
+    deviceBatteryTempC: 32.5,
+    deviceNetworkType: "Wi-Fi",
+    deviceInternetValidated: true,
+    deviceOperatorName: "Operator",
+    deviceStatusAt: Timestamp.now()
+  }));
+});
+
 test("child cannot publish an oversized Wi-Fi network name", async () => {
   const db = testEnv.authenticatedContext("child-user").firestore();
   await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
