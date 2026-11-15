@@ -125,27 +125,36 @@ object ChildDeviceStatusReporter {
         if (!isWifi ||
             context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) !=
                 android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) return ""
+        ) {
+            Log.d(TAG, "SSID unavailable: Wi-Fi=$isWifi, fineLocationGranted=" +
+                (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
+                    android.content.pm.PackageManager.PERMISSION_GRANTED))
+            return ""
+        }
 
         return try {
-            val modernInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                capabilities?.transportInfo as? WifiInfo
-            } else null
-            val legacyInfo = if (modernInfo == null) {
-                context.getSystemService(WifiManager::class.java)?.connectionInfo
-            } else null
-            val rawSsid = modernInfo?.ssid ?: legacyInfo?.ssid
-            rawSsid
-                ?.trim()
-                ?.trim('"')
-                ?.takeIf {
+            fun usableSsid(value: String?): String? {
+                val cleaned = value?.trim()?.trim('"') ?: return null
+                return cleaned.takeIf {
                     it.isNotBlank() &&
                         it != WifiManager.UNKNOWN_SSID &&
                         !it.equals("<unknown ssid>", ignoreCase = true) &&
                         !it.equals("unknown ssid", ignoreCase = true)
                 }
-                ?.take(100)
-                ?: ""
+            }
+
+            // Android 10+ may provide a WifiInfo whose SSID is redacted.
+            // In that case, still try the legacy WifiManager route rather
+            // than treating the non-null modern WifiInfo as a successful read.
+            val modernSsid = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                usableSsid((capabilities?.transportInfo as? WifiInfo)?.ssid)
+            } else null
+            val legacySsid = if (modernSsid == null) {
+                usableSsid(context.getSystemService(WifiManager::class.java)?.connectionInfo?.ssid)
+            } else null
+            val result = (modernSsid ?: legacySsid)?.take(100).orEmpty()
+            Log.d(TAG, "Wi-Fi SSID read: " + if (result.isBlank()) "unavailable" else "available")
+            result
         } catch (error: Exception) {
             Log.w(TAG, "Unable to read connected Wi-Fi name", error)
             ""
