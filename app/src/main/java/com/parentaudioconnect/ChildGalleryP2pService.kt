@@ -30,6 +30,10 @@ class ChildGalleryP2pService : Service() {
     }
 
     private var manager: GalleryP2pManager? = null
+    // A service instance can receive a new START after unlink/re-pair before Android
+    // finishes destroying the previous instance. Never keep a transport bound to
+    // the previous pairing document.
+    private var activePairingCode: String? = null
     private var protocol: GalleryP2pGalleryProtocol? = null
     private var parentReceiveProtocol: ParentToChildMediaProtocol? = null
     private var backupPolicyListener: ListenerRegistration? = null
@@ -74,6 +78,13 @@ class ChildGalleryP2pService : Service() {
         }
 
         startAsForeground()
+        // Unlink stops the transport, but stopService() and a rapid re-pair can
+        // overlap. If this service receives START for another pairing, tear down
+        // every old listener/protocol before binding the new pairing code.
+        if (manager != null && activePairingCode != code) {
+            Log.i(TAG, "Pairing berubah; mengganti sesi transport galeri")
+            stopTransport()
+        }
         if (backupConsent) listenForBackupNetworkPolicy(code)
         if (manager == null) startTransport(code)
         if (backupConsent) {
@@ -151,6 +162,7 @@ class ChildGalleryP2pService : Service() {
     }
 
     private fun startTransport(pairingCode: String) {
+        activePairingCode = pairingCode
         lateinit var activeProtocol: GalleryP2pGalleryProtocol
         val activeManager = GalleryP2pManager(
             context = applicationContext,
@@ -224,6 +236,7 @@ class ChildGalleryP2pService : Service() {
         protocol = null
         manager?.close()
         manager = null
+        activePairingCode = null
     }
 
     override fun onDestroy() {
