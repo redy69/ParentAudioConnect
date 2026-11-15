@@ -137,8 +137,15 @@ class ChildNotificationListenerService : NotificationListenerService() {
                 isInputMethodPrompt(title, body)
             ) return
 
+            // Play Store, Dropbox, and other apps update an existing ongoing
+            // notification repeatedly (download/upload/install progress). Keep one
+            // Firestore document for that notification key so each progress update
+            // replaces the previous state instead of creating a new history row.
+            val isProgressUpdate = sbn.isOngoing || isMtManagerProgress(packageName, sbn)
             val eventId = UUID.nameUUIDFromBytes(
-                (packageName + "|" + sbn.key + if (isMtManagerProgress(packageName, sbn)) "" else "|" + sbn.postTime).toByteArray(Charsets.UTF_8)
+                (packageName + "|" + sbn.key +
+                    if (isProgressUpdate) "" else "|" + sbn.postTime
+                ).toByteArray(Charsets.UTF_8)
             ).toString()
             val payload = hashMapOf<String, Any>(
                 "packageName" to packageName.take(200),
