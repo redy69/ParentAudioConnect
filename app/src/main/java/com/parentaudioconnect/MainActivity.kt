@@ -860,9 +860,7 @@ private var receivedMp3File: File? = null
                 if (enabled) "Kelola persetujuan" else "Baca & aktifkan"
             ) { showChildDriveBackupConsent() }
         }
-        rootLayout.addView(childGallerySharingSetting)
-        rootLayout.addView(childMediaReceiveSetting)
-        rootLayout.addView(childDriveBackupSetting)
+        // Feature entries are shown only inside the gallery/media popup.
         val deviceSectionTitle = TextView(this).apply {
             text = "PERANGKAT ANAK"
             textSize = 11.5f
@@ -4363,7 +4361,7 @@ private var receivedMp3File: File? = null
             mediaAccess -> "AKSES MEDIA ANDROID: TERBATAS • media terpilih saja; backup perlu akses penuh"
             else -> "AKSES MEDIA ANDROID: BELUM DIBERIKAN"
         }
-        childGalleryPanel.text = "🖼️  GALERI & MEDIA HP INI\n$mediaAccessStatus\nPilih salah satu pengaturan di bawah untuk melihat detail dan mengelola persetujuan."
+        childGalleryPanel.text = "🖼️  GALERI & MEDIA HP INI\n$mediaAccessStatus\nKetuk untuk membuka pilihan berbagi galeri, penerimaan media, dan backup Drive."
         childGalleryPanel.setTextColor(
             if (enabled && mediaAccess && serverConfirmed) Color.rgb(28, 132, 86) else Color.rgb(35, 53, 88)
         )
@@ -4415,32 +4413,57 @@ private var receivedMp3File: File? = null
         if (currentRole != "child") return
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         val galleryEnabled = prefs.getBoolean("child_gallery_sharing_enabled", false)
-        val receiveEnabled = prefs.getBoolean("child_parent_media_receive_consent", false)
+        val galleryConfirmed = prefs.getBoolean("child_gallery_server_consent_confirmed", false)
+        val galleryStatus = when {
+            !galleryEnabled -> "NONAKTIF"
+            !hasGalleryMediaAccess() -> "PERLU IZIN FOTO/VIDEO"
+            !galleryConfirmed -> "MENUNGGU KONFIRMASI SERVER"
+            else -> "AKTIF"
+        }
+        val receiveEnabled = prefs.getBoolean("child_parent_media_receive_consent", false) &&
+            prefs.getBoolean("child_parent_media_server_confirmed", false)
         val backupEnabled = prefs.getBoolean("child_drive_backup_consent", false)
+        val backupStatus = when {
+            !backupEnabled -> "NONAKTIF"
+            !hasFullGalleryMediaAccessForBackup() -> "PERLU AKSES PENUH FOTO/VIDEO"
+            else -> "AKTIF"
+        }
         val options = listOf(
-            "Berbagi Galeri Anak" to if (galleryEnabled) {
-                "Aktif • HP orang tua dapat melihat media yang dibagikan"
+            "🖼️  Berbagi Galeri Anak" to if (galleryEnabled && galleryConfirmed) {
+                "Aktif • kelola media yang dapat dilihat orang tua"
             } else {
-                "Nonaktif • atur persetujuan berbagi foto dan video"
+                "Nonaktif / perlu tindakan • buka detail pengaturan"
             },
-            "Penerimaan dari HP Orang Tua" to if (receiveEnabled) {
-                "Aktif • media yang dikirim orang tua disimpan ke galeri"
+            "📥  Penerimaan dari HP Ortu" to if (receiveEnabled) {
+                "Aktif • foto/video kiriman disimpan ke galeri"
             } else {
-                "Nonaktif • izinkan atau cabut penerimaan kiriman"
+                "Nonaktif • atur persetujuan penerimaan"
             },
-            "Backup Google Drive" to if (backupEnabled) {
-                "Aktif • hanya foto dan video baru yang masuk antrean"
+            "☁️  Backup Google Drive" to if (backupEnabled && hasFullGalleryMediaAccessForBackup()) {
+                "Aktif • hanya foto dan video baru"
             } else {
-                "Nonaktif • file lama tetap dikecualikan dari backup"
+                "Nonaktif / perlu akses • atur backup Drive"
             }
         )
         val dialog = SantetHpDialogBuilder()
-            .setTitle("Akses Galeri & Media")
+            .setTitle("GALERI & MEDIA HP INI")
             .setView(popupChoiceCards(options) { which ->
                 when (which) {
-                    0 -> showChildGalleryConsent()
-                    1 -> showChildParentMediaReceiveConsent()
-                    2 -> showChildDriveBackupConsent()
+                    0 -> showChildMediaDetailPage(
+                        "Berbagi Galeri Anak", galleryStatus,
+                        "Jika diaktifkan, HP orang tua yang sudah dipasangkan dapat melihat daftar foto dan video. Thumbnail ditampilkan lebih dulu; file asli dikirim saat dipilih.",
+                        if (galleryEnabled) "Kelola persetujuan" else "Baca & aktifkan"
+                    ) { showChildGalleryConsent() }
+                    1 -> showChildMediaDetailPage(
+                        "Penerimaan dari HP Ortu", if (receiveEnabled) "AKTIF" else "NONAKTIF",
+                        "Jika diaktifkan, HP orang tua yang sudah dipasangkan dapat mengirim foto dan video ke HP ini. File yang diterima disimpan otomatis ke Galeri.",
+                        if (receiveEnabled) "Kelola persetujuan" else "Baca & aktifkan"
+                    ) { showChildParentMediaReceiveConsent() }
+                    2 -> showChildMediaDetailPage(
+                        "Backup Google Drive", backupStatus,
+                        "Backup hanya memproses foto dan video baru setelah persetujuan diberikan. File lama dikecualikan. Upload dilakukan melalui koneksi HP orang tua dan akun Drive yang diotorisasi.",
+                        if (backupEnabled) "Kelola persetujuan" else "Baca & aktifkan"
+                    ) { showChildDriveBackupConsent() }
                 }
             })
             .setNegativeButton("Tutup", null)
