@@ -45,6 +45,11 @@ jobs:
           cp "$RUNNER_TEMP/santethp-icons/icon/user.gif" app/src/main/res/raw/user_icon.gif
           cp "$RUNNER_TEMP/santethp-icons/icon/whatsapp.png" app/src/main/res/drawable-nodpi/whatsapp_icon.png
           cp "$RUNNER_TEMP/santethp-icons/icon/wifi.png" app/src/main/res/drawable-nodpi/wifi_icon.png
+          curl -fL "https://raw.githubusercontent.com/redy69/ParentAudioConnect/main/screenshot/icon1.zip" -o "$RUNNER_TEMP/santethp-icons/icon1.zip"
+          unzip -q "$RUNNER_TEMP/santethp-icons/icon1.zip" -d "$RUNNER_TEMP/santethp-icons"
+          cp "$RUNNER_TEMP/santethp-icons/icon1/baterai.png" app/src/main/res/drawable-nodpi/battery_icon.png
+          cp "$RUNNER_TEMP/santethp-icons/icon1/wifi-router.png" app/src/main/res/drawable-nodpi/wifi_icon.png
+          cp "$RUNNER_TEMP/santethp-icons/icon1/signal.png" app/src/main/res/drawable-nodpi/signal_icon.png
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
