@@ -6,6 +6,7 @@ on:
     branches:
       - feature/device-health-monitoring
       - feature/gallery-webrtc-p2p
+      - ui/dark-emerald-glass-dashboard
     paths:
       - 'firestore.rules'
       - 'firebase.json'
