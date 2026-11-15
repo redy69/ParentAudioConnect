@@ -5,6 +5,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.Manifest
+import android.net.wifi.WifiManager
 import android.os.BatteryManager
 import android.telephony.TelephonyManager
 import android.util.Log
@@ -75,6 +77,30 @@ object ChildDeviceStatusReporter {
                 NetworkCapabilities.NET_CAPABILITY_VALIDATED
             ) == true
 
+            // Read the connected Wi-Fi name only when Android already grants
+            // fine-location access; otherwise publish an empty value so the
+            // parent UI can safely fall back to the generic "Wi-Fi" label.
+            val wifiSsid = if (
+                capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true &&
+                context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
+                    android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                try {
+                    val wifiInfo = context.getSystemService(WifiManager::class.java)
+                        ?.connectionInfo
+                    wifiInfo?.ssid
+                        ?.takeIf { it.isNotBlank() && it != WifiManager.UNKNOWN_SSID }
+                        ?.trim('"')
+                        ?.takeIf { it.isNotBlank() && it != WifiManager.UNKNOWN_SSID }
+                        ?: ""
+                } catch (error: Exception) {
+                    Log.w(TAG, "Unable to read connected Wi-Fi name", error)
+                    ""
+                }
+            } else {
+                ""
+            }
+
             val operatorName = try {
                 context.getSystemService(TelephonyManager::class.java)
                     ?.networkOperatorName
@@ -90,6 +116,7 @@ object ChildDeviceStatusReporter {
                 "deviceCharging" to charging,
                 "deviceBatteryTempC" to batteryTempC,
                 "deviceNetworkType" to networkType,
+                "deviceWifiSsid" to wifiSsid,
                 "deviceInternetValidated" to internetValidated,
                 "deviceOperatorName" to operatorName,
                 "deviceStatusAt" to FieldValue.serverTimestamp()
