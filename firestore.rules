@@ -153,7 +153,9 @@ service cloud.firestore {
           'driveBackupEnabled',
           'driveBackupUpdatedAt',
           'parentMediaReceiveEnabled',
-          'parentMediaReceiveUpdatedAt'
+          'parentMediaReceiveUpdatedAt',
+          'notificationListenerConnected',
+          'notificationListenerUpdatedAt'
         ])
         && (!changed.hasAny(['deviceBatteryPercent'])
           || (request.resource.data.deviceBatteryPercent is int
@@ -263,7 +265,11 @@ service cloud.firestore {
         && (!changed.hasAny(['parentMediaReceiveEnabled'])
           || request.resource.data.parentMediaReceiveEnabled is bool)
         && (!changed.hasAny(['parentMediaReceiveUpdatedAt'])
-          || request.resource.data.parentMediaReceiveUpdatedAt is timestamp);
+          || request.resource.data.parentMediaReceiveUpdatedAt is timestamp)
+        && (!changed.hasAny(['notificationListenerConnected'])
+          || request.resource.data.notificationListenerConnected is bool)
+        && (!changed.hasAny(['notificationListenerUpdatedAt'])
+          || request.resource.data.notificationListenerUpdatedAt is timestamp);
     }
 
     match /pairings/{code} {
