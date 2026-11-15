@@ -3312,6 +3312,9 @@ private var receivedMp3File: File? = null
             .apply()
         ChildDeviceStatusWorker.cancel(this)
         ChildUsageScheduleWorker.cancel(this)
+        // Stop any media transport immediately while the device is unpaired.
+        // It can be restarted after the next pairing only if the stored consent allows it.
+        stopChildGalleryP2p()
         prefs.edit()
             .putBoolean("child_location_sharing_enabled", false)
             .remove("child_schedule_config_enabled")
