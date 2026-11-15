@@ -6038,10 +6038,11 @@ private var receivedMp3File: File? = null
                 document.update("childUid", uid)
                     .addOnSuccessListener {
 
+                        // Save the new code first so consent synchronization targets this pairing.
+                        savePairing(code, "child")
                         // Restore previously approved feature consents only when the same parent
                         // account is verified. Android runtime/special permissions are never reset.
                         prepareChildConsentsForPairing(parentUid)
-                        savePairing(code, "child")
                         currentRole = "child"
 
                         codeText.text = code
