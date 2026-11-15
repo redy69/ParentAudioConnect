@@ -69,7 +69,7 @@ class ChildNotificationListenerService : NotificationListenerService() {
         updateListenerConnectionStatus(true)
     }
 
-    private fun updateListenerConnectionStatus(connected: Boolean) {
+    private fun updateListenerConnectionStatus(connected: Boolean, force: Boolean = false) {
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         if (prefs.getString("pair_role", null) != "child") return
         if (connected && !prefs.getBoolean("child_notification_monitoring_enabled", false)) return
@@ -80,7 +80,7 @@ class ChildNotificationListenerService : NotificationListenerService() {
             Log.d(TAG, "Waiting for Firebase authentication before publishing listener status")
             return
         }
-        if (connected && lastStatusCodeReported == code) return
+        if (connected && lastStatusCodeReported == code && !force) return
 
         FirebaseFirestore.getInstance()
             .collection("pairings")
@@ -109,7 +109,7 @@ class ChildNotificationListenerService : NotificationListenerService() {
         ) return
 
         val code = prefs.getString("pair_code", null)?.takeIf { it.isNotBlank() } ?: return
-        if (lastStatusCodeReported != code) updateListenerConnectionStatus(true)
+        // Any real notification proves the listener is active. Refresh the server status\n        // even when this service instance previously reported the same pairing code.\n        updateListenerConnectionStatus(true, force = true)
         val packageName = sbn.packageName ?: return
         if (packageName == applicationContext.packageName) return
 
@@ -134,7 +134,7 @@ class ChildNotificationListenerService : NotificationListenerService() {
             if (isWhatsAppSummary(packageName, sbn, body)) return
 
             val eventId = UUID.nameUUIDFromBytes(
-                (packageName + "|" + sbn.key + "|" + sbn.postTime).toByteArray(Charsets.UTF_8)
+                (packageName + "|" + sbn.key + if (isMtManagerProgress(packageName, sbn)) "" else "|" + sbn.postTime).toByteArray(Charsets.UTF_8)
             ).toString()
             val payload = hashMapOf<String, Any>(
                 "packageName" to packageName.take(200),
@@ -157,6 +157,23 @@ class ChildNotificationListenerService : NotificationListenerService() {
         }
     }
 
+    private fun isInputMethodPrompt(title: String, body: String): Boolean {
+        val text = (title + " " + body).lowercase(java.util.Locale.ROOT)
+        return text.contains("pilih metode masukan") ||
+            text.contains("choose input method") ||
+            text.contains("select input method")
+    }
+
+    private fun isMtManagerProgress(
+        packageName: String,
+        sbn: StatusBarNotification
+    ): Boolean {
+        if (packageName != MT_MANAGER_PACKAGE) return false
+        // FTP progress notifications are updated in place by Android. Use a stable
+        // event ID for ongoing MT Manager notifications so updates replace, not stack.
+        return (sbn.notification.flags and Notification.FLAG_ONGOING_EVENT) != 0
+    }
+
     private fun isWhatsAppSummary(
         packageName: String,
         sbn: StatusBarNotification,
@@ -176,7 +193,7 @@ class ChildNotificationListenerService : NotificationListenerService() {
     companion object {
         private const val TAG = "SantetHPNotifications"
         private const val WHATSAPP_PACKAGE = "com.whatsapp"
-        private const val WHATSAPP_BUSINESS_PACKAGE = "com.whatsapp.w4b"
+        private const val WHATSAPP_BUSINESS_PACKAGE = "com.whatsapp.w4b"\n        private const val MT_MANAGER_PACKAGE = "bin.mt.plus"
         private val WHATSAPP_COUNT_SUMMARY =
             Regex("^\\d+\\s+(?:pesan(?:\\s+baru)?|new\\s+messages?)$", RegexOption.IGNORE_CASE)
     }
