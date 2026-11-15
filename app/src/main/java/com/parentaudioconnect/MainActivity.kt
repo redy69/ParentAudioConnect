@@ -276,7 +276,7 @@ private var receivedMp3File: File? = null
             textSize = 12.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.008f
-            setTextColor(Color.rgb(93, 105, 123))
+            setTextColor(Color.rgb(98, 110, 128))
             gravity = Gravity.CENTER_VERTICAL
             setLineSpacing(dp(2).toFloat(), 1f)
             setPadding(dp(12), dp(6), dp(12), dp(6))
@@ -1780,7 +1780,7 @@ private var receivedMp3File: File? = null
         val audioIsActive = liveAudioActive || mp3AudioActive
         childAudioActivityText.setTextColor(
             if (audioIsActive) Color.rgb(22, 113, 77)
-            else Color.rgb(93, 105, 123)
+            else Color.rgb(98, 110, 128)
         )
         (childAudioActivityText.background as? GradientDrawable)?.apply {
             setColors(
