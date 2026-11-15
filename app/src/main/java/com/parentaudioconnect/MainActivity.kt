@@ -5888,7 +5888,7 @@ private var receivedMp3File: File? = null
                 }
                 pairingRef.get().addOnSuccessListener { pairing ->
                     val configured = pairing.get("notificationAllowedPackages") as? List<*>
-                    val allAllowed = configured == null
+                    val allAllowed = configured.isNullOrEmpty()
                     // Show friendly app names only; package IDs stay internal for filtering.
                     val appEntries = options.entries.sortedBy { it.value.lowercase(java.util.Locale.ROOT) }
                     val selected = appEntries.map { entry ->
@@ -5920,7 +5920,7 @@ private var receivedMp3File: File? = null
                                 }
                         }
                         .setNeutralButton("Tampilkan semua") { _, _ ->
-                            pairingRef.update("notificationAllowedPackages", com.google.firebase.firestore.FieldValue.delete())
+                            pairingRef.update("notificationAllowedPackages", emptyList<String>())
                                 .addOnSuccessListener {
                                     Toast.makeText(this, "Semua aplikasi kembali ditampilkan.", Toast.LENGTH_SHORT).show()
                                 }
