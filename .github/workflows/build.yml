@@ -13,7 +13,6 @@ on:
       - recovery/full-features-2026-11-12
       - ui/liquid-glass-child-status
       - ui/dark-emerald-glass-dashboard
-      - trial/custom-audio-gif-icons
 
 permissions:
   contents: write
