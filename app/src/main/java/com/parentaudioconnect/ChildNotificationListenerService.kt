@@ -14,6 +14,36 @@ import java.util.UUID
  */
 class ChildNotificationListenerService : NotificationListenerService() {
 
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        updateListenerConnectionStatus(true)
+    }
+
+    override fun onListenerDisconnected() {
+        updateListenerConnectionStatus(false)
+        super.onListenerDisconnected()
+    }
+
+    private fun updateListenerConnectionStatus(connected: Boolean) {
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        if (prefs.getString("pair_role", null) != "child" ||
+            !prefs.getBoolean("child_notification_monitoring_enabled", false)
+        ) return
+        val code = prefs.getString("pair_code", null)?.takeIf { it.isNotBlank() } ?: return
+        FirebaseFirestore.getInstance()
+            .collection("pairings")
+            .document(code)
+            .update(
+                mapOf(
+                    "notificationListenerConnected" to connected,
+                    "notificationListenerUpdatedAt" to FieldValue.serverTimestamp()
+                )
+            )
+            .addOnFailureListener { error ->
+                Log.w(TAG, "Unable to publish notification listener status", error)
+            }
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
         if (sbn == null) return
