@@ -171,6 +171,9 @@ private lateinit var playMp3Button: Button
     private lateinit var childAppActivityPanel: TextView
     private lateinit var childNotificationPanel: TextView
     private lateinit var childGalleryPanel: TextView
+    private lateinit var childGallerySharingSetting: TextView
+    private lateinit var childMediaReceiveSetting: TextView
+    private lateinit var childDriveBackupSetting: TextView
     private var childGalleryP2pManager: GalleryP2pManager? = null
     private var childGalleryProtocol: GalleryP2pGalleryProtocol? = null
     private var parentGalleryP2pManager: GalleryP2pManager? = null
@@ -817,6 +820,18 @@ private var receivedMp3File: File? = null
             setOnClickListener { showChildMediaSettingsMenu() }
         }
         rootLayout.addView(childGalleryPanel)
+        childGallerySharingSetting = createChildMediaSettingCard("🖼️  BERBAGI GALERI ANAK") {
+            showChildGalleryConsent()
+        }
+        childMediaReceiveSetting = createChildMediaSettingCard("📥  PENERIMAAN DARI HP ORANG TUA") {
+            showChildParentMediaReceiveConsent()
+        }
+        childDriveBackupSetting = createChildMediaSettingCard("☁️  BACKUP GOOGLE DRIVE") {
+            showChildDriveBackupConsent()
+        }
+        rootLayout.addView(childGallerySharingSetting)
+        rootLayout.addView(childMediaReceiveSetting)
+        rootLayout.addView(childDriveBackupSetting)
         val deviceSectionTitle = TextView(this).apply {
             text = "PERANGKAT ANAK"
             textSize = 11.5f
@@ -1900,6 +1915,9 @@ private var receivedMp3File: File? = null
         childModePanel.visibility = View.GONE
         childLocationPanel.visibility = View.GONE
         childGalleryPanel.visibility = View.GONE
+        childGallerySharingSetting.visibility = View.GONE
+        childMediaReceiveSetting.visibility = View.GONE
+        childDriveBackupSetting.visibility = View.GONE
         childAppActivityPanel.visibility = View.GONE
         parentOnlyViews.forEach { it.visibility = View.VISIBLE }
         additionalControlsHeading.visibility = View.GONE
@@ -2005,6 +2023,9 @@ private var receivedMp3File: File? = null
         childAppActivityPanel.visibility = View.VISIBLE
         childNotificationPanel.visibility = View.VISIBLE
         childGalleryPanel.visibility = View.VISIBLE
+        childGallerySharingSetting.visibility = View.VISIBLE
+        childMediaReceiveSetting.visibility = View.VISIBLE
+        childDriveBackupSetting.visibility = View.VISIBLE
 
         statusText.text = if (needsSetup) {
             "Periksa izin Android untuk fitur yang sudah disetujui: " + issues.joinToString(", ") + ". Kartu pengaturan tetap tersedia untuk mengaktifkan atau mengelola fitur lainnya."
@@ -4221,6 +4242,32 @@ private var receivedMp3File: File? = null
             ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
         }
 
+    private fun createChildMediaSettingCard(title: String, onClick: () -> Unit): TextView {
+        return TextView(this).apply {
+            text = "$title\nMemuat status…"
+            textSize = 12f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(36, 70, 56))
+            gravity = Gravity.CENTER_VERTICAL
+            setLineSpacing(dp(2).toFloat(), 1f)
+            setPadding(dp(15), dp(11), dp(15), dp(11))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.WHITE, Color.rgb(239, 247, 242))
+            ).apply {
+                cornerRadius = dp(15).toFloat()
+                setStroke(dp(1), Color.rgb(201, 222, 210))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(2), 0, dp(5)) }
+            visibility = View.GONE
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { onClick() }
+        }
+    }
+
     private fun updateChildGalleryPanel() {
         if (!this::childGalleryPanel.isInitialized || currentRole != "child") return
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
@@ -4254,10 +4301,15 @@ private var receivedMp3File: File? = null
             mediaAccess -> "AKSES MEDIA ANDROID: TERBATAS • media terpilih saja; backup perlu akses penuh"
             else -> "AKSES MEDIA ANDROID: BELUM DIBERIKAN"
         }
-        childGalleryPanel.text = "🖼️  GALERI & MEDIA HP INI\n$mediaAccessStatus\n$galleryStatus\n$receiveStatus\n$backupStatus\nKetuk untuk mengatur ketiga fitur secara terpisah."
+        childGalleryPanel.text = "🖼️  GALERI & MEDIA HP INI\n$mediaAccessStatus\nAtur setiap fitur melalui kartu di bawah. Persetujuan tetap terpisah."
         childGalleryPanel.setTextColor(
             if (enabled && mediaAccess && serverConfirmed) Color.rgb(28, 132, 86) else Color.rgb(35, 53, 88)
         )
+        childGallerySharingSetting.text = "BERBAGI GALERI ANAK\n$galleryStatus\n" +
+            if (enabled && mediaAccess && serverConfirmed) "HP orang tua dapat melihat media yang dibagikan" else "Ketuk untuk membaca penjelasan dan mengatur persetujuan"
+        childMediaReceiveSetting.text = "PENERIMAAN DARI HP ORANG TUA\n$receiveStatus\n" +
+            if (receiveEnabled) "Foto/video kiriman akan disimpan otomatis" else "Ketuk untuk mengatur izin menerima kiriman"
+        childDriveBackupSetting.text = "BACKUP GOOGLE DRIVE\n$backupStatus"
     }
 
     private fun updateGalleryConsentOnServer(enabled: Boolean, onSaved: (() -> Unit)? = null) {
