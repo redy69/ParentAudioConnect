@@ -4,6 +4,7 @@ import android.app.Notification
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.UUID
@@ -15,23 +16,67 @@ import java.util.UUID
 class ChildNotificationListenerService : NotificationListenerService() {
 
     private var lastStatusCodeReported: String? = null
+    private var observedPrefs: android.content.SharedPreferences? = null
+
+    private val preferenceListener =
+        android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "pair_role" || key == "pair_code" ||
+                key == "child_notification_monitoring_enabled"
+            ) {
+                // The system may bind this service before pairing or consent is saved.
+                // Re-publish as soon as those local prerequisites become available.
+                publishConnectedStatusIfEligible()
+            }
+        }
+
+    private val authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+        if (firebaseAuth.currentUser != null) {
+            // Retry after anonymous Firebase authentication finishes.
+            publishConnectedStatusIfEligible()
+        }
+    }
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        updateListenerConnectionStatus(true)
+        observedPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE).also {
+            it.registerOnSharedPreferenceChangeListener(preferenceListener)
+        }
+        FirebaseAuth.getInstance().addAuthStateListener(authStateListener)
+        publishConnectedStatusIfEligible()
     }
 
     override fun onListenerDisconnected() {
         updateListenerConnectionStatus(false)
+        observedPrefs?.unregisterOnSharedPreferenceChangeListener(preferenceListener)
+        observedPrefs = null
+        FirebaseAuth.getInstance().removeAuthStateListener(authStateListener)
         super.onListenerDisconnected()
+    }
+
+    override fun onDestroy() {
+        observedPrefs?.unregisterOnSharedPreferenceChangeListener(preferenceListener)
+        observedPrefs = null
+        FirebaseAuth.getInstance().removeAuthStateListener(authStateListener)
+        super.onDestroy()
+    }
+
+    private fun publishConnectedStatusIfEligible() {
+        updateListenerConnectionStatus(true)
     }
 
     private fun updateListenerConnectionStatus(connected: Boolean) {
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
-        if (prefs.getString("pair_role", null) != "child" ||
-            !prefs.getBoolean("child_notification_monitoring_enabled", false)
-        ) return
+        if (prefs.getString("pair_role", null) != "child") return
+        if (connected && !prefs.getBoolean("child_notification_monitoring_enabled", false)) return
         val code = prefs.getString("pair_code", null)?.takeIf { it.isNotBlank() } ?: return
+
+        val firebaseAuth = FirebaseAuth.getInstance()
+        if (firebaseAuth.currentUser == null) {
+            Log.d(TAG, "Waiting for Firebase authentication before publishing listener status")
+            return
+        }
+        if (connected && lastStatusCodeReported == code) return
+
         FirebaseFirestore.getInstance()
             .collection("pairings")
             .document(code)
