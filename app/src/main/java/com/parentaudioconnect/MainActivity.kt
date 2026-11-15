@@ -5557,7 +5557,13 @@ private var receivedMp3File: File? = null
                 }
                 val documents = snapshot?.documents.orEmpty()
                 latestNotificationReceivedAt = documents
-                    .mapNotNull { it.getTimestamp("postedAt")?.toDate() }
+                    .mapNotNull { document ->
+                        // postedAt is the canonical event time. Fall back to Firestore's
+                        // server document update time when a serverTimestamp is still
+                        // unresolved in the first snapshot after a role switch.
+                        document.getTimestamp("postedAt")?.toDate()
+                            ?: document.updateTime?.toDate()
+                    }
                     .maxByOrNull { it.time }
                 refreshNotificationServiceStatus()
                 val lastReadPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
