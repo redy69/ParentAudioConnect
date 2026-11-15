@@ -1,13 +1,15 @@
 package com.santethp
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.Manifest
+import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.BatteryManager
+import android.os.Build
 import android.telephony.TelephonyManager
 import android.util.Log
 import com.google.firebase.firestore.FieldValue
@@ -17,8 +19,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Publishes lightweight battery and active-network diagnostics for a paired child device.
- * It never reads message content, phone numbers, or device identifiers.
+ * Publishes battery/network heartbeat independently from optional Wi-Fi SSID.
+ * A rules rollout or SSID read failure must never suppress battery telemetry
+ * or the device heartbeat used by the parent online indicator.
  */
 object ChildDeviceStatusReporter {
     private const val TAG = "ChildDeviceStatus"
@@ -32,111 +35,120 @@ object ChildDeviceStatusReporter {
             return
         }
 
-        try {
-            val batteryIntent = context.registerReceiver(
-                null,
-                IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-            )
-            val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
-            val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
-            val batteryPercent = if (level >= 0 && scale > 0) {
-                (level * 100f / scale).toInt().coerceIn(0, 100)
-            } else {
-                -1
-            }
-            val batteryStatus = batteryIntent?.getIntExtra(
-                BatteryManager.EXTRA_STATUS,
-                BatteryManager.BATTERY_STATUS_UNKNOWN
-            ) ?: BatteryManager.BATTERY_STATUS_UNKNOWN
-            // EXTRA_PLUGGED also covers a device connected to power at FULL.
-            val pluggedIn = (batteryIntent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
-            val charging = pluggedIn || batteryStatus == BatteryManager.BATTERY_STATUS_CHARGING
-            val temperatureTenths = batteryIntent?.getIntExtra(
-                BatteryManager.EXTRA_TEMPERATURE,
-                -1
-            ) ?: -1
-            val batteryTempC = if (temperatureTenths >= 0) {
-                temperatureTenths / 10.0
-            } else {
-                -1.0
-            }
+        val batteryIntent = context.registerReceiver(
+            null,
+            IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        )
+        val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+        val batteryPercent = if (level >= 0 && scale > 0) {
+            (level * 100f / scale).toInt().coerceIn(0, 100)
+        } else {
+            -1
+        }
+        val batteryStatus = batteryIntent?.getIntExtra(
+            BatteryManager.EXTRA_STATUS,
+            BatteryManager.BATTERY_STATUS_UNKNOWN
+        ) ?: BatteryManager.BATTERY_STATUS_UNKNOWN
+        val pluggedIn = (batteryIntent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
+        val charging = pluggedIn || batteryStatus == BatteryManager.BATTERY_STATUS_CHARGING
+        val temperatureTenths = batteryIntent?.getIntExtra(
+            BatteryManager.EXTRA_TEMPERATURE,
+            -1
+        ) ?: -1
+        val batteryTempC = if (temperatureTenths >= 0) temperatureTenths / 10.0 else -1.0
 
-            val connectivity = context.getSystemService(ConnectivityManager::class.java)
-            val activeNetwork = connectivity?.activeNetwork
-            val capabilities = activeNetwork?.let {
-                connectivity.getNetworkCapabilities(it)
-            }
-            val networkType = when {
-                capabilities == null -> "Tidak terhubung"
-                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi"
-                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "Data seluler"
-                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet"
-                else -> "Jaringan lain"
-            }
-            val internetValidated = capabilities?.hasCapability(
-                NetworkCapabilities.NET_CAPABILITY_VALIDATED
-            ) == true
+        val connectivity = context.getSystemService(ConnectivityManager::class.java)
+        val activeNetwork = connectivity?.activeNetwork
+        val capabilities = activeNetwork?.let { connectivity.getNetworkCapabilities(it) }
+        val isWifi = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+        val networkType = when {
+            capabilities == null -> "Tidak terhubung"
+            isWifi -> "Wi-Fi"
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "Data seluler"
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet"
+            else -> "Jaringan lain"
+        }
+        val internetValidated = capabilities?.hasCapability(
+            NetworkCapabilities.NET_CAPABILITY_VALIDATED
+        ) == true
 
-            // Read the connected Wi-Fi name only when Android already grants
-            // fine-location access; otherwise publish an empty value so the
-            // parent UI can safely fall back to the generic "Wi-Fi" label.
-            val wifiSsid = if (
-                capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true &&
-                context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
-                    android.content.pm.PackageManager.PERMISSION_GRANTED
-            ) {
-                try {
-                    val wifiInfo = context.getSystemService(WifiManager::class.java)
-                        ?.connectionInfo
-                    wifiInfo?.ssid
-                        ?.takeIf { it.isNotBlank() && it != WifiManager.UNKNOWN_SSID }
-                        ?.trim('"')
-                        ?.takeIf { it.isNotBlank() && it != WifiManager.UNKNOWN_SSID }
-                        ?: ""
-                } catch (error: Exception) {
-                    Log.w(TAG, "Unable to read connected Wi-Fi name", error)
-                    ""
-                }
-            } else {
-                ""
-            }
-
-            val operatorName = try {
-                context.getSystemService(TelephonyManager::class.java)
-                    ?.networkOperatorName
-                    ?.takeIf { it.isNotBlank() }
-                    ?: "Tidak terdeteksi / tanpa SIM"
-            } catch (error: Exception) {
-                Log.w(TAG, "Unable to read registered mobile operator", error)
-                "Tidak tersedia"
-            }
-
-            val status = mapOf(
-                "deviceBatteryPercent" to batteryPercent,
-                "deviceCharging" to charging,
-                "deviceBatteryTempC" to batteryTempC,
-                "deviceNetworkType" to networkType,
-                "deviceWifiSsid" to wifiSsid,
-                "deviceInternetValidated" to internetValidated,
-                "deviceOperatorName" to operatorName,
-                "deviceStatusAt" to FieldValue.serverTimestamp()
-            )
-
-            withContext(Dispatchers.IO) {
-                Tasks.await(
-                    FirebaseFirestore.getInstance()
-                        .collection("pairings")
-                        .document(code)
-                        .update(status)
-                )
-            }
+        val wifiSsid = readWifiSsid(context, capabilities, isWifi)
+        val operatorName = try {
+            context.getSystemService(TelephonyManager::class.java)
+                ?.networkOperatorName
+                ?.takeIf { it.isNotBlank() }
+                ?: "Tidak terdeteksi / tanpa SIM"
         } catch (error: Exception) {
-            Log.e(
-                TAG,
-                "Unable to publish child device status (${error.javaClass.simpleName}): ${error.message}",
-                error
-            )
-            throw error
+            Log.w(TAG, "Unable to read registered mobile operator", error)
+            "Tidak tersedia"
+        }
+
+        val pairing = FirebaseFirestore.getInstance()
+            .collection("pairings")
+            .document(code)
+
+        // Critical telemetry first. These fields are already supported by the
+        // deployed rules; keep them independent from the newer SSID field.
+        val coreStatus = mapOf(
+            "deviceBatteryPercent" to batteryPercent,
+            "deviceCharging" to charging,
+            "deviceBatteryTempC" to batteryTempC,
+            "deviceNetworkType" to networkType,
+            "deviceInternetValidated" to internetValidated,
+            "deviceOperatorName" to operatorName,
+            "deviceStatusAt" to FieldValue.serverTimestamp()
+        )
+
+        withContext(Dispatchers.IO) {
+            Tasks.await(pairing.update(coreStatus))
+        }
+        Log.i(TAG, "Battery/network heartbeat published for pairing $code")
+
+        // SSID is optional. If the live Firestore rules have not yet been
+        // published, its denial must not undo the successful heartbeat above.
+        try {
+            withContext(Dispatchers.IO) {
+                Tasks.await(pairing.update("deviceWifiSsid", wifiSsid))
+            }
+            Log.i(TAG, "Wi-Fi SSID telemetry published")
+        } catch (error: Exception) {
+            Log.w(TAG, "Wi-Fi SSID update unavailable; core status remains healthy", error)
+        }
+    }
+
+    private fun readWifiSsid(
+        context: Context,
+        capabilities: NetworkCapabilities?,
+        isWifi: Boolean
+    ): String {
+        if (!isWifi ||
+            context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) !=
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) return ""
+
+        return try {
+            val modernInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                capabilities?.transportInfo as? WifiInfo
+            } else null
+            val legacyInfo = if (modernInfo == null) {
+                context.getSystemService(WifiManager::class.java)?.connectionInfo
+            } else null
+            val rawSsid = modernInfo?.ssid ?: legacyInfo?.ssid
+            rawSsid
+                ?.trim()
+                ?.trim('"')
+                ?.takeIf {
+                    it.isNotBlank() &&
+                        it != WifiManager.UNKNOWN_SSID &&
+                        !it.equals("<unknown ssid>", ignoreCase = true) &&
+                        !it.equals("unknown ssid", ignoreCase = true)
+                }
+                ?.take(100)
+                ?: ""
+        } catch (error: Exception) {
+            Log.w(TAG, "Unable to read connected Wi-Fi name", error)
+            ""
         }
     }
 }
