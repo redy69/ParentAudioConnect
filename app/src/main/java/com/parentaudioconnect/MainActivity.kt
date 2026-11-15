@@ -1958,7 +1958,11 @@ private var receivedMp3File: File? = null
 
         if (prefs.getBoolean("child_gallery_sharing_enabled", false) &&
             !hasGalleryMediaAccess()
-        ) issues.add("Akses foto dan video")
+        ) issues.add("Akses foto dan video untuk berbagi galeri")
+
+        if (prefs.getBoolean("child_drive_backup_consent", false) &&
+            !hasFullGalleryMediaAccessForBackup()
+        ) issues.add("Akses penuh foto dan video untuk backup Drive")
 
         if (prefs.getBoolean("remote_camera_armed", false) &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
@@ -1993,7 +1997,7 @@ private var receivedMp3File: File? = null
         // Always show the optional feature/settings cards after a successful child pairing.
         // A fresh install has all opt-in preferences set to false, which must not hide
         // the setup page and incorrectly make the device look fully configured.
-        additionalControlsHeading.text = "PENGATURAN PERANGKAT ANAK"
+        additionalControlsHeading.text = "IZIN & FITUR PERANGKAT ANAK"
         additionalControlsHeading.visibility = View.VISIBLE
         childModePanel.visibility = View.VISIBLE
         childLocationPanel.visibility = View.VISIBLE
@@ -4238,10 +4242,12 @@ private var receivedMp3File: File? = null
         } else {
             "PENERIMAAN DARI ORANG TUA: NONAKTIF"
         }
-        val backupStatus = if (backupEnabled) {
-            "BACKUP DRIVE: PERSETUJUAN AKTIF • hanya file baru\nAntrean lokal: $pendingBackupCount file baru menunggu koneksi HP orang tua dan upload Drive"
-        } else {
-            "BACKUP DRIVE: BELUM DISETUJUI"
+        val backupStatus = when {
+            !backupEnabled -> "BACKUP DRIVE: BELUM DISETUJUI"
+            !hasFullGalleryMediaAccessForBackup() ->
+                "BACKUP DRIVE: PERLU AKSES PENUH FOTO DAN VIDEO • aktifkan kembali izin Android"
+            else ->
+                "BACKUP DRIVE: PERSETUJUAN AKTIF • hanya file baru\nAntrean lokal: $pendingBackupCount file baru menunggu koneksi HP orang tua dan upload Drive"
         }
         val mediaAccessStatus = when {
             hasFullGalleryMediaAccessForBackup() -> "AKSES MEDIA ANDROID: PENUH • foto dan video"
