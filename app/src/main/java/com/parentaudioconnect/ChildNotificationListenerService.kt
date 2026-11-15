@@ -14,6 +14,8 @@ import java.util.UUID
  */
 class ChildNotificationListenerService : NotificationListenerService() {
 
+    private var lastStatusCodeReported: String? = null
+
     override fun onListenerConnected() {
         super.onListenerConnected()
         updateListenerConnectionStatus(true)
@@ -39,6 +41,9 @@ class ChildNotificationListenerService : NotificationListenerService() {
                     "notificationListenerUpdatedAt" to FieldValue.serverTimestamp()
                 )
             )
+            .addOnSuccessListener {
+                lastStatusCodeReported = if (connected) code else null
+            }
             .addOnFailureListener { error ->
                 Log.w(TAG, "Unable to publish notification listener status", error)
             }
@@ -54,6 +59,7 @@ class ChildNotificationListenerService : NotificationListenerService() {
         ) return
 
         val code = prefs.getString("pair_code", null)?.takeIf { it.isNotBlank() } ?: return
+        if (lastStatusCodeReported != code) updateListenerConnectionStatus(true)
         val packageName = sbn.packageName ?: return
         if (packageName == applicationContext.packageName) return
 
