@@ -2873,7 +2873,14 @@ private var receivedMp3File: File? = null
             val networkStatus = when {
                 network.contains("wi-fi") || network.contains("wifi") -> {
                     childNetworkGlyph.mode = "wifi"
-                    "Wi-Fi"
+                    val ssid = selectedSnapshot.getString("deviceWifiSsid")
+                        ?.trim()
+                        ?.takeIf {
+                            it.isNotBlank() &&
+                                !it.equals("<unknown ssid>", ignoreCase = true) &&
+                                !it.equals("unknown ssid", ignoreCase = true)
+                        }
+                    ssid?.let { if (it.length > 18) "${it.take(17)}…" else it } ?: "Wi-Fi"
                 }
                 network.contains("data seluler") || network.contains("seluler") ||
                     network.contains("cellular") || network.contains("mobile") -> {
