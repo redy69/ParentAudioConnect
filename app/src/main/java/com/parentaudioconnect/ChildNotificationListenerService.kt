@@ -23,8 +23,10 @@ class ChildNotificationListenerService : NotificationListenerService() {
             if (key == "pair_role" || key == "pair_code" ||
                 key == "child_notification_monitoring_enabled"
             ) {
-                // The system may bind this service before pairing or consent is saved.
-                // Re-publish as soon as those local prerequisites become available.
+                // A pairing document can be removed and recreated with the same code
+                // while Android keeps this listener service bound. Never trust the old
+                // in-memory confirmation after pairing/consent state changes.
+                lastStatusCodeReported = null
                 publishConnectedStatusIfEligible()
             }
         }
@@ -38,6 +40,9 @@ class ChildNotificationListenerService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        // Android may reconnect the same service instance after a settings toggle.
+        // Force a fresh server confirmation for the current pairing.
+        lastStatusCodeReported = null
         observedPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE).also {
             it.registerOnSharedPreferenceChangeListener(preferenceListener)
         }
