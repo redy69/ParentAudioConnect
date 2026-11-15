@@ -5542,7 +5542,7 @@ private var receivedMp3File: File? = null
                 }
                 if (documents.isEmpty()) {
                     list.addView(TextView(this).apply {
-                        text = "Belum ada notifikasi. Pastikan HP anak online dan akses notifikasi SantetHP sudah aktif."
+                        text = "Belum ada notifikasi baru. SantetHP hanya menyimpan notifikasi yang muncul setelah pemantauan aktif; riwayat sebelumnya tidak diimpor."
                         textSize = 12.5f
                         setTextColor(Color.rgb(91, 112, 132))
                         gravity = Gravity.CENTER
