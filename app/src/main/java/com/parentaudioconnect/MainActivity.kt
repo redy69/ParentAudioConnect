@@ -590,6 +590,7 @@ private var receivedMp3File: File? = null
         addChildButton.gravity = Gravity.CENTER
         addChildButton.stateListAnimator = null
         addChildButton.layoutParams = LinearLayout.LayoutParams(dp(42), dp(42)).apply { setMargins(dp(3), 0, dp(2), 0) }
+        selectedChildAvatar = AnimatedGifIconView(R.raw.user_icon)
         selectedChildButton = createButton("Pilih anak  ▾")
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
         selectedChildButton.setOnClickListener { toggleChildrenPanel() }
@@ -2949,8 +2950,8 @@ private var receivedMp3File: File? = null
         val connected = presence.second
         val childLabel = if (name.isNullOrBlank()) "Pilih perangkat anak" else name
         val connectionLabel = presence.first
-        val childDisplay = android.text.SpannableString("🧒  $childLabel   $connectionLabel   $arrow")
-        val nameStart = 4
+        val childDisplay = android.text.SpannableString("$childLabel   $connectionLabel   $arrow")
+        val nameStart = 0
         val nameEnd = (nameStart + childLabel.length).coerceAtMost(childDisplay.length)
         childDisplay.setSpan(
             android.text.style.ForegroundColorSpan(Color.rgb(31, 83, 56)),
