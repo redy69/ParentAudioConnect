@@ -5939,14 +5939,23 @@ private var receivedMp3File: File? = null
                     filterDialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)
                         ?.setTextColor(Color.rgb(91, 111, 126))
                     filterDialog.listView?.let { appList ->
-                        appList.setBackgroundColor(Color.TRANSPARENT)
-                        appList.divider = android.graphics.drawable.ColorDrawable(Color.rgb(190, 220, 201))
+                        // Give the complete application list its own visible emerald container.
+                        appList.background = GradientDrawable(
+                            GradientDrawable.Orientation.TL_BR,
+                            intArrayOf(Color.rgb(248, 253, 249), Color.rgb(232, 246, 237))
+                        ).apply {
+                            cornerRadius = dp(16).toFloat()
+                            setStroke(dp(1), Color.rgb(164, 205, 177))
+                        }
+                        appList.clipToOutline = true
+                        appList.setPadding(dp(8), dp(6), dp(8), dp(6))
+                        appList.divider = android.graphics.drawable.ColorDrawable(Color.rgb(205, 228, 212))
                         appList.dividerHeight = dp(1)
                         for (index in 0 until appList.childCount) {
                             (appList.getChildAt(index) as? android.widget.CheckedTextView)?.apply {
                                 setTextColor(Color.rgb(36, 70, 56))
                                 checkMarkTintList = android.content.res.ColorStateList.valueOf(Color.rgb(32, 119, 84))
-                                setPadding(dp(16), dp(11), dp(16), dp(11))
+                                setPadding(dp(14), dp(12), dp(14), dp(12))
                             }
                         }
                     }
