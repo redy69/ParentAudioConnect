@@ -5706,6 +5706,13 @@ private var receivedMp3File: File? = null
             )
         }
         list.addView(listenerStatus)
+        val filterButton = Button(this).apply {
+            text = "PILIH APLIKASI YANG DITAMPILKAN"
+            textSize = 11f
+            isAllCaps = false
+            setOnClickListener { showNotificationAppFilter(code) }
+        }
+        list.addView(filterButton)
         notificationPairingStatusListener = db.collection("pairings").document(code)
             .addSnapshotListener { pairing, statusError ->
                 if (statusError != null) {
@@ -5849,6 +5856,80 @@ private var receivedMp3File: File? = null
             notificationPairingStatusListener = null
         }
         dialog.show()
+    }
+
+    private fun showNotificationAppFilter(code: String) {
+        val pairingRef = db.collection("pairings").document(code)
+        val knownApps = linkedMapOf(
+            "WhatsApp" to "com.whatsapp",
+            "WhatsApp Business" to "com.whatsapp.w4b",
+            "Telegram" to "org.telegram.messenger",
+            "Instagram" to "com.instagram.android",
+            "Facebook" to "com.facebook.katana",
+            "Messenger" to "com.facebook.orca",
+            "TikTok" to "com.zhiliaoapp.musically",
+            "Gmail" to "com.google.android.gm",
+            "YouTube" to "com.google.android.youtube",
+            "Chrome" to "com.android.chrome",
+            "SMS Google" to "com.google.android.apps.messaging",
+            "SMS bawaan Android" to "com.android.mms",
+            "Telepon Google" to "com.google.android.dialer"
+        )
+        pairingRef.collection("notifications").limit(300).get()
+            .addOnSuccessListener { history ->
+                val options = linkedMapOf<String, String>()
+                knownApps.forEach { (name, packageName) -> options[packageName] = name }
+                history.documents.forEach { document ->
+                    val packageName = document.getString("packageName") ?: return@forEach
+                    val appName = document.getString("appName") ?: packageName
+                    options[packageName] = appName
+                }
+                pairingRef.get().addOnSuccessListener { pairing ->
+                    val configured = pairing.get("notificationAllowedPackages") as? List<*>
+                    val allAllowed = configured == null
+                    val selected = options.keys.map { packageName ->
+                        allAllowed || packageName in configured.orEmpty()
+                    }.toBooleanArray()
+                    val labels = options.map { (packageName, appName) ->
+                        "$appName  ($packageName)"
+                    }.toTypedArray()
+                    if (labels.isEmpty()) {
+                        Toast.makeText(this, "Belum ada daftar aplikasi. Tunggu notifikasi pertama dari HP anak.", Toast.LENGTH_LONG).show()
+                        return@addOnSuccessListener
+                    }
+                    AlertDialog.Builder(this)
+                        .setTitle("Filter Notifikasi")
+                        .setMultiChoiceItems(labels, selected) { _, which, checked ->
+                            selected[which] = checked
+                        }
+                        .setPositiveButton("Simpan pilihan") { _, _ ->
+                            val allowed = options.keys.filterIndexed { index, _ -> selected[index] }
+                            pairingRef.update("notificationAllowedPackages", allowed)
+                                .addOnSuccessListener {
+                                    Toast.makeText(this, "Filter tersimpan. Hanya aplikasi terpilih yang akan dikirim.", Toast.LENGTH_LONG).show()
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(this, "Gagal menyimpan filter notifikasi.", Toast.LENGTH_LONG).show()
+                                }
+                        }
+                        .setNeutralButton("Tampilkan semua") { _, _ ->
+                            pairingRef.update("notificationAllowedPackages", com.google.firebase.firestore.FieldValue.delete())
+                                .addOnSuccessListener {
+                                    Toast.makeText(this, "Semua aplikasi kembali ditampilkan.", Toast.LENGTH_SHORT).show()
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(this, "Gagal menghapus filter.", Toast.LENGTH_SHORT).show()
+                                }
+                        }
+                        .setNegativeButton("Batal", null)
+                        .show()
+                }.addOnFailureListener {
+                    Toast.makeText(this, "Gagal membaca pengaturan filter.", Toast.LENGTH_LONG).show()
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Gagal memuat daftar aplikasi dari riwayat notifikasi.", Toast.LENGTH_LONG).show()
+            }
     }
 
     private fun clearChildNotificationHistory(code: String) {
