@@ -2500,8 +2500,8 @@ private var receivedMp3File: File? = null
             set(value) { field = value; invalidateSelf() }
         var mode: String = "wifi"
             set(value) { field = value; invalidateSelf() }
-        override fun getIntrinsicWidth(): Int = dp(18)
-        override fun getIntrinsicHeight(): Int = dp(18)
+        override fun getIntrinsicWidth(): Int = dp(20)
+        override fun getIntrinsicHeight(): Int = dp(20)
         override fun draw(canvas: Canvas) {
             val b = bounds
             val w = b.width().toFloat()
@@ -2509,9 +2509,9 @@ private var receivedMp3File: File? = null
             if (w <= 0f || h <= 0f) return
             val cx = b.exactCenterX()
             val cy = b.exactCenterY()
-            glyphPaint.color = Color.rgb(48, 111, 194)
+            glyphPaint.color = Color.rgb(29, 112, 77)
             glyphPaint.style = Paint.Style.STROKE
-            glyphPaint.strokeWidth = dp(1.6f)
+            glyphPaint.strokeWidth = dp(1.9f)
             glyphPaint.strokeCap = Paint.Cap.ROUND
             glyphPaint.strokeJoin = Paint.Join.ROUND
             glyphPaint.colorFilter = null
@@ -2914,7 +2914,7 @@ private var receivedMp3File: File? = null
             if (networkStatus.isNotBlank()) {
                 val glyphIndex = statusLine.indexOf('◇')
                 if (glyphIndex >= 0) {
-                    childNetworkGlyph.setBounds(0, 0, dp(16), dp(16))
+                    childNetworkGlyph.setBounds(0, 0, dp(20), dp(20))
                     statusDisplay.setSpan(
                         android.text.style.ImageSpan(childNetworkGlyph, android.text.style.ImageSpan.ALIGN_CENTER),
                         glyphIndex, glyphIndex + 1,
