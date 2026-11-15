@@ -5710,6 +5710,20 @@ private var receivedMp3File: File? = null
             text = "PILIH APLIKASI YANG DITAMPILKAN"
             textSize = 11f
             isAllCaps = false
+            setTextColor(Color.rgb(25, 91, 67))
+            typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+            letterSpacing = 0.025f
+            gravity = android.view.Gravity.CENTER
+            minHeight = dp(46)
+            setPadding(dp(16), dp(10), dp(16), dp(10))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(248, 253, 249), Color.rgb(232, 246, 237))
+            ).apply {
+                cornerRadius = dp(14).toFloat()
+                setStroke(dp(1), Color.rgb(164, 205, 177))
+            }
+            elevation = dp(1).toFloat()
             setOnClickListener { showNotificationAppFilter(code) }
         }
         list.addView(filterButton)
