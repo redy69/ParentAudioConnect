@@ -109,7 +109,9 @@ class ChildNotificationListenerService : NotificationListenerService() {
         ) return
 
         val code = prefs.getString("pair_code", null)?.takeIf { it.isNotBlank() } ?: return
-        // Any real notification proves the listener is active. Refresh the server status\n        // even when this service instance previously reported the same pairing code.\n        updateListenerConnectionStatus(true, force = true)
+        // Any real notification proves the listener is active. Refresh the server status
+        // even when this service instance previously reported the same pairing code.
+        updateListenerConnectionStatus(true, force = true)
         val packageName = sbn.packageName ?: return
         if (packageName == applicationContext.packageName) return
 
