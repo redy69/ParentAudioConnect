@@ -273,6 +273,7 @@ private var receivedMp3File: File? = null
     private const val GALLERY_MEDIA_PERMISSION = 1009
     private const val PARENT_MEDIA_WRITE_PERMISSION = 1010
     private const val PARENT_MEDIA_PICKER = 1011
+    private const val BACKUP_MEDIA_PERMISSION = 1012
 }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -4242,7 +4243,12 @@ private var receivedMp3File: File? = null
         } else {
             "BACKUP DRIVE: BELUM DISETUJUI"
         }
-        childGalleryPanel.text = "🖼️  GALERI & BACKUP HP INI\n$galleryStatus\n$receiveStatus\n$backupStatus\nKetuk untuk mengatur persetujuan masing-masing fitur."
+        val mediaAccessStatus = when {
+            hasFullGalleryMediaAccessForBackup() -> "AKSES MEDIA ANDROID: PENUH • foto dan video"
+            mediaAccess -> "AKSES MEDIA ANDROID: TERBATAS • media terpilih saja; backup perlu akses penuh"
+            else -> "AKSES MEDIA ANDROID: BELUM DIBERIKAN"
+        }
+        childGalleryPanel.text = "🖼️  GALERI & MEDIA HP INI\n$mediaAccessStatus\n$galleryStatus\n$receiveStatus\n$backupStatus\nKetuk untuk mengatur ketiga fitur secara terpisah."
         childGalleryPanel.setTextColor(
             if (enabled && mediaAccess && serverConfirmed) Color.rgb(28, 132, 86) else Color.rgb(35, 53, 88)
         )
@@ -4282,17 +4288,39 @@ private var receivedMp3File: File? = null
 
     private fun showChildMediaSettingsMenu() {
         if (currentRole != "child") return
-        SantetHpDialogBuilder()
-            .setTitle("Pengaturan Galeri & Backup")
-            .setItems(arrayOf("Berbagi Galeri Anak", "Penerimaan dari HP Orang Tua", "Backup Google Drive")) { _, which ->
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        val galleryEnabled = prefs.getBoolean("child_gallery_sharing_enabled", false)
+        val receiveEnabled = prefs.getBoolean("child_parent_media_receive_consent", false)
+        val backupEnabled = prefs.getBoolean("child_drive_backup_consent", false)
+        val options = listOf(
+            "Berbagi Galeri Anak" to if (galleryEnabled) {
+                "Aktif • HP orang tua dapat melihat media yang dibagikan"
+            } else {
+                "Nonaktif • atur persetujuan berbagi foto dan video"
+            },
+            "Penerimaan dari HP Orang Tua" to if (receiveEnabled) {
+                "Aktif • media yang dikirim orang tua disimpan ke galeri"
+            } else {
+                "Nonaktif • izinkan atau cabut penerimaan kiriman"
+            },
+            "Backup Google Drive" to if (backupEnabled) {
+                "Aktif • hanya foto dan video baru yang masuk antrean"
+            } else {
+                "Nonaktif • file lama tetap dikecualikan dari backup"
+            }
+        )
+        val dialog = SantetHpDialogBuilder()
+            .setTitle("Akses Galeri & Media")
+            .setView(popupChoiceCards(options) { which ->
                 when (which) {
                     0 -> showChildGalleryConsent()
                     1 -> showChildParentMediaReceiveConsent()
                     2 -> showChildDriveBackupConsent()
                 }
-            }
+            })
             .setNegativeButton("Tutup", null)
-            .show()
+            .create()
+        dialog.show()
     }
 
     private fun updateParentMediaReceiveConsentOnServer(enabled: Boolean) {
@@ -4443,6 +4471,36 @@ private var receivedMp3File: File? = null
             }
     }
 
+    private fun enableChildDriveBackupAfterPermission() {
+        if (currentRole != "child") return
+        if (!hasFullGalleryMediaAccessForBackup()) {
+            Toast.makeText(this, "Backup belum diaktifkan. Izin penuh untuk foto dan video masih diperlukan.", Toast.LENGTH_LONG).show()
+            updateChildGalleryPanel()
+            return
+        }
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        Toast.makeText(this, "Sedang mencatat galeri yang sudah ada sebagai batas awal backup…", Toast.LENGTH_LONG).show()
+        activityScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val repository = GalleryMediaRepository(this@MainActivity)
+                    GalleryBackupTracker(this@MainActivity).enableWithCompleteBaseline(repository)
+                }
+                prefs.edit().putBoolean("child_drive_backup_consent", true).apply()
+                updateDriveBackupConsentOnServer(true)
+                GalleryBackupDiscoveryWorker.schedule(this@MainActivity)
+                // Backup consent keeps P2P ready without enabling parent gallery browsing.
+                startChildGalleryP2pIfAllowed()
+                updateChildGalleryPanel()
+                Toast.makeText(this@MainActivity, "Persetujuan tersimpan. File lama dikecualikan dari antrean backup.", Toast.LENGTH_LONG).show()
+                showChildDriveBackupConsent()
+            } catch (error: Exception) {
+                GalleryBackupTracker(this@MainActivity).disable()
+                Toast.makeText(this@MainActivity, "Gagal mencatat batas awal galeri: ${error.localizedMessage ?: "coba lagi"}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     private fun showChildDriveBackupConsent() {
         if (currentRole != "child") return
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
@@ -4468,29 +4526,15 @@ private var receivedMp3File: File? = null
                     updateChildGalleryPanel()
                     Toast.makeText(this, "Persetujuan Backup Drive dicabut.", Toast.LENGTH_LONG).show()
                 } else if (!hasFullGalleryMediaAccessForBackup()) {
-                    Toast.makeText(this, "Backup memerlukan izin akses penuh ke foto DAN video agar file lama yang belum dipilih tidak keliru dianggap file baru. Atur izin media penuh melalui pengaturan Android.", Toast.LENGTH_LONG).show()
-                } else {
-                    Toast.makeText(this, "Sedang mencatat galeri yang sudah ada sebagai batas awal backup…", Toast.LENGTH_LONG).show()
-                    activityScope.launch {
-                        try {
-                            withContext(Dispatchers.IO) {
-                                val repository = GalleryMediaRepository(this@MainActivity)
-                                GalleryBackupTracker(this@MainActivity).enableWithCompleteBaseline(repository)
-                            }
-                            prefs.edit().putBoolean("child_drive_backup_consent", true).apply()
-                            updateDriveBackupConsentOnServer(true)
-                            GalleryBackupDiscoveryWorker.schedule(this@MainActivity)
-                            // Start the foreground P2P service under backup consent
-                            // without granting gallery-browsing consent.
-                            startChildGalleryP2pIfAllowed()
-                            updateChildGalleryPanel()
-                            Toast.makeText(this@MainActivity, "Persetujuan tersimpan. File lama dikecualikan dari antrean backup.", Toast.LENGTH_LONG).show()
-                            showChildDriveBackupConsent()
-                        } catch (error: Exception) {
-                            GalleryBackupTracker(this@MainActivity).disable()
-                            Toast.makeText(this@MainActivity, "Gagal mencatat batas awal galeri: ${error.localizedMessage ?: "coba lagi"}", Toast.LENGTH_LONG).show()
-                        }
+                    val permissions = if (Build.VERSION.SDK_INT >= 33) {
+                        arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
+                    } else {
+                        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
                     }
+                    Toast.makeText(this, "Izinkan akses penuh foto dan video agar file lama dapat dikecualikan dengan aman.", Toast.LENGTH_LONG).show()
+                    requestPermissions(permissions, BACKUP_MEDIA_PERMISSION)
+                } else {
+                    enableChildDriveBackupAfterPermission()
                 }
             }
             .show()
@@ -6831,6 +6875,15 @@ private fun playReceivedMp3() {
                 showChildParentMediaReceiveConsent()
             } else {
                 Toast.makeText(this, "Izin penyimpanan diperlukan agar file dapat masuk ke galeri pada Android lama.", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        if (requestCode == BACKUP_MEDIA_PERMISSION) {
+            if (hasFullGalleryMediaAccessForBackup()) {
+                enableChildDriveBackupAfterPermission()
+            } else {
+                Toast.makeText(this, "Izin penuh foto dan video belum diberikan. Backup tetap nonaktif; Anda dapat mengubah akses media melalui Pengaturan Android.", Toast.LENGTH_LONG).show()
+                updateChildGalleryPanel()
             }
         }
 
