@@ -821,13 +821,44 @@ private var receivedMp3File: File? = null
         }
         rootLayout.addView(childGalleryPanel)
         childGallerySharingSetting = createChildMediaSettingCard("🖼️  BERBAGI GALERI ANAK") {
-            showChildGalleryConsent()
+            val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            val enabled = prefs.getBoolean("child_gallery_sharing_enabled", false)
+            val confirmed = prefs.getBoolean("child_gallery_server_consent_confirmed", false)
+            val status = when {
+                !enabled -> "NONAKTIF"
+                !hasGalleryMediaAccess() -> "PERLU IZIN FOTO/VIDEO"
+                !confirmed -> "MENUNGGU KONFIRMASI SERVER"
+                else -> "AKTIF"
+            }
+            showChildMediaDetailPage(
+                "Berbagi Galeri Anak", status,
+                "Jika diaktifkan, HP orang tua yang sudah dipasangkan dapat melihat daftar foto dan video. Thumbnail ditampilkan lebih dulu; file asli dikirim saat dipilih.",
+                if (enabled) "Kelola persetujuan" else "Baca & aktifkan"
+            ) { showChildGalleryConsent() }
         }
         childMediaReceiveSetting = createChildMediaSettingCard("📥  PENERIMAAN DARI HP ORANG TUA") {
-            showChildParentMediaReceiveConsent()
+            val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            val enabled = prefs.getBoolean("child_parent_media_receive_consent", false) &&
+                prefs.getBoolean("child_parent_media_server_confirmed", false)
+            showChildMediaDetailPage(
+                "Penerimaan dari HP Orang Tua", if (enabled) "AKTIF" else "NONAKTIF",
+                "Jika diaktifkan, HP orang tua yang sudah dipasangkan dapat mengirim foto dan video ke HP ini. File yang diterima disimpan otomatis ke Galeri.",
+                if (enabled) "Kelola persetujuan" else "Baca & aktifkan"
+            ) { showChildParentMediaReceiveConsent() }
         }
         childDriveBackupSetting = createChildMediaSettingCard("☁️  BACKUP GOOGLE DRIVE") {
-            showChildDriveBackupConsent()
+            val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            val enabled = prefs.getBoolean("child_drive_backup_consent", false)
+            val status = when {
+                !enabled -> "NONAKTIF"
+                !hasFullGalleryMediaAccessForBackup() -> "PERLU AKSES PENUH FOTO/VIDEO"
+                else -> "AKTIF"
+            }
+            showChildMediaDetailPage(
+                "Backup Google Drive", status,
+                "Backup hanya memproses foto dan video baru setelah persetujuan diberikan. File lama dikecualikan. Upload dilakukan melalui koneksi HP orang tua dan akun Drive yang diotorisasi.",
+                if (enabled) "Kelola persetujuan" else "Baca & aktifkan"
+            ) { showChildDriveBackupConsent() }
         }
         rootLayout.addView(childGallerySharingSetting)
         rootLayout.addView(childMediaReceiveSetting)
@@ -4242,6 +4273,37 @@ private var receivedMp3File: File? = null
             ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
         }
 
+    private fun showChildMediaDetailPage(
+        title: String,
+        status: String,
+        description: String,
+        actionLabel: String,
+        onAction: () -> Unit
+    ) {
+        if (currentRole != "child") return
+        val page = SantetHpDialogBuilder()
+            .setTitle(title)
+            .setView(popupInfoCards(listOf(
+                "STATUS SAAT INI" to status,
+                "CARA KERJA" to description,
+                "PRIVASI & KENDALI" to "Persetujuan fitur ini berdiri sendiri. Anda dapat mengaktifkan atau mencabutnya kapan saja dari HP anak."
+            )))
+            .setNegativeButton("Kembali", null)
+            .setPositiveButton(actionLabel, null)
+            .create()
+        page.setOnShowListener {
+            page.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                page.dismiss()
+                onAction()
+            }
+        }
+        page.show()
+        page.window?.setLayout(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+    }
+
     private fun createChildMediaSettingCard(title: String, onClick: () -> Unit): TextView {
         return TextView(this).apply {
             text = "$title\nMemuat status…"
@@ -4301,15 +4363,20 @@ private var receivedMp3File: File? = null
             mediaAccess -> "AKSES MEDIA ANDROID: TERBATAS • media terpilih saja; backup perlu akses penuh"
             else -> "AKSES MEDIA ANDROID: BELUM DIBERIKAN"
         }
-        childGalleryPanel.text = "🖼️  GALERI & MEDIA HP INI\n$mediaAccessStatus\nAtur setiap fitur melalui kartu di bawah. Persetujuan tetap terpisah."
+        childGalleryPanel.text = "🖼️  GALERI & MEDIA HP INI\n$mediaAccessStatus\nPilih salah satu pengaturan di bawah untuk melihat detail dan mengelola persetujuan."
         childGalleryPanel.setTextColor(
             if (enabled && mediaAccess && serverConfirmed) Color.rgb(28, 132, 86) else Color.rgb(35, 53, 88)
         )
-        childGallerySharingSetting.text = "BERBAGI GALERI ANAK\n$galleryStatus\n" +
-            if (enabled && mediaAccess && serverConfirmed) "HP orang tua dapat melihat media yang dibagikan" else "Ketuk untuk membaca penjelasan dan mengatur persetujuan"
-        childMediaReceiveSetting.text = "PENERIMAAN DARI HP ORANG TUA\n$receiveStatus\n" +
-            if (receiveEnabled) "Foto/video kiriman akan disimpan otomatis" else "Ketuk untuk mengatur izin menerima kiriman"
-        childDriveBackupSetting.text = "BACKUP GOOGLE DRIVE\n$backupStatus"
+        childGallerySharingSetting.text = "🖼️  BERBAGI GALERI ANAK\n" +
+            if (enabled && mediaAccess && serverConfirmed) "STATUS: AKTIF  •  Ketuk untuk detail" else "STATUS: NONAKTIF / PERLU TINDAKAN  •  Ketuk untuk detail"
+        childMediaReceiveSetting.text = "📥  PENERIMAAN DARI HP ORANG TUA\n" +
+            if (receiveEnabled) "STATUS: AKTIF  •  Ketuk untuk detail" else "STATUS: NONAKTIF  •  Ketuk untuk detail"
+        childDriveBackupSetting.text = "☁️  BACKUP GOOGLE DRIVE\n" +
+            when {
+                !backupEnabled -> "STATUS: NONAKTIF  •  Ketuk untuk detail"
+                !hasFullGalleryMediaAccessForBackup() -> "STATUS: PERLU AKSES PENUH  •  Ketuk untuk detail"
+                else -> "STATUS: AKTIF  •  Ketuk untuk detail"
+            }
     }
 
     private fun updateGalleryConsentOnServer(enabled: Boolean, onSaved: (() -> Unit)? = null) {
