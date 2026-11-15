@@ -5473,6 +5473,35 @@ private var receivedMp3File: File? = null
                 setStroke(dp(1), Color.rgb(211, 224, 240))
             }
         }
+        var serverListenerConnected = false
+        var serverListenerUpdatedText: String? = null
+        var latestNotificationReceivedAt: java.util.Date? = null
+        fun refreshNotificationServiceStatus() {
+            val recentNotification = latestNotificationReceivedAt?.takeIf {
+                System.currentTimeMillis() - it.time <= 10 * 60 * 1000L
+            }
+            listenerStatus.text = when {
+                serverListenerConnected ->
+                    "LAYANAN NOTIFIKASI TERHUBUNG" +
+                        (serverListenerUpdatedText?.let { " • diperbarui " + it } ?: "")
+                recentNotification != null -> {
+                    val recentText = java.text.SimpleDateFormat(
+                        "HH:mm:ss", java.util.Locale("id", "ID")
+                    ).format(recentNotification)
+                    "LAYANAN NOTIFIKASI TERDETEKSI AKTIF • notifikasi terbaru " + recentText
+                }
+                serverListenerUpdatedText != null ->
+                    "LAYANAN NOTIFIKASI TIDAK TERHUBUNG • status terakhir " +
+                        serverListenerUpdatedText
+                else ->
+                    "BELUM ADA KONFIRMASI LAYANAN • buka SantetHP di HP anak dan tunggu beberapa saat"
+            }
+            listenerStatus.setTextColor(
+                if (serverListenerConnected || recentNotification != null)
+                    Color.rgb(28, 132, 86)
+                else Color.rgb(151, 91, 35)
+            )
+        }
         list.addView(listenerStatus)
         notificationPairingStatusListener = db.collection("pairings").document(code)
             .addSnapshotListener { pairing, statusError ->
@@ -5480,17 +5509,13 @@ private var receivedMp3File: File? = null
                     listenerStatus.text = "Status layanan notifikasi belum dapat diperiksa. Periksa koneksi HP anak."
                     return@addSnapshotListener
                 }
-                val connected = pairing?.getBoolean("notificationListenerConnected") == true
+                serverListenerConnected =
+                    pairing?.getBoolean("notificationListenerConnected") == true
                 val updatedAt = pairing?.getTimestamp("notificationListenerUpdatedAt")
-                val updatedText = updatedAt?.toDate()?.let {
+                serverListenerUpdatedText = updatedAt?.toDate()?.let {
                     java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale("id", "ID")).format(it)
                 }
-                listenerStatus.text = when {
-                    connected -> "LAYANAN NOTIFIKASI TERHUBUNG" + (updatedText?.let { " • diperbarui " + it } ?: "")
-                    updatedAt != null -> "LAYANAN NOTIFIKASI TIDAK TERHUBUNG • status terakhir " + (updatedText ?: "tersedia")
-                    else -> "BELUM ADA KONFIRMASI LAYANAN • buka SantetHP di HP anak dan tunggu beberapa saat"
-                }
-                listenerStatus.setTextColor(if (connected) Color.rgb(28, 132, 86) else Color.rgb(151, 91, 35))
+                refreshNotificationServiceStatus()
             }
         val scroll = ScrollView(this).apply {
             addView(list)
@@ -5531,6 +5556,10 @@ private var receivedMp3File: File? = null
                     return@addSnapshotListener
                 }
                 val documents = snapshot?.documents.orEmpty()
+                latestNotificationReceivedAt = documents
+                    .mapNotNull { it.getTimestamp("postedAt")?.toDate() }
+                    .maxByOrNull { it.time }
+                refreshNotificationServiceStatus()
                 val lastReadPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
                 val lastReadAt = lastReadPrefs.getLong("notification_last_read_$code", 0L)
                 val unreadCount = documents.count { document ->
