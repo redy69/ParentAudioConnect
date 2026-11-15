@@ -34,6 +34,8 @@ import android.widget.TextView
 import android.widget.ScrollView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.work.WorkManager
 
 import androidx.lifecycle.Lifecycle
@@ -1114,6 +1116,14 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.VERTICAL
             setPadding(dp(11), dp(7), dp(11), dp(3))
         }
+        // Keep the sticky header below the Android status bar on edge-to-edge devices.
+        // Use the actual system inset so clock, Wi-Fi, signal and battery icons never
+        // overlap the SantetHP brand header.
+        ViewCompat.setOnApplyWindowInsetsListener(stickyHeader) { view, insets ->
+            val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+            view.setPadding(dp(11), dp(7) + statusBarTop, dp(11), dp(3))
+            insets
+        }
         stickyHeader.addView(title, title.layoutParams)
         stickyHeader.addView(deviceSectionTitle, deviceSectionTitle.layoutParams)
         stickyHeader.addView(childHeaderRow, childHeaderRow.layoutParams)
@@ -1139,6 +1149,7 @@ private var receivedMp3File: File? = null
             ))
         }
         setContentView(screenLayout)
+        ViewCompat.requestApplyInsets(stickyHeader)
 
         connectFirebase()
     }
