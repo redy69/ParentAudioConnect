@@ -5889,12 +5889,12 @@ private var receivedMp3File: File? = null
                 pairingRef.get().addOnSuccessListener { pairing ->
                     val configured = pairing.get("notificationAllowedPackages") as? List<*>
                     val allAllowed = configured == null
-                    val selected = options.keys.map { packageName ->
-                        allAllowed || packageName in configured.orEmpty()
+                    // Show friendly app names only; package IDs stay internal for filtering.
+                    val appEntries = options.entries.sortedBy { it.value.lowercase(java.util.Locale.ROOT) }
+                    val selected = appEntries.map { entry ->
+                        allAllowed || entry.key in configured.orEmpty()
                     }.toBooleanArray()
-                    val labels = options.map { (packageName, appName) ->
-                        "$appName  ($packageName)"
-                    }.toTypedArray()
+                    val labels = appEntries.map { it.value }.toTypedArray()
                     if (labels.isEmpty()) {
                         Toast.makeText(this, "Belum ada daftar aplikasi. Tunggu notifikasi pertama dari HP anak.", Toast.LENGTH_LONG).show()
                         return@addOnSuccessListener
@@ -5905,13 +5905,18 @@ private var receivedMp3File: File? = null
                             selected[which] = checked
                         }
                         .setPositiveButton("Simpan pilihan") { _, _ ->
-                            val allowed = options.keys.filterIndexed { index, _ -> selected[index] }
+                            val allowed = appEntries.filterIndexed { index, _ -> selected[index] }.map { it.key }
                             pairingRef.update("notificationAllowedPackages", allowed)
                                 .addOnSuccessListener {
                                     Toast.makeText(this, "Filter tersimpan. Hanya aplikasi terpilih yang akan dikirim.", Toast.LENGTH_LONG).show()
                                 }
-                                .addOnFailureListener {
-                                    Toast.makeText(this, "Gagal menyimpan filter notifikasi.", Toast.LENGTH_LONG).show()
+                                .addOnFailureListener { error ->
+                                    val reason = error.localizedMessage?.take(150).orEmpty()
+                                    Toast.makeText(
+                                        this,
+                                        "Gagal menyimpan filter notifikasi: ${reason.ifBlank { "periksa koneksi dan izin" }}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
                                 }
                         }
                         .setNeutralButton("Tampilkan semua") { _, _ ->
