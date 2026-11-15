@@ -77,6 +77,21 @@ test("parent can save a valid schedule using Sunday=1 through Saturday=7", async
   }));
 });
 
+test("parent can save notification app filter and child cannot change it", async () => {
+  const parentDb = testEnv.authenticatedContext("parent-user").firestore();
+  await assertSucceeds(updateDoc(doc(parentDb, "pairings", PAIR_CODE), {
+    notificationAllowedPackages: ["com.whatsapp", "org.telegram.messenger"]
+  }));
+
+  const childDb = testEnv.authenticatedContext("child-user").firestore();
+  await assertFails(updateDoc(doc(childDb, "pairings", PAIR_CODE), {
+    notificationAllowedPackages: ["com.android.chrome"]
+  }));
+  await assertFails(updateDoc(doc(parentDb, "pairings", PAIR_CODE), {
+    notificationAllowedPackages: "com.whatsapp"
+  }));
+});
+
 test("parent can configure Wi-Fi-only Drive backup per child", async () => {
   const db = testEnv.authenticatedContext("parent-user").firestore();
   await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
