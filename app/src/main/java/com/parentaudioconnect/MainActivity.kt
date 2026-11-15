@@ -5899,7 +5899,7 @@ private var receivedMp3File: File? = null
                         Toast.makeText(this, "Belum ada daftar aplikasi. Tunggu notifikasi pertama dari HP anak.", Toast.LENGTH_LONG).show()
                         return@addOnSuccessListener
                     }
-                    AlertDialog.Builder(this)
+                    val filterDialog = SantetHpDialogBuilder()
                         .setTitle("Filter Notifikasi")
                         .setMultiChoiceItems(labels, selected) { _, which, checked ->
                             selected[which] = checked
@@ -5929,7 +5929,25 @@ private var receivedMp3File: File? = null
                                 }
                         }
                         .setNegativeButton("Batal", null)
-                        .show()
+                        .create()
+                    filterDialog.show()
+                    filterDialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)
+                        ?.setTextColor(Color.rgb(25, 91, 67))
+                    filterDialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL)
+                        ?.setTextColor(Color.rgb(25, 91, 67))
+                    filterDialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)
+                        ?.setTextColor(Color.rgb(91, 111, 126))
+                    filterDialog.listView?.let { appList ->
+                        appList.divider = android.graphics.drawable.ColorDrawable(Color.rgb(225, 237, 230))
+                        appList.dividerHeight = dp(1)
+                        for (index in 0 until appList.childCount) {
+                            (appList.getChildAt(index) as? android.widget.CheckedTextView)?.apply {
+                                setTextColor(Color.rgb(36, 70, 56))
+                                checkMarkTintList = android.content.res.ColorStateList.valueOf(Color.rgb(32, 119, 84))
+                                setPadding(dp(16), dp(11), dp(16), dp(11))
+                            }
+                        }
+                    }
                 }.addOnFailureListener {
                     Toast.makeText(this, "Gagal membaca pengaturan filter.", Toast.LENGTH_LONG).show()
                 }
