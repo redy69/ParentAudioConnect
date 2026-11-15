@@ -3203,6 +3203,10 @@ private var receivedMp3File: File? = null
                 if (!snapshot.exists()) {
                     handleChildPairingRemoved(code)
                 } else {
+                    // Remember the stable parent identity before a future unlink removes this pairing.
+                    snapshot.getString("parentUid")?.takeIf { it.isNotBlank() }?.let { parentUid ->
+                        prefs.edit().putString("child_last_parent_uid", parentUid).apply()
+                    }
                     // Only restore the connected screen after the server confirms the pairing.
                     showChildConnectedScreen()
                     watchChildPairingRemoval(code)
@@ -3221,6 +3225,72 @@ private var receivedMp3File: File? = null
             }
     }
 
+    private fun prepareChildConsentsForPairing(parentUid: String?) {
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        val previousParentUid = prefs.getString("child_last_parent_uid", null)
+        val sameParent = !parentUid.isNullOrBlank() && previousParentUid == parentUid
+
+        val editor = prefs.edit()
+            .putString("child_last_parent_uid", parentUid)
+            .putBoolean("child_location_sharing_enabled", false)
+            .putBoolean("remote_camera_armed", false)
+
+        if (!sameParent) {
+            // No consent is transferred to a different or unverified parent account.
+            editor
+                .putBoolean("child_usage_audit_enabled", false)
+                .putBoolean("child_permission_audit_enabled", false)
+                .putBoolean("child_app_block_consent", false)
+                .putBoolean("child_app_activity_consent", false)
+                .putBoolean("child_notification_monitoring_enabled", false)
+                .putBoolean("child_gallery_sharing_enabled", false)
+                .putBoolean("child_gallery_server_consent_confirmed", false)
+                .putBoolean("child_drive_backup_consent", false)
+                .putBoolean("child_parent_media_receive_consent", false)
+                .putBoolean("child_parent_media_server_confirmed", false)
+        } else {
+            // The new pairing document is empty, so force previously approved
+            // gallery/receive consents to be written again for this same parent.
+            editor
+                .putBoolean("child_gallery_server_consent_confirmed", false)
+                .putBoolean("child_parent_media_server_confirmed", false)
+        }
+        editor.apply()
+
+        if (!sameParent) {
+            stopChildGalleryP2p()
+            db.collection("pairings").document(prefs.getString("pair_code", "") ?: "")
+                .update(
+                    mapOf(
+                        "appActivityConsent" to false,
+                        "childLocationSharingEnabled" to false
+                    )
+                )
+            return
+        }
+
+        val code = prefs.getString("pair_code", null) ?: return
+        if (prefs.getBoolean("child_app_activity_consent", false)) {
+            db.collection("pairings").document(code)
+                .update("appActivityConsent", true, "childLocationSharingEnabled", false)
+        } else {
+            db.collection("pairings").document(code)
+                .update("appActivityConsent", false, "childLocationSharingEnabled", false)
+        }
+
+        if (prefs.getBoolean("child_gallery_sharing_enabled", false) && hasGalleryMediaAccess()) {
+            updateGalleryConsentOnServer(true) { startChildGalleryP2pIfAllowed() }
+        }
+        if (prefs.getBoolean("child_drive_backup_consent", false)) {
+            updateDriveBackupConsentOnServer(true)
+        }
+        if (prefs.getBoolean("child_parent_media_receive_consent", false)) {
+            updateParentMediaReceiveConsentOnServer(true)
+        }
+        // Usage history and app-block consent are republished by the initial
+        // ChildDeviceStatusWorker scheduled by savePairing().
+    }
+
     private fun handleChildPairingRemoved(code: String) {
         val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
         val savedCode = prefs.getString("pair_code", null)
@@ -3230,14 +3300,14 @@ private var receivedMp3File: File? = null
         childPairingVerificationInFlight = false
         pairingListener?.remove()
         pairingListener = null
+        // Keep explicit feature consents locally for a possible re-pair with the
+        // same verified parent. A different parent is handled by
+        // prepareChildConsentsForPairing(), which clears these consents safely.
+        // Active location sharing and remote camera standby are always stopped on unlink.
         prefs.edit()
             .remove("pair_role")
             .remove("pair_code")
             .putBoolean("remote_camera_armed", false)
-            .putBoolean("child_usage_audit_enabled", false)
-            .putBoolean("child_permission_audit_enabled", false)
-            .putBoolean("child_app_block_consent", false)
-            .putBoolean("child_app_activity_consent", false)
             .putBoolean("child_location_sharing_enabled", false)
             .apply()
         ChildDeviceStatusWorker.cancel(this)
@@ -5968,6 +6038,9 @@ private var receivedMp3File: File? = null
                 document.update("childUid", uid)
                     .addOnSuccessListener {
 
+                        // Restore previously approved feature consents only when the same parent
+                        // account is verified. Android runtime/special permissions are never reset.
+                        prepareChildConsentsForPairing(parentUid)
                         savePairing(code, "child")
                         currentRole = "child"
 
