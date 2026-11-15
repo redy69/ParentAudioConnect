@@ -20,6 +20,8 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Path
+import android.graphics.Movie
+import android.os.SystemClock
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
@@ -2644,6 +2646,54 @@ private var receivedMp3File: File? = null
         }
     }
 
+    /**
+     * Small animated GIF icon used only by the two audio action tiles.
+     * Its 32dp slot matches the existing static action icons; the surrounding
+     * card, text, click handling, and all other feature icons remain unchanged.
+     */
+    private inner class AnimatedGifIconView(resourceId: Int) : View(this@MainActivity) {
+        private val gif: Movie = resources.openRawResource(resourceId).use { stream ->
+            Movie.decodeStream(stream)
+        } ?: throw IllegalStateException("GIF ikon SantetHP tidak dapat dibaca")
+        private val iconBackground = GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            intArrayOf(Color.rgb(26, 125, 88), Color.rgb(24, 105, 77), Color.rgb(31, 119, 84))
+        ).apply {
+            cornerRadius = dp(11).toFloat()
+            setStroke(dp(1), Color.argb(105, 255, 255, 255))
+        }
+        private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        private val startedAt = SystemClock.uptimeMillis()
+
+        init {
+            layoutParams = LinearLayout.LayoutParams(dp(32), dp(32)).apply {
+                marginEnd = dp(7)
+            }
+        }
+
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            iconBackground.setBounds(0, 0, width, height)
+            iconBackground.draw(canvas)
+
+            val frameDuration = gif.duration().takeIf { it > 0 } ?: 1000
+            val elapsed = (SystemClock.uptimeMillis() - startedAt).coerceAtLeast(0L)
+            gif.setTime((elapsed % frameDuration).toInt())
+
+            val sourceWidth = gif.width().coerceAtLeast(1)
+            val sourceHeight = gif.height().coerceAtLeast(1)
+            val scale = minOf(width.toFloat() / sourceWidth, height.toFloat() / sourceHeight)
+            val drawWidth = sourceWidth * scale
+            val drawHeight = sourceHeight * scale
+            canvas.save()
+            canvas.translate((width - drawWidth) / 2f, (height - drawHeight) / 2f)
+            canvas.scale(scale, scale)
+            gif.draw(canvas, 0f, 0f, iconPaint)
+            canvas.restore()
+            postInvalidateDelayed(40L)
+        }
+    }
+
     private fun createActionButton(icon: String, label: String, accent: Int): LinearLayout {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -2669,14 +2719,15 @@ private var receivedMp3File: File? = null
             isFocusable = true
             contentDescription = label
         }
-        val iconView: View = if (label == "CHAT ADMIN") {
-            WhatsAppBrandIconView().apply {
+        val iconView: View = when (label) {
+            "CHAT ADMIN" -> WhatsAppBrandIconView().apply {
                 layoutParams = LinearLayout.LayoutParams(dp(31), dp(31)).apply {
                     marginEnd = dp(7)
                 }
             }
-        } else {
-            TextView(this).apply {
+            "BICARA LIVE" -> AnimatedGifIconView(R.raw.santethp_live_icon)
+            "PUTAR MP3" -> AnimatedGifIconView(R.raw.santethp_mp3_icon)
+            else -> TextView(this).apply {
                 text = icon
                 textSize = if (label == "SERVER") 20f else 19f
                 gravity = Gravity.CENTER
