@@ -5900,11 +5900,12 @@ private var receivedMp3File: File? = null
                         return@addOnSuccessListener
                     }
                     val filterDialog = SantetHpDialogBuilder()
-                        .setTitle("Filter Notifikasi")
+                        .setTitle("Pilih Aplikasi yang Ditampilkan")
                         .setMultiChoiceItems(labels, selected) { _, which, checked ->
                             selected[which] = checked
                         }
-                        .setPositiveButton("Simpan pilihan") { _, _ ->
+                        .setNegativeButton("Batal", null)
+                        .setPositiveButton("Simpan") { _, _ ->
                             val allowed = appEntries.filterIndexed { index, _ -> selected[index] }.map { it.key }
                             pairingRef.update("notificationAllowedPackages", allowed)
                                 .addOnSuccessListener {
@@ -5919,26 +5920,27 @@ private var receivedMp3File: File? = null
                                     ).show()
                                 }
                         }
-                        .setNeutralButton("Tampilkan semua") { _, _ ->
-                            pairingRef.update("notificationAllowedPackages", emptyList<String>())
-                                .addOnSuccessListener {
-                                    Toast.makeText(this, "Semua aplikasi kembali ditampilkan.", Toast.LENGTH_SHORT).show()
-                                }
-                                .addOnFailureListener {
-                                    Toast.makeText(this, "Gagal menghapus filter.", Toast.LENGTH_SHORT).show()
-                                }
-                        }
-                        .setNegativeButton("Batal", null)
                         .create()
                     filterDialog.show()
+                    filterDialog.window?.setBackgroundDrawable(
+                        GradientDrawable(
+                            GradientDrawable.Orientation.TL_BR,
+                            intArrayOf(Color.rgb(239, 249, 243), Color.rgb(222, 240, 229))
+                        ).apply {
+                            cornerRadius = dp(22).toFloat()
+                            setStroke(dp(1), Color.rgb(133, 184, 151))
+                        }
+                    )
+                    filterDialog.findViewById<TextView>(androidx.appcompat.R.id.alertTitle)?.apply {
+                        setTextColor(Color.rgb(25, 91, 67))
+                    }
                     filterDialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)
-                        ?.setTextColor(Color.rgb(25, 91, 67))
-                    filterDialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL)
                         ?.setTextColor(Color.rgb(25, 91, 67))
                     filterDialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)
                         ?.setTextColor(Color.rgb(91, 111, 126))
                     filterDialog.listView?.let { appList ->
-                        appList.divider = android.graphics.drawable.ColorDrawable(Color.rgb(225, 237, 230))
+                        appList.setBackgroundColor(Color.TRANSPARENT)
+                        appList.divider = android.graphics.drawable.ColorDrawable(Color.rgb(190, 220, 201))
                         appList.dividerHeight = dp(1)
                         for (index in 0 until appList.childCount) {
                             (appList.getChildAt(index) as? android.widget.CheckedTextView)?.apply {
@@ -5947,6 +5949,10 @@ private var receivedMp3File: File? = null
                                 setPadding(dp(16), dp(11), dp(16), dp(11))
                             }
                         }
+                    }
+                    filterDialog.findViewById<android.widget.LinearLayout>(androidx.appcompat.R.id.buttonPanel)?.let { panel ->
+                        panel.orientation = android.widget.LinearLayout.HORIZONTAL
+                        panel.gravity = android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL
                     }
                 }.addOnFailureListener {
                     Toast.makeText(this, "Gagal membaca pengaturan filter.", Toast.LENGTH_LONG).show()
