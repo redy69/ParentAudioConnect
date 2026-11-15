@@ -5520,6 +5520,8 @@ private var receivedMp3File: File? = null
             .limit(100)
             .addSnapshotListener { snapshot, error ->
                 list.removeAllViews()
+                // Keep the live listener diagnostic visible when the history list refreshes.
+                list.addView(listenerStatus)
                 if (error != null) {
                     list.addView(TextView(this).apply {
                         text = "Gagal memuat notifikasi: ${error.localizedMessage ?: "periksa aturan Firestore"}"
