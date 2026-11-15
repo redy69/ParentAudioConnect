@@ -299,14 +299,22 @@ test("parent cannot write child app usage history", async () => {
   }));
 });
 
-test("child can publish valid battery and network telemetry", async () => {
+test("child can publish valid battery, network, and Wi-Fi name telemetry", async () => {
   const db = testEnv.authenticatedContext("child-user").firestore();
   await assertSucceeds(updateDoc(doc(db, "pairings", PAIR_CODE), {
     deviceBatteryPercent: 78,
     deviceCharging: false,
     deviceNetworkType: "Wi-Fi",
+    deviceWifiSsid: "Rumah-5G",
     deviceInternetValidated: true,
     deviceStatusAt: Timestamp.now()
+  }));
+});
+
+test("child cannot publish an oversized Wi-Fi network name", async () => {
+  const db = testEnv.authenticatedContext("child-user").firestore();
+  await assertFails(updateDoc(doc(db, "pairings", PAIR_CODE), {
+    deviceWifiSsid: "W".repeat(101)
   }));
 });
 
