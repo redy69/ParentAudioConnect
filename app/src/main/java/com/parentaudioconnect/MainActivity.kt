@@ -211,6 +211,7 @@ private lateinit var playMp3Button: Button
     private var parentGalleryThumbInFlight: String? = null
     private var parentGalleryIndexRequested = false
     private var notificationHistoryListener: ListenerRegistration? = null
+    private var notificationPairingStatusListener: ListenerRegistration? = null
     private var notificationUnreadListener: ListenerRegistration? = null
     private var notificationUnreadChildCode: String? = null
     private lateinit var notificationBadge: TextView
@@ -3231,8 +3232,9 @@ private var receivedMp3File: File? = null
         val sameParent = !parentUid.isNullOrBlank() && previousParentUid == parentUid
 
         val editor = prefs.edit()
-            .putString("child_last_parent_uid", parentUid)
-            .putBoolean("child_location_sharing_enabled", false)
+        // Keep the last verified identity if the pairing response is incomplete.
+        if (!parentUid.isNullOrBlank()) editor.putString("child_last_parent_uid", parentUid)
+        editor.putBoolean("child_location_sharing_enabled", false)
             .putBoolean("remote_camera_armed", false)
 
         if (!sameParent) {
@@ -5455,10 +5457,41 @@ private var receivedMp3File: File? = null
             return
         }
         notificationHistoryListener?.remove()
+        notificationPairingStatusListener?.remove()
         val list = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(8), dp(14), dp(8))
         }
+        val listenerStatus = TextView(this).apply {
+            text = "Memeriksa koneksi pemantauan notifikasi HP anak…"
+            textSize = 11.5f
+            setTextColor(Color.rgb(91, 112, 132))
+            setPadding(dp(10), dp(8), dp(10), dp(8))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(10).toFloat()
+                setColor(Color.rgb(241, 247, 253))
+                setStroke(dp(1), Color.rgb(211, 224, 240))
+            }
+        }
+        list.addView(listenerStatus)
+        notificationPairingStatusListener = db.collection("pairings").document(code)
+            .addSnapshotListener { pairing, statusError ->
+                if (statusError != null) {
+                    listenerStatus.text = "Status layanan notifikasi belum dapat diperiksa. Periksa koneksi HP anak."
+                    return@addSnapshotListener
+                }
+                val connected = pairing?.getBoolean("notificationListenerConnected") == true
+                val updatedAt = pairing?.getTimestamp("notificationListenerUpdatedAt")
+                val updatedText = updatedAt?.toDate()?.let {
+                    java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale("id", "ID")).format(it)
+                }
+                listenerStatus.text = when {
+                    connected -> "LAYANAN NOTIFIKASI TERHUBUNG" + (updatedText?.let { " • diperbarui " + it } ?: "")
+                    updatedAt != null -> "LAYANAN NOTIFIKASI TIDAK TERHUBUNG • status terakhir " + (updatedText ?: "tersedia")
+                    else -> "BELUM ADA KONFIRMASI LAYANAN • buka SantetHP di HP anak dan tunggu beberapa saat"
+                }
+                listenerStatus.setTextColor(if (connected) Color.rgb(28, 132, 86) else Color.rgb(151, 91, 35))
+            }
         val scroll = ScrollView(this).apply {
             addView(list)
             layoutParams = LinearLayout.LayoutParams(
@@ -5578,6 +5611,8 @@ private var receivedMp3File: File? = null
         dialog.setOnDismissListener {
             notificationHistoryListener?.remove()
             notificationHistoryListener = null
+            notificationPairingStatusListener?.remove()
+            notificationPairingStatusListener = null
         }
         dialog.show()
     }
@@ -6045,8 +6080,9 @@ private var receivedMp3File: File? = null
                         savePairing(code, "child")
                         // Restore previously approved feature consents only when the same parent
                         // account is verified. Android runtime/special permissions are never reset.
-                        prepareChildConsentsForPairing(parentUid)
+                        // Consent callbacks can start gallery P2P only after child mode is active.
                         currentRole = "child"
+                        prepareChildConsentsForPairing(parentUid)
 
                         codeText.text = code
                         showChildConnectedScreen()
@@ -6859,6 +6895,8 @@ private fun playReceivedMp3() {
         childAudioActivityText.removeCallbacks(staleStatusRunnable)
         notificationHistoryListener?.remove()
         notificationHistoryListener = null
+        notificationPairingStatusListener?.remove()
+        notificationPairingStatusListener = null
         notificationUnreadListener?.remove()
         notificationUnreadListener = null
         notificationUnreadChildCode = null
