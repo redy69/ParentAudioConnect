@@ -1247,6 +1247,7 @@ private var receivedMp3File: File? = null
             // Device battery/network reporting is independent of Usage Access.
             // Always re-enqueue the lightweight status worker when the child app resumes.
             ChildDeviceStatusWorker.schedule(this)
+            publishChildDeviceStatusNow()
             refreshFcmToken()
             restoreCameraStandbyIfNeeded()
         }
@@ -2083,11 +2084,31 @@ private var receivedMp3File: File? = null
         updateCameraStandbyButton()
     }
 
+    // Send one foreground status report after Firebase authentication is ready.
+    // WorkManager may be enqueued during onResume before anonymous sign-in finishes.
+    private fun publishChildDeviceStatusNow() {
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        if (prefs.getString("pair_role", null) != "child") return
+        if (auth.currentUser == null) {
+            android.util.Log.w("ChildDeviceStatus", "Foreground report deferred: Firebase auth is not ready")
+            return
+        }
+        activityScope.launch {
+            try {
+                ChildDeviceStatusReporter.publish(applicationContext)
+                android.util.Log.i("ChildDeviceStatus", "Foreground status report completed")
+            } catch (error: Exception) {
+                android.util.Log.e("ChildDeviceStatus", "Foreground status report failed", error)
+            }
+        }
+    }
+
     private fun connectFirebase() {
         if (auth.currentUser != null) {
             refreshFcmToken()
             statusText.text = "Firebase terhubung!"
             restoreSavedPairing()
+            publishChildDeviceStatusNow()
             return
         }
 
@@ -2100,6 +2121,8 @@ private var receivedMp3File: File? = null
                     refreshFcmToken()
                     statusText.text = "Firebase terhubung!"
                     restoreSavedPairing()
+                    // Retry telemetry now that anonymous Firebase authentication is ready.
+                    publishChildDeviceStatusNow()
 
                     Toast.makeText(
                         this,
