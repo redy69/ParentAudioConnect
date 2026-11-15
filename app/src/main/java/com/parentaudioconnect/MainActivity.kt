@@ -154,7 +154,7 @@ private lateinit var playMp3Button: Button
     private lateinit var rootLayout: LinearLayout
     private lateinit var childrenContainer: LinearLayout
     private lateinit var actionButtonsRow: LinearLayout
-    private lateinit var addChildButton: Button
+    private lateinit var addChildButton: AnimatedGifButton
     private lateinit var selectedChildButton: Button
     private lateinit var childQuickStatusText: TextView
     private lateinit var childBatteryGlyph: StatusGlyphDrawable
@@ -577,7 +577,7 @@ private var receivedMp3File: File? = null
         firstActionRow.addView(sendMp3Button, LinearLayout.LayoutParams(actionParams))
         secondActionRow.addView(cameraLiveButton, LinearLayout.LayoutParams(actionParams))
         actionButtonsRow.addView(firstActionRow)
-        addChildButton = createButton("+")
+        addChildButton = AnimatedGifButton(R.raw.add_icon)
         addChildButton.textSize = 24f
         addChildButton.includeFontPadding = false
         addChildButton.textAlignment = View.TEXT_ALIGNMENT_CENTER
@@ -881,7 +881,15 @@ private var receivedMp3File: File? = null
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        childIdentityColumn.addView(selectedChildButton, LinearLayout.LayoutParams(
+        val childIdentityRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        childIdentityRow.addView(AnimatedGifIconView(R.raw.user_icon), LinearLayout.LayoutParams(dp(30), dp(30)).apply {
+            marginEnd = dp(5)
+        })
+        childIdentityRow.addView(selectedChildButton, LinearLayout.LayoutParams(0, dp(42), 1f))
+        childIdentityColumn.addView(childIdentityRow, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(42)
         ))
         childHeaderRow.addView(childIdentityColumn, LinearLayout.LayoutParams(0, dp(42), 1f).apply { weight = 1f })
@@ -890,7 +898,7 @@ private var receivedMp3File: File? = null
                 setMargins(dp(3), 0, dp(3), 0)
             }
         }
-        val notificationsBellButton = createButton("🔔")
+        val notificationsBellButton = AnimatedGifButton(R.raw.notification_icon)
         notificationsBellButton.textSize = 19f
         notificationsBellButton.minimumHeight = dp(42)
         notificationsBellButton.minimumWidth = dp(42)
@@ -2694,6 +2702,35 @@ private var receivedMp3File: File? = null
         }
     }
 
+    private inner class AnimatedGifButton(resourceId: Int) : Button(this@MainActivity) {
+        private val gif: Movie = resources.openRawResource(resourceId).use { stream ->
+            Movie.decodeStream(stream)
+        } ?: throw IllegalStateException("GIF tombol SantetHP tidak dapat dibaca")
+        private val startedAt = SystemClock.uptimeMillis()
+        private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+
+        init {
+            text = ""
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, 0)
+            includeFontPadding = false
+        }
+
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val duration = gif.duration().takeIf { it > 0 } ?: 1000
+            gif.setTime(((SystemClock.uptimeMillis() - startedAt) % duration).toInt())
+            val side = dp(27).toFloat()
+            val scale = minOf(side / gif.width().coerceAtLeast(1), side / gif.height().coerceAtLeast(1))
+            canvas.save()
+            canvas.translate((width - gif.width() * scale) / 2f, (height - gif.height() * scale) / 2f)
+            canvas.scale(scale, scale)
+            gif.draw(canvas, 0f, 0f, iconPaint)
+            canvas.restore()
+            postInvalidateDelayed(40L)
+        }
+    }
+
     private fun createActionButton(icon: String, label: String, accent: Int): LinearLayout {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -2720,13 +2757,20 @@ private var receivedMp3File: File? = null
             contentDescription = label
         }
         val iconView: View = when (label) {
-            "CHAT ADMIN" -> WhatsAppBrandIconView().apply {
+            "CHAT ADMIN" -> android.widget.ImageView(this).apply {
+                setImageResource(R.drawable.whatsapp_icon)
+                scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
                 layoutParams = LinearLayout.LayoutParams(dp(31), dp(31)).apply {
                     marginEnd = dp(7)
                 }
             }
             "BICARA LIVE" -> AnimatedGifIconView(R.raw.santethp_live_icon)
             "PUTAR MP3" -> AnimatedGifIconView(R.raw.santethp_mp3_icon)
+            "KAMERA LIVE" -> AnimatedGifIconView(R.raw.camera_live_icon)
+            "BLOKIR APLIKASI" -> AnimatedGifIconView(R.raw.block_app_icon)
+            "GALERI" -> AnimatedGifIconView(R.raw.galeri_icon)
+            "MAPS" -> AnimatedGifIconView(R.raw.map_location_icon)
+            "SERVER" -> AnimatedGifIconView(R.raw.server_icon)
             else -> TextView(this).apply {
                 text = icon
                 textSize = if (label == "SERVER") 20f else 19f
@@ -2988,9 +3032,16 @@ private var receivedMp3File: File? = null
             if (networkStatus.isNotBlank()) {
                 val glyphIndex = statusLine.indexOf('◇')
                 if (glyphIndex >= 0) {
-                    childNetworkGlyph.setBounds(0, 0, dp(20), dp(20))
+                    val isWifi = network.contains("wi-fi") || network.contains("wifi")
+                    val networkIcon: android.graphics.drawable.Drawable = if (isWifi) {
+                        resources.getDrawable(R.drawable.wifi_icon, theme).mutate().apply {
+                            setBounds(0, 0, dp(20), dp(20))
+                        }
+                    } else {
+                        childNetworkGlyph.apply { setBounds(0, 0, dp(20), dp(20)) }
+                    }
                     statusDisplay.setSpan(
-                        android.text.style.ImageSpan(childNetworkGlyph, android.text.style.ImageSpan.ALIGN_CENTER),
+                        android.text.style.ImageSpan(networkIcon, android.text.style.ImageSpan.ALIGN_CENTER),
                         glyphIndex, glyphIndex + 1,
                         android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                     )
