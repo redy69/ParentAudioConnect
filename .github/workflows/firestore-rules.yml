@@ -6,6 +6,7 @@ on:
     branches:
       - feature/livekit-multi-server-failover
       - feature/gallery-webrtc-p2p
+      - ui/dark-emerald-glass-dashboard
     paths:
       - 'firestore.rules'
       - 'tests/firestore.rules.test.js'
