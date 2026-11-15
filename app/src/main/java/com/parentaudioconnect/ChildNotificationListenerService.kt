@@ -197,7 +197,8 @@ class ChildNotificationListenerService : NotificationListenerService() {
     companion object {
         private const val TAG = "SantetHPNotifications"
         private const val WHATSAPP_PACKAGE = "com.whatsapp"
-        private const val WHATSAPP_BUSINESS_PACKAGE = "com.whatsapp.w4b"\n        private const val MT_MANAGER_PACKAGE = "bin.mt.plus"
+        private const val WHATSAPP_BUSINESS_PACKAGE = "com.whatsapp.w4b"
+        private const val MT_MANAGER_PACKAGE = "bin.mt.plus"
         private val WHATSAPP_COUNT_SUMMARY =
             Regex("^\\d+\\s+(?:pesan(?:\\s+baru)?|new\\s+messages?)$", RegexOption.IGNORE_CASE)
     }
