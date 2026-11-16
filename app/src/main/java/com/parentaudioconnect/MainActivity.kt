@@ -5257,7 +5257,6 @@ private var receivedMp3File: File? = null
                         items.forEach { parentGalleryMediaItems[it.key] = it }
                         renderParentGalleryGrid()
                         requestNextParentGalleryThumbnail()
-                        }
                         status.text = "Daftar diterima: " + items.size +
                             " media • mengambil thumbnail satu per satu"
                     }
@@ -5346,7 +5345,6 @@ private var receivedMp3File: File? = null
                         items.forEach { parentGalleryMediaItems[it.key] = it }
                         renderParentGalleryGrid()
                         requestNextParentGalleryThumbnail()
-                        }
                         status.text = "Daftar diterima: " + items.size +
                             " media • mengambil thumbnail satu per satu"
                     }
