@@ -4938,7 +4938,7 @@ private var receivedMp3File: File? = null
             onState = { message ->
                 runOnUiThread {
                     statusText.text = message
-                    if (message.contains("P2P TERHUBUNG") && !parentSendStarted) {
+                    if (message.contains("jalur data aktif") && !parentSendStarted) {
                         parentSendStarted = true
                         val accepted = protocol.sendFromUri(uri, name, mime)
                         if (!accepted) {
@@ -5435,7 +5435,7 @@ private var receivedMp3File: File? = null
                 onState = { message ->
                     runOnUiThread {
                         if (parentGalleryDialog?.isShowing == true) status.text = message
-                        if (message.contains("P2P TERHUBUNG") &&
+                        if (message.contains("jalur data aktif") &&
                             childSnapshots[code]?.getBoolean("gallerySharingEnabled") == true &&
                             !parentGalleryIndexRequested
                         ) {
@@ -5669,7 +5669,7 @@ private var receivedMp3File: File? = null
                 onState = { message ->
                     runOnUiThread {
                         if (parentGalleryDialog?.isShowing == true) status.text = message
-                        if (message.contains("P2P TERHUBUNG")) {
+                        if (message.contains("jalur data aktif")) {
                             if (childSnapshots[code]?.getBoolean("gallerySharingEnabled") == true &&
                                 !parentGalleryIndexRequested
                             ) {

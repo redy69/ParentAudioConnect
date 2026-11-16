@@ -1,7 +1,12 @@
 package com.santethp
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import org.json.JSONArray
+import java.net.HttpURLConnection
+import java.net.URL
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -15,12 +20,13 @@ import org.webrtc.SessionDescription
 import org.webrtc.SdpObserver
 import java.nio.ByteBuffer
 import java.util.UUID
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Direct peer-to-peer transport bootstrap for the paired SantetHP gallery.
  * Firestore carries SDP/ICE signaling only; media bytes use the DataChannel.
- * This milestone is STUN-only and never silently falls back to a relay.
+ * Uses direct ICE paths first and Metered TURN relay candidates as fallback.
  */
 class GalleryP2pManager(
     context: Context,
@@ -36,6 +42,8 @@ class GalleryP2pManager(
         private const val MAX_SIGNAL_TEXT = 64 * 1024
         private const val MAX_DATA_FRAME_BYTES = 96 * 1024
         private const val MAX_BUFFERED_DATA_BYTES = 512L * 1024L
+        private const val METERED_APP_DOMAIN = "santethp-gallery.metered.live"
+        private const val TURN_FETCH_TIMEOUT_MS = 10_000
         private val initialized = AtomicBoolean(false)
     }
 
@@ -46,6 +54,8 @@ class GalleryP2pManager(
     private val localUid = com.google.firebase.auth.FirebaseAuth.getInstance()
         .currentUser?.uid
 
+    private val configExecutor = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
     private var factory: PeerConnectionFactory? = null
     private var peer: PeerConnection? = null
     private var channel: DataChannel? = null
@@ -70,10 +80,12 @@ class GalleryP2pManager(
                 .addOnSuccessListener {
                     if (closed) return@addOnSuccessListener
                     try {
-                        initializePeer()
-                        listenForSignals()
-                        onState("Menyiapkan koneksi P2P langsung…")
-                        createOffer()
+                        initializePeer {
+                            if (closed) return@initializePeer
+                            listenForSignals()
+                            onState("Mencari jalur koneksi langsung atau relay…")
+                            createOffer()
+                        }
                     } catch (error: Exception) {
                         Log.e(TAG, "Gagal memulai P2P", error)
                         fail("Gagal memulai P2P: ${error.localizedMessage ?: error.javaClass.simpleName}")
@@ -86,9 +98,11 @@ class GalleryP2pManager(
                 }
         } else {
             try {
-                initializePeer()
-                listenForPairingSession()
-                onState("Menunggu permintaan galeri dari HP orang tua…")
+                initializePeer {
+                    if (closed) return@initializePeer
+                    listenForPairingSession()
+                    onState("Menunggu permintaan galeri dari HP orang tua…")
+                }
             } catch (error: Exception) {
                 Log.e(TAG, "Gagal memulai P2P", error)
                 fail("Gagal memulai P2P: ${error.localizedMessage ?: error.javaClass.simpleName}")
@@ -97,19 +111,97 @@ class GalleryP2pManager(
         }
     }
 
-    private fun initializePeer() {
-        if (initialized.compareAndSet(false, true)) {
-            val options = PeerConnectionFactory.InitializationOptions
-                .builder(appContext).createInitializationOptions()
-            PeerConnectionFactory.initialize(options)
+    /**
+     * Fetch Metered ICE servers off the main thread. The credential-scoped API
+     * key is injected at build time; TURN username/password are never stored in source.
+     * If Metered is temporarily unavailable, preserve the existing STUN path.
+     */
+    private fun initializePeer(onReady: () -> Unit) {
+        configExecutor.execute {
+            val servers = loadIceServers()
+            mainHandler.post {
+                if (closed) return@post
+                try {
+                    if (initialized.compareAndSet(false, true)) {
+                        val options = PeerConnectionFactory.InitializationOptions
+                            .builder(appContext).createInitializationOptions()
+                        PeerConnectionFactory.initialize(options)
+                    }
+                    factory = PeerConnectionFactory.builder().createPeerConnectionFactory()
+                    peer = factory?.createPeerConnection(
+                        PeerConnection.RTCConfiguration(servers),
+                        peerObserver
+                    )
+                    if (peer == null) throw IllegalStateException("Mesin P2P tidak dapat dibuat")
+                    onReady()
+                } catch (error: Exception) {
+                    Log.e(TAG, "Gagal membuat PeerConnection", error)
+                    fail("Gagal menyiapkan koneksi galeri: ${error.localizedMessage ?: error.javaClass.simpleName}")
+                    close()
+                }
+            }
         }
-        factory = PeerConnectionFactory.builder().createPeerConnectionFactory()
-        val servers = listOf(
+    }
+
+    private fun loadIceServers(): List<PeerConnection.IceServer> {
+        val fallback = listOf(
             PeerConnection.IceServer.builder("stun:stun.l.google.com:19302")
                 .createIceServer()
         )
-        peer = factory?.createPeerConnection(PeerConnection.RTCConfiguration(servers), peerObserver)
-        if (peer == null) throw IllegalStateException("Mesin P2P tidak dapat dibuat")
+        val apiKey = BuildConfig.METERED_TURN_API_KEY
+        if (apiKey.isBlank()) {
+            Log.w(TAG, "Metered TURN API key belum dikonfigurasi; memakai STUN saja")
+            return fallback
+        }
+
+        var connection: HttpURLConnection? = null
+        return try {
+            val endpoint = URL(
+                "https://$METERED_APP_DOMAIN/api/v1/turn/credentials?apiKey=$apiKey"
+            )
+            connection = (endpoint.openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = TURN_FETCH_TIMEOUT_MS
+                readTimeout = TURN_FETCH_TIMEOUT_MS
+                setRequestProperty("Accept", "application/json")
+            }
+            if (connection.responseCode !in 200..299) {
+                throw IllegalStateException("Metered HTTP ${connection.responseCode}")
+            }
+            val body = connection.inputStream.bufferedReader().use { it.readText() }
+            val json = JSONArray(body)
+            val result = mutableListOf<PeerConnection.IceServer>()
+            for (index in 0 until json.length()) {
+                val item = json.optJSONObject(index) ?: continue
+                val urlsValue = item.opt("urls")
+                val urls = when (urlsValue) {
+                    is String -> listOf(urlsValue)
+                    is JSONArray -> (0 until urlsValue.length())
+                        .mapNotNull { urlsValue.optString(it).takeIf(String::isNotBlank) }
+                    else -> emptyList()
+                }
+                if (urls.isEmpty()) continue
+                val username = item.optString("username")
+                val credential = item.optString("credential")
+                val builder = PeerConnection.IceServer.builder(urls)
+                if (username.isNotBlank()) builder.setUsername(username)
+                if (credential.isNotBlank()) builder.setPassword(credential)
+                result += builder.createIceServer()
+            }
+            if (result.none { server -> server.urls.any { it.startsWith("stun:") || it.startsWith("stuns:") } }) {
+                result.addAll(0, fallback)
+            }
+            if (result.none { server -> server.urls.any { it.startsWith("turn:") || it.startsWith("turns:") } }) {
+                throw IllegalStateException("Daftar ICE dari Metered tidak memuat TURN")
+            }
+            Log.i(TAG, "ICE server siap: STUN + TURN Metered")
+            result
+        } catch (error: Exception) {
+            Log.w(TAG, "Gagal mengambil ICE server Metered; fallback ke STUN", error)
+            fallback
+        } finally {
+            connection?.disconnect()
+        }
     }
 
     private fun listenForPairingSession() {
@@ -256,7 +348,7 @@ class GalleryP2pManager(
             override fun onBufferedAmountChange(previousAmount: Long) = Unit
             override fun onStateChange() {
                 when (dataChannel.state()) {
-                    DataChannel.State.OPEN -> onState("P2P TERHUBUNG • jalur data langsung aktif")
+                    DataChannel.State.OPEN -> onState("GALERI TERHUBUNG • jalur data aktif")
                     DataChannel.State.CLOSED -> onState("Koneksi galeri P2P ditutup")
                     else -> Unit
                 }
@@ -289,13 +381,13 @@ class GalleryP2pManager(
             when (state) {
                 PeerConnection.IceConnectionState.CONNECTED,
                 PeerConnection.IceConnectionState.COMPLETED ->
-                    onState("P2P TERHUBUNG • jalur langsung aktif")
+                    onState("GALERI TERHUBUNG • jalur P2P/TURN aktif")
                 PeerConnection.IceConnectionState.FAILED ->
-                    onState("P2P gagal pada jaringan ini • belum memakai relay/TURN")
+                    onState("Koneksi galeri gagal • jalur langsung dan relay tidak tersedia")
                 PeerConnection.IceConnectionState.DISCONNECTED ->
                     onState("P2P terputus • menunggu jaringan kembali")
                 PeerConnection.IceConnectionState.CHECKING ->
-                    onState("Mencari jalur P2P langsung…")
+                    onState("Mencari jalur koneksi langsung atau relay…")
                 else -> Unit
             }
         }
@@ -344,6 +436,7 @@ class GalleryP2pManager(
         peer = null
         factory?.dispose()
         factory = null
+        configExecutor.shutdownNow()
         pendingRemoteCandidates.clear()
         onState("Koneksi galeri P2P dihentikan")
     }

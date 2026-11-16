@@ -13,6 +13,7 @@ on:
       - recovery/full-features-2026-11-12
       - ui/liquid-glass-child-status
       - ui/dark-emerald-glass-dashboard
+      - feature/gallery-turn-fallback
 
 permissions:
   contents: write
@@ -84,6 +85,7 @@ jobs:
 
       - name: Build signed release APK
         env:
+          METERED_TURN_API_KEY: ${{ secrets.METERED_TURN_API_KEY }}
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/parent-audio-release.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -110,4 +112,4 @@ jobs:
           name: SantetHP-release
           path: app/build/outputs/apk/release/app-release.apk
 
-# Triggered by a commit on this branch to produce the LiveKit failover test APK.
+# Triggered by a commit on this branch to produce the Gallery TURN fallback test APK.
