@@ -84,6 +84,7 @@ jobs:
 
       - name: Build signed release APK
         env:
+          METERED_TURN_API_KEY: ${{ secrets.METERED_TURN_API_KEY }}
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/parent-audio-release.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
