@@ -39,6 +39,6 @@ match /cameraLabPairings/{code} {
 1. Open Firebase Console → project `parentaudioconnect` → Firestore Database → Rules.
 2. Keep all existing rules. Insert the `match /cameraLabPairings/{code}` block inside the existing `match /databases/{database}/documents` block.
 3. Publish the rules.
-4. Deploy the updated Worker source `worker/parent-audio-token.js` to the existing `parent-audio-token` Worker. It now reads from `cameraLabPairings` for the Camera Lab token route.
+4. Deploy the updated Worker source `worker/parent-audio-token.js` to the existing `parent-audio-token` Worker. It now exposes a dedicated `/camera-lab/token` route reading from `cameraLabPairings`. The existing `/token` and `/register-device` routes continue using the production `pairings` collection.
 
 The Android app and Worker must both use `cameraLabPairings`. These rules do not grant access to the existing `pairings` collection and do not change SantetHP production pairing permissions.
