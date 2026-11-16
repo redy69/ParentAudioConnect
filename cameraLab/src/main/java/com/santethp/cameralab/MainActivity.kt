@@ -120,7 +120,7 @@ class MainActivity : Activity() {
         viewer.setOnClickListener { chooseRole(Role.VIEWER) }
 
         codeInput = EditText(this).apply {
-            hint = "Masukkan kode 8 karakter dari HP penerima"
+            hint = "Masukkan kode 8 karakter dari HP pengirim"
             textSize = 15f
             setSingleLine(true)
             setTextColor(Color.WHITE)
@@ -286,28 +286,29 @@ class MainActivity : Activity() {
                 }
                 showStatus("Token diterima (${tokenMs} ms). Menghubungkan LiveKit…")
                 val connected = io.livekit.android.LiveKit.create(applicationContext)
-                connected.connect(
-                    url = response.optString("serverUrl"),
-                    token = response.optString("token")
-                )
                 room = connected
+                if (currentRole == Role.VIEWER && mode == Mode.CAMERA_AUDIO) {
+                    connected.initVideoRenderer(videoRenderer)
+                }
                 eventJob?.cancel()
                 eventJob = scope.launch {
                     connected.events.collect { event ->
                         if (event is RoomEvent.TrackSubscribed) {
                             val video = event.track as? VideoTrack
                             if (video != null && currentRole == Role.VIEWER) {
-                                runOnUiThread {
-                                    video.addRenderer(videoRenderer)
-                                    showStatus("VIDEO TERTERIMA • LiveKit tersambung")
-                                }
+                                video.addRenderer(videoRenderer)
+                                showStatus("VIDEO TERTERIMA • LiveKit tersambung")
                             }
                         }
                         if (event is RoomEvent.Disconnected) {
-                            runOnUiThread { showStatus("Koneksi LiveKit terputus.") }
+                            showStatus("Koneksi LiveKit terputus.")
                         }
                     }
                 }
+                connected.connect(
+                    url = response.optString("serverUrl"),
+                    token = response.optString("token")
+                )
                 if (currentRole == Role.SENDER) {
                     connected.localParticipant.setMicrophoneEnabled(true)
                     if (mode == Mode.CAMERA_AUDIO) {
