@@ -29,17 +29,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -f screenshot/icon2.zip
-          mkdir -p /tmp/icon2-unpacked screenshot/icon2-inspection
-          unzip -o screenshot/icon2.zip -d /tmp/icon2-unpacked
           python - <<'PY'
           from pathlib import Path
-          from PIL import Image
+          from zipfile import ZipFile
           import shutil
 
+          archive = Path("screenshot/icon2.zip")
+          assert archive.is_file(), f"Arsip tidak ditemukan: {archive}"
           source = Path("/tmp/icon2-unpacked")
+          source.mkdir(parents=True, exist_ok=True)
+          with ZipFile(archive) as z:
+              bad = z.testzip()
+              if bad:
+                  raise RuntimeError(f"Arsip rusak pada: {bad}")
+              z.extractall(source)
           target = Path("screenshot/icon2-inspection")
-          image_ext = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"}
           rows = []
           for p in sorted(source.rglob("*")):
               if not p.is_file():
@@ -48,25 +52,14 @@ jobs:
               dest = target / "extracted" / rel
               dest.parent.mkdir(parents=True, exist_ok=True)
               shutil.copy2(p, dest)
-              info = f"{p.stat().st_size} bytes"
-              if p.suffix.lower() in image_ext:
-                  try:
-                      with Image.open(p) as im:
-                          info += f" | {im.format} | {im.width}x{im.height} | {im.mode}"
-                  except Exception as e:
-                      info += f" | unreadable image: {e}"
-              rows.append(f"- `{rel.as_posix()}` — {info}")
+              rows.append(f"- `{rel.as_posix()}` — {p.stat().st_size} bytes")
           (target / "CONTENTS.md").write_text(
               "# Isi screenshot/icon2.zip\n\n" +
-              ( "\n".join(rows) if rows else "Tidak ada file di dalam arsip." ) +
-              "\n",
+              ("\n".join(rows) if rows else "Tidak ada file di dalam arsip.") + "\n",
               encoding="utf-8"
           )
           print("\n".join(rows))
           PY
-        env:
-          PYTHONUNBUFFERED: "1"
-
 
       - name: Create icon contact sheet
         run: |
