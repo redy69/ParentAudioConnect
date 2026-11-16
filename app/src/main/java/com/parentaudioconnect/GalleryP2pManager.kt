@@ -387,7 +387,7 @@ class GalleryP2pManager(
                 PeerConnection.IceConnectionState.DISCONNECTED ->
                     onState("P2P terputus • menunggu jaringan kembali")
                 PeerConnection.IceConnectionState.CHECKING ->
-                    onState("Mencari jalur P2P langsung…")
+                    onState("Mencari jalur koneksi langsung atau relay…")
                 else -> Unit
             }
         }
