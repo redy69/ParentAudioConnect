@@ -42,9 +42,9 @@ async function authenticate(idToken, env) {
   return user.localId;
 }
 
-function pairingUrl(code) {
+function pairingUrl(code, collection = "pairings") {
   return "https://firestore.googleapis.com/v1/projects/" + PROJECT_ID +
-    "/databases/(default)/documents/pairings/" + encodeURIComponent(code);
+    "/databases/(default)/documents/" + collection + "/" + encodeURIComponent(code);
 }
 
 export default {
@@ -52,7 +52,7 @@ export default {
     try {
       if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
       const url = new URL(request.url);
-      if (url.pathname !== "/token" && url.pathname !== "/register-device") {
+      if (url.pathname !== "/token" && url.pathname !== "/register-device" && url.pathname !== "/camera-lab/token") {
         return jsonResponse({ error: "Not found" }, 404);
       }
 
@@ -63,7 +63,8 @@ export default {
       const callerUid = await authenticate(body.idToken, env);
       if (!callerUid) return jsonResponse({ error: "Firebase authentication failed" }, 401);
 
-      const firestoreResponse = await fetch(pairingUrl(code), {
+      const pairingCollection = url.pathname === "/camera-lab/token" ? "cameraLabPairings" : "pairings";
+      const firestoreResponse = await fetch(pairingUrl(code, pairingCollection), {
         headers: { Authorization: "Bearer " + body.idToken }
       });
       if (!firestoreResponse.ok) return jsonResponse({ error: "Pairing not found or access denied" }, 403);
@@ -84,7 +85,7 @@ export default {
           return jsonResponse({ error: "Invalid device token" }, 400);
         }
         const field = callerUid === parentUid ? "parentFcmToken" : "childFcmToken";
-        const patchUrl = pairingUrl(code) + "?updateMask.fieldPaths=" + field;
+        const patchUrl = pairingUrl(code, pairingCollection) + "?updateMask.fieldPaths=" + field;
         const saved = await fetch(patchUrl, {
           method: "PATCH",
           headers: {
