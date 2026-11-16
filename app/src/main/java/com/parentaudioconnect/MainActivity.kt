@@ -4818,8 +4818,14 @@ private var receivedMp3File: File? = null
             "Kirim ke HP Anak" to "Pilih media untuk dikirim ke perangkat anak",
             "Backup Google Drive" to "Atur pencadangan foto dan video"
         )
-        val dialog = SantetHpDialogBuilder().setTitle("Galeri & Backup")
+        lateinit var dialog: AlertDialog
+        dialog = SantetHpDialogBuilder().setTitle("Galeri & Backup")
             .setView(popupChoiceCards(options) { which ->
+                // This dialog is created first and shown manually, so it is not
+                // tracked by SantetHpDialogBuilder.show(). Dismiss it explicitly
+                // before opening another screen or dialog to prevent it floating
+                // above the full-screen gallery page.
+                if (dialog.isShowing) dialog.dismiss()
                 when (which) {
                     0 -> showParentGalleryStatus()
                     1 -> showSendMediaToChildInfo()
