@@ -106,7 +106,11 @@ class MainActivity : Activity() {
     }
 
     private fun requestMediaPermissions(mode: String) {
-        val required = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+        val required = if (mode == "Audio Live") {
+            arrayOf(Manifest.permission.RECORD_AUDIO)
+        } else {
+            arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+        }
         val missing = required.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
