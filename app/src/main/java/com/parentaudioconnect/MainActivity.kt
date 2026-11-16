@@ -5170,24 +5170,38 @@ private var receivedMp3File: File? = null
         }
         val list = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(10), dp(8), dp(10), dp(12))
+            setPadding(dp(5), dp(7), dp(5), dp(14))
+        }
+        val filterRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(dp(8), dp(5), dp(8), dp(8))
         }
         val scroll = ScrollView(this).apply {
+            isFillViewport = true
             addView(list)
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(440)
-            )
         }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
+            setPadding(dp(10), dp(8), dp(10), dp(8))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(7, 29, 22), Color.rgb(13, 48, 36), Color.rgb(8, 35, 27))
+            ).apply { cornerRadius = dp(18).toFloat() }
             addView(status)
-            addView(scroll)
+            addView(filterRow)
+            addView(scroll, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
+            ))
         }
         parentGalleryStatus = status
         parentGalleryList = list
+        parentGalleryFilter = "Semua"
+        parentGalleryFilterRow = filterRow
+        renderParentGalleryFilterTabs()
         val dialog = SantetHpDialogBuilder()
             .setTitle("Galeri • " + name)
-            .setView(popupContentCard(content))
+            .setView(content)
             .setNegativeButton("Tutup", null)
             .setNeutralButton("Muat ulang / sambung", null)
             .create()
@@ -5219,8 +5233,14 @@ private var receivedMp3File: File? = null
             parentGalleryDialog = null
             parentGalleryStatus = null
             parentGalleryList = null
+            parentGalleryFilterRow = null
         }
         dialog.show()
+        dialog.window?.setLayout(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
         if (backupServiceActive) {
             parentGalleryUsingBackupService = backupServiceActive
