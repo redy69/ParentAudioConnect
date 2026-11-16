@@ -200,7 +200,16 @@ class MainActivity : Activity() {
             .addOnSuccessListener {
                 pairingCode = code
                 busy = false
-                showStatus("KODE PASANGAN: $code\nMasukkan kode ini di HP pengirim. Berlaku 5 menit.")
+                showStatus("KODE PASANGAN: $code\nMasukkan kode ini di HP penerima. Berlaku 5 menit.")
+                pairingListener?.remove()
+                pairingListener = db.collection("pairings").document(code).addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        showStatus("Pemantauan pasangan gagal: " + (error.localizedMessage ?: "Firestore"))
+                    } else if (snapshot?.getString("childUid") != null && room == null && !busy) {
+                        showStatus("HP penerima bergabung. Menyiapkan sesi media…")
+                        startMediaSession()
+                    }
+                }
             }
             .addOnFailureListener {
                 busy = false
