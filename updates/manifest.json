@@ -1,17 +1,20 @@
 {
-  "dataVersion": 3,
+  "dataVersion": 4,
   "dataFiles": [
     {
       "path": "santethp-hybrid-test.txt",
       "url": "https://raw.githubusercontent.com/redy69/ParentAudioConnect/feature/modern-parent-ui/updates/santethp-hybrid-test.txt",
-      "sha256": "7d6925695e43d7ad3ec6941db7a0e8f57ed359a9321035925398f62923c232ab"
+      "sha256": "522d3910e4c032feadaa57cf1a405671ae82fe69eeba8f11b6cb73bf6eb26233"
     }
   ],
-  "notes": "Uji hybrid update v3: file teks non-eksekusi untuk memverifikasi unduhan dan SHA-256.",
+  "notes": "Pembaruan SantetHP Build 222: siap untuk pengujian terkontrol pada perangkat.",
   "installStatus": "NORMAL",
-  "installStatusMessage": "Status instalasi APK tidak diubah oleh uji hybrid update.",
+  "installStatusMessage": "Build 222 siap untuk pengujian perangkat. Pengiriman FCM antarkedua HP masih perlu diverifikasi.",
   "changes": [
-    "Uji hybrid data v3: satu file teks non-eksekusi diperbarui dari server.",
-    "Tidak ada perubahan APK, tampilan, fitur, atau konfigurasi perangkat."
+    "Pengamanan Audio Live ditingkatkan: koneksi yang gagal atau kedaluwarsa meminta HP anak menghentikan audio.",
+    "Perintah mulai dan berhenti audio jarak jauh menggunakan FCM dengan pemeriksaan pasangan orang tua dan anak.",
+    "Pemantauan baterai, jaringan, penggunaan aplikasi, jadwal, izin, dan pemblokiran berjalan terpisah dari LiveKit.",
+    "Status kesiapan update dan daftar perubahan ditampilkan sebelum APK diunduh.",
+    "Build 222 lolos build Android; pengujian FCM langsung pada kedua HP masih menunggu."
   ]
 }
