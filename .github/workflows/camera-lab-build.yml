@@ -1,0 +1,50 @@
+name: Build SantetHP Camera Lab APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/santethp-camera-lab
+    paths:
+      - 'cameraLab/**'
+      - 'settings.gradle.kts'
+      - '.github/workflows/camera-lab-build.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-camera-lab:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 12266719
+          packages: 'platform-tools'
+
+      - name: Install Android SDK components
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Build Camera Lab APK
+        run: gradle :cameraLab:assembleDebug
+
+      - name: Upload Camera Lab APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SantetHP-Camera-Lab-debug
+          path: cameraLab/build/outputs/apk/debug/cameraLab-debug.apk
