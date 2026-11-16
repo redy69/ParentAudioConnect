@@ -44,7 +44,7 @@ async function authenticate(idToken, env) {
 
 function pairingUrl(code) {
   return "https://firestore.googleapis.com/v1/projects/" + PROJECT_ID +
-    "/databases/(default)/documents/pairings/" + encodeURIComponent(code);
+    "/databases/(default)/documents/cameraLabPairings/" + encodeURIComponent(code);
 }
 
 export default {
