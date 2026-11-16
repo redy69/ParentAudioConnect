@@ -4835,7 +4835,7 @@ private var receivedMp3File: File? = null
         }
         val backupWasActive = getSharedPreferences("parent_audio", MODE_PRIVATE)
             .getBoolean("parent_drive_backup_service_active", false)
-        parentGalleryDialog?.dismiss()
+        closeParentGalleryPage()
         stopParentGalleryP2p()
         stopParentMediaTransfer()
         if (backupWasActive) {
@@ -5092,7 +5092,7 @@ private var receivedMp3File: File? = null
                                 // The gallery dialog owns a separate parent P2P session.
                                 // Close it before the multi-child backup scheduler takes over.
                                 if (isParentGalleryPageVisible()) {
-                                    parentGalleryDialog?.dismiss()
+                                    closeParentGalleryPage()
                                     stopParentGalleryP2p()
                                 }
                                 childSnapshots[code]?.let {
@@ -5484,6 +5484,77 @@ private var receivedMp3File: File? = null
         showParentDashboard()
     }
 
+    private fun showParentGalleryPreview(item: GalleryP2pGalleryProtocol.RemoteMedia) {
+        val page = parentGalleryPage ?: return
+        val grid = parentGalleryGridScroll ?: return
+        parentGalleryPreviewContent?.let { page.removeView(it) }
+        grid.visibility = View.GONE
+        val preview = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(12), dp(16), dp(16))
+            setBackgroundColor(Color.rgb(246, 251, 247))
+        }
+        preview.addView(TextView(this).apply {
+            text = item.name
+            textSize = 15f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(40, 83, 53))
+            setPadding(0, 0, 0, dp(10))
+        })
+        preview.addView(ImageView(this).apply {
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setBackgroundColor(Color.rgb(231, 241, 233))
+            val cached = galleryThumbnailCacheFile(item.key)
+            if (item.kind == "VIDEO") setImageResource(android.R.drawable.ic_media_play)
+            else if (cached.isFile) BitmapFactory.decodeFile(cached.absolutePath)?.let { setImageBitmap(it) }
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+        })
+        preview.addView(TextView(this).apply {
+            text = (if (item.kind == "VIDEO") "Video" else "Foto") + " • " +
+                android.text.format.Formatter.formatFileSize(this@MainActivity, item.sizeBytes)
+            textSize = 12f
+            setTextColor(Color.rgb(83, 111, 88))
+            setPadding(0, dp(10), 0, dp(10))
+        })
+        preview.addView(Button(this).apply {
+            text = "Unduh HD & simpan"
+            isAllCaps = false
+            setTextColor(Color.WHITE)
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(42, 132, 78))
+                cornerRadius = dp(13).toFloat()
+            }
+            setOnClickListener { requestParentGalleryOriginal(item) }
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)))
+        page.addView(preview, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        parentGalleryPreviewContent = preview
+    }
+
+    private fun requestParentGalleryOriginal(item: GalleryP2pGalleryProtocol.RemoteMedia) {
+        if (Build.VERSION.SDK_INT < 29) {
+            Toast.makeText(this, "Simpan langsung ke galeri memerlukan Android 10 atau lebih baru.", Toast.LENGTH_LONG).show()
+        } else if (item.sizeBytes <= 0 || item.sizeBytes > 200L * 1024L * 1024L) {
+            Toast.makeText(this, "File kosong atau lebih besar dari batas transfer 200 MB.", Toast.LENGTH_LONG).show()
+        } else {
+            val prefs = getSharedPreferences("parent_gallery_cache", MODE_PRIVATE)
+            val prefKey = gallerySavedUriPreferenceKey(item.key)
+            val savedText = prefs.getString(prefKey, null)
+            val savedUri = savedText?.let { Uri.parse(it) }
+            val exists = if (savedUri != null) try {
+                contentResolver.openFileDescriptor(savedUri, "r")?.use { true } ?: false
+            } catch (_: Exception) { false } else false
+            if (exists && savedUri != null) openSavedGalleryMedia(savedUri, item.mime)
+            else {
+                if (savedText != null) prefs.edit().remove(prefKey).apply()
+                val requested = if (parentGalleryUsingBackupService)
+                    parentDriveBackupBinder?.requestGalleryOriginal(item.key) == true
+                else parentGalleryProtocol?.requestOriginal(item.key) == true
+                if (!requested) Toast.makeText(this, "Permintaan unduh belum terkirim. Periksa koneksi P2P.", Toast.LENGTH_LONG).show()
+                else parentGalleryStatus?.text = "Meminta file asli: " + item.name
+            }
+        }
+    }
+
     private fun renderParentGalleryFilterTabs() {
         val row = parentGalleryFilterRow ?: return
         row.removeAllViews()
@@ -5494,12 +5565,12 @@ private var receivedMp3File: File? = null
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 gravity = Gravity.CENTER
                 val selected = parentGalleryFilter == filter
-                setTextColor(if (selected) Color.rgb(8, 35, 25) else Color.rgb(196, 225, 207))
+                setTextColor(if (selected) Color.rgb(33, 83, 48) else Color.rgb(67, 104, 73))
                 setPadding(dp(17), dp(9), dp(17), dp(9))
                 background = GradientDrawable().apply {
-                    setColor(if (selected) Color.rgb(145, 205, 157) else Color.rgb(21, 62, 47))
+                    setColor(if (selected) Color.rgb(210, 235, 214) else Color.rgb(248, 252, 248))
                     cornerRadius = dp(20).toFloat()
-                    setStroke(dp(1), if (selected) Color.rgb(180, 226, 184) else Color.rgb(58, 111, 81))
+                    setStroke(dp(1), if (selected) Color.rgb(189, 220, 194) else Color.rgb(207, 228, 211))
                 }
             }
             tab.layoutParams = LinearLayout.LayoutParams(0, dp(38), 1f).apply { setMargins(dp(3), 0, dp(3), 0) }
@@ -5525,7 +5596,7 @@ private var receivedMp3File: File? = null
             list.addView(TextView(this).apply {
                 text = if (parentGalleryMediaItems.isEmpty()) "Belum ada foto atau video yang dapat dibagikan." else "Belum ada media pada kategori ini."
                 textSize = 13f
-                setTextColor(Color.rgb(190, 220, 200))
+                setTextColor(Color.rgb(91, 122, 98))
                 gravity = Gravity.CENTER
                 setPadding(dp(18), dp(36), dp(18), dp(36))
             })
@@ -5541,14 +5612,14 @@ private var receivedMp3File: File? = null
             }
             val image = ImageView(this).apply {
                 scaleType = ImageView.ScaleType.CENTER_CROP
-                setBackgroundColor(Color.rgb(23, 62, 46))
+                setBackgroundColor(Color.rgb(231, 242, 233))
                 layoutParams = FrameLayout.LayoutParams(-1, -1)
             }
             val tile = FrameLayout(this).apply {
                 background = GradientDrawable().apply {
-                    setColor(Color.rgb(18, 53, 39))
+                    setColor(Color.rgb(255, 255, 255))
                     cornerRadius = dp(9).toFloat()
-                    setStroke(dp(1), Color.rgb(57, 105, 76))
+                    setStroke(dp(1), Color.rgb(205, 226, 209))
                 }
                 clipToOutline = true
                 addView(image)
@@ -5568,51 +5639,7 @@ private var receivedMp3File: File? = null
                 layoutParams = LinearLayout.LayoutParams(dp(tileWidth), dp(tileWidth))
                     .apply { setMargins(dp(3), dp(3), dp(3), dp(3)) }
             }
-            tile.setOnClickListener {
-                val cached = galleryThumbnailCacheFile(item.key)
-                val preview = ImageView(this).apply {
-                    scaleType = ImageView.ScaleType.FIT_CENTER
-                    setBackgroundColor(Color.rgb(5, 24, 17))
-                    if (cached.isFile) BitmapFactory.decodeFile(cached.absolutePath)?.let { setImageBitmap(it) }
-                    layoutParams = LinearLayout.LayoutParams(-1, dp(280))
-                }
-                val details = TextView(this).apply {
-                    text = item.name + "\n" + android.text.format.Formatter.formatFileSize(this@MainActivity, item.sizeBytes)
-                    textSize = 12f; setTextColor(Color.rgb(213, 235, 220))
-                    setPadding(dp(4), dp(9), dp(4), dp(4))
-                }
-                val viewer = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL; setPadding(dp(10), dp(8), dp(10), dp(8))
-                    background = GradientDrawable().apply { setColor(Color.rgb(7, 29, 22)); cornerRadius = dp(14).toFloat() }
-                    addView(preview); addView(details)
-                }
-                SantetHpDialogBuilder().setTitle(if (item.kind == "VIDEO") "Pratinjau video" else "Pratinjau foto")
-                    .setView(viewer).setNegativeButton("Tutup", null)
-                    .setPositiveButton("Unduh HD & simpan") { _, _ ->
-                        if (Build.VERSION.SDK_INT < 29) {
-                            Toast.makeText(this, "Simpan langsung ke galeri memerlukan Android 10 atau lebih baru.", Toast.LENGTH_LONG).show()
-                        } else if (item.sizeBytes <= 0 || item.sizeBytes > 200L * 1024L * 1024L) {
-                            Toast.makeText(this, "File kosong atau lebih besar dari batas transfer 200 MB.", Toast.LENGTH_LONG).show()
-                        } else {
-                            val prefs = getSharedPreferences("parent_gallery_cache", MODE_PRIVATE)
-                            val prefKey = gallerySavedUriPreferenceKey(item.key)
-                            val savedText = prefs.getString(prefKey, null)
-                            val savedUri = savedText?.let { Uri.parse(it) }
-                            val exists = if (savedUri != null) try {
-                                contentResolver.openFileDescriptor(savedUri, "r")?.use { true } ?: false
-                            } catch (_: Exception) { false } else false
-                            if (exists && savedUri != null) openSavedGalleryMedia(savedUri, item.mime)
-                            else {
-                                if (savedText != null) prefs.edit().remove(prefKey).apply()
-                                val requested = if (parentGalleryUsingBackupService)
-                                    parentDriveBackupBinder?.requestGalleryOriginal(item.key) == true
-                                else parentGalleryProtocol?.requestOriginal(item.key) == true
-                                if (!requested) Toast.makeText(this, "Permintaan unduh belum terkirim. Periksa koneksi P2P.", Toast.LENGTH_LONG).show()
-                                else parentGalleryStatus?.text = "Meminta file asli: " + item.name
-                            }
-                        }
-                    }.show()
-            }
+            tile.setOnClickListener { showParentGalleryPreview(item) }
             gridRow?.addView(tile)
             parentGalleryRows[item.key] = image
             val cached = galleryThumbnailCacheFile(item.key)
@@ -6337,7 +6364,7 @@ private var receivedMp3File: File? = null
         ) return
 
         if (isParentGalleryPageVisible()) {
-            parentGalleryDialog?.dismiss()
+            closeParentGalleryPage()
             stopParentGalleryP2p()
         }
         prefs.edit()
