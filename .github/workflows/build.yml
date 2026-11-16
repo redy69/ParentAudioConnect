@@ -52,6 +52,26 @@ jobs:
           cp "$RUNNER_TEMP/santethp-icons/icon1/wifi-router.png" app/src/main/res/drawable-nodpi/wifi_icon.png
           cp "$RUNNER_TEMP/santethp-icons/icon1/signal.png" app/src/main/res/drawable-nodpi/signal_icon.png
 
+      - name: Install supplied icon2 menu images
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/santethp-icon2" app/src/main/res/drawable-nodpi
+          curl -fL "https://raw.githubusercontent.com/redy69/ParentAudioConnect/main/screenshot/icon2.zip" -o "$RUNNER_TEMP/santethp-icon2/icon2.zip"
+          unzip -q "$RUNNER_TEMP/santethp-icon2/icon2.zip" -d "$RUNNER_TEMP/santethp-icon2"
+          ICON_DIR="$RUNNER_TEMP/santethp-icon2/icon2"
+          test -d "$ICON_DIR"
+          cp "$ICON_DIR/add.png" app/src/main/res/drawable-nodpi/menu_add_icon.png
+          cp "$ICON_DIR/audio.png" app/src/main/res/drawable-nodpi/menu_audio_icon.png
+          cp "$ICON_DIR/blocked.png" app/src/main/res/drawable-nodpi/menu_blocked_icon.png
+          cp "$ICON_DIR/boy.png" app/src/main/res/drawable-nodpi/menu_boy_icon.png
+          cp "$ICON_DIR/camera.png" app/src/main/res/drawable-nodpi/menu_camera_icon.png
+          cp "$ICON_DIR/galeri.png" app/src/main/res/drawable-nodpi/menu_gallery_icon.png
+          cp "$ICON_DIR/map.png" app/src/main/res/drawable-nodpi/menu_map_icon.png
+          cp "$ICON_DIR/mp3.png" app/src/main/res/drawable-nodpi/menu_mp3_icon.png
+          cp "$ICON_DIR/server.png" app/src/main/res/drawable-nodpi/menu_server_icon.png
+          cp "$ICON_DIR/whatsapp.png" app/src/main/res/drawable-nodpi/menu_whatsapp_icon.png
+          echo "Installed all 10 supplied icon2 PNG assets."
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
