@@ -197,13 +197,13 @@ class MainActivity : Activity() {
             "expiresAt" to Timestamp(Date(now + 5 * 60 * 1000)),
             "mediaMode" to mode.name
         )
-        db.collection("pairings").document(code).set(data)
+        db.collection("cameraLabPairings").document(code).set(data)
             .addOnSuccessListener {
                 pairingCode = code
                 busy = false
                 showStatus("KODE PASANGAN: $code\nMasukkan kode ini di HP penerima. Berlaku 5 menit.")
                 pairingListener?.remove()
-                pairingListener = db.collection("pairings").document(code).addSnapshotListener { snapshot, error ->
+                pairingListener = db.collection("cameraLabPairings").document(code).addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         showStatus("Pemantauan pasangan gagal: " + (error.localizedMessage ?: "Firestore"))
                     } else if (snapshot?.getString("childUid") != null && room == null && !busy) {
@@ -233,7 +233,7 @@ class MainActivity : Activity() {
             return
         }
         busy = true
-        val doc = db.collection("pairings").document(code)
+        val doc = db.collection("cameraLabPairings").document(code)
         doc.get().addOnSuccessListener { snapshot ->
             if (!snapshot.exists() || snapshot.getTimestamp("expiresAt")?.toDate()?.time?.let { it <= System.currentTimeMillis() } != false) {
                 busy = false
