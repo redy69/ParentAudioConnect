@@ -36,15 +36,8 @@ jobs:
           curl -fL "https://raw.githubusercontent.com/redy69/ParentAudioConnect/b164ed1a75a7bece1e1a840b9ac5670055aca8d7/screenshot/icon.zip" -o "$RUNNER_TEMP/santethp-icons/icon.zip"
           unzip -q "$RUNNER_TEMP/santethp-icons/icon.zip" -d "$RUNNER_TEMP/santethp-icons"
           mkdir -p app/src/main/res/raw app/src/main/res/drawable-nodpi
-          cp "$RUNNER_TEMP/santethp-icons/icon/Camera_live.gif" app/src/main/res/raw/camera_live_icon.gif
-          cp "$RUNNER_TEMP/santethp-icons/icon/add.gif" app/src/main/res/raw/add_icon.gif
-          cp "$RUNNER_TEMP/santethp-icons/icon/block_app.gif" app/src/main/res/raw/block_app_icon.gif
-          cp "$RUNNER_TEMP/santethp-icons/icon/galeri.gif" app/src/main/res/raw/galeri_icon.gif
-          cp "$RUNNER_TEMP/santethp-icons/icon/map-location.gif" app/src/main/res/raw/map_location_icon.gif
-          cp "$RUNNER_TEMP/santethp-icons/icon/notification.gif" app/src/main/res/raw/notification_icon.gif
-          cp "$RUNNER_TEMP/santethp-icons/icon/server.gif" app/src/main/res/raw/server_icon.gif
-          cp "$RUNNER_TEMP/santethp-icons/icon/user.gif" app/src/main/res/raw/user_icon.gif
-          cp "$RUNNER_TEMP/santethp-icons/icon/whatsapp.png" app/src/main/res/drawable-nodpi/whatsapp_icon.png
+                                                            cp "$RUNNER_TEMP/santethp-icons/icon/notification.gif" app/src/main/res/raw/notification_icon.gif
+                              cp "$RUNNER_TEMP/santethp-icons/icon/whatsapp.png" app/src/main/res/drawable-nodpi/whatsapp_icon.png
           cp "$RUNNER_TEMP/santethp-icons/icon/wifi.png" app/src/main/res/drawable-nodpi/wifi_icon.png
           curl -fL "https://raw.githubusercontent.com/redy69/ParentAudioConnect/49a6dc86eb92eed40871adfb77962d027fcb0294/screenshot/icon1.zip" -o "$RUNNER_TEMP/santethp-icons/icon1.zip"
           unzip -q "$RUNNER_TEMP/santethp-icons/icon1.zip" -d "$RUNNER_TEMP/santethp-icons"
