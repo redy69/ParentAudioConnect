@@ -194,7 +194,8 @@ class MainActivity : Activity() {
             "parentUid" to auth.currentUser!!.uid,
             "childUid" to null,
             "createdAt" to Timestamp(Date(now)),
-            "expiresAt" to Timestamp(Date(now + 5 * 60 * 1000))
+            "expiresAt" to Timestamp(Date(now + 5 * 60 * 1000)),
+            "mediaMode" to mode.name
         )
         db.collection("pairings").document(code).set(data)
             .addOnSuccessListener {
@@ -243,6 +244,11 @@ class MainActivity : Activity() {
                 busy = false
                 showStatus("Kode ini sudah digunakan. Minta kode baru.")
                 return@addOnSuccessListener
+            }
+            mode = if (snapshot.getString("mediaMode") == Mode.AUDIO_ONLY.name) {
+                Mode.AUDIO_ONLY
+            } else {
+                Mode.CAMERA_AUDIO
             }
             doc.update("childUid", auth.currentUser!!.uid)
                 .addOnSuccessListener {
@@ -333,7 +339,6 @@ class MainActivity : Activity() {
                     }
                 } else {
                     if (mode == Mode.CAMERA_AUDIO) {
-                        connected.initVideoRenderer(videoRenderer)
                         showStatus("Menunggu video dan audio dari HP pengirim…")
                     } else {
                         showStatus("Menerima audio LiveKit…")
