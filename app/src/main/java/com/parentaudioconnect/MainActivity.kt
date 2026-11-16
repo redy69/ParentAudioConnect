@@ -199,6 +199,7 @@ private lateinit var playMp3Button: Button
         }
     }
     private var parentGalleryDialog: AlertDialog? = null
+    private var parentGalleryHost: ViewGroup? = null
     private var parentGalleryPage: LinearLayout? = null
     private var parentGalleryGridScroll: ScrollView? = null
     private var parentGalleryPreviewContent: LinearLayout? = null
@@ -608,14 +609,9 @@ private var receivedMp3File: File? = null
         selectedChildButton.elevation = dp(1).toFloat()
         selectedChildButton.minimumHeight = dp(40)
         selectedChildButton.setTypeface(null, android.graphics.Typeface.BOLD)
-        addChildButton.background = GradientDrawable(
-            GradientDrawable.Orientation.TL_BR,
-            intArrayOf(Color.rgb(31, 105, 73), Color.rgb(25, 91, 67), Color.rgb(48, 128, 91))
-        ).apply {
-            cornerRadius = dp(16).toFloat()
-            setStroke(dp(1), Color.argb(90, 255, 255, 255))
-        }
-        addChildButton.elevation = dp(3).toFloat()
+        // Keep the add-child icon clean and transparent; no Dark Emerald tile.
+        addChildButton.background = null
+        addChildButton.elevation = 0f
         cancelPairingButton = createButton("BATALKAN KODE")
         updateButton = createButton("PERIKSA PEMBARUAN")
         cameraStandbyButton = createButton("AKTIFKAN SIAGA KAMERA")
@@ -5229,10 +5225,16 @@ private var receivedMp3File: File? = null
         parentGalleryGridScroll = scroll
         parentGalleryPreviewContent = null
         renderParentGalleryFilterTabs()
-        for (index in 0 until rootLayout.childCount) rootLayout.getChildAt(index).visibility = View.GONE
-        parentGalleryPage?.let { rootLayout.removeView(it) }
+        // Mount the gallery as a true screen overlay above the entire dashboard,
+        // not as the last child of the vertical dashboard layout.
+        parentGalleryPage?.let { oldPage ->
+            (oldPage.parent as? ViewGroup)?.removeView(oldPage)
+        }
+        val host = findViewById<ViewGroup>(android.R.id.content)
+        parentGalleryHost = host
         parentGalleryPage = page
-        rootLayout.addView(page, LinearLayout.LayoutParams(
+        page.elevation = dp(24).toFloat()
+        host.addView(page, ViewGroup.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
         ))
 
@@ -5465,10 +5467,13 @@ private var receivedMp3File: File? = null
     }
 
     private fun isParentGalleryPageVisible(): Boolean =
-        parentGalleryPage?.parent != null && parentGalleryPage?.visibility == View.VISIBLE
+        parentGalleryPage?.parent === parentGalleryHost && parentGalleryPage?.visibility == View.VISIBLE
 
     private fun closeParentGalleryPage() {
-        parentGalleryPage?.let { rootLayout.removeView(it) }
+        parentGalleryPage?.let { page ->
+            (page.parent as? ViewGroup)?.removeView(page)
+        }
+        parentGalleryHost = null
         parentGalleryPage = null
         parentGalleryGridScroll = null
         parentGalleryPreviewContent = null
