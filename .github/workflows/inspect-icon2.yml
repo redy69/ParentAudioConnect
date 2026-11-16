@@ -21,6 +21,15 @@ jobs:
           ref: ui/dark-emerald-glass-dashboard
           fetch-depth: 1
 
+      - name: Checkout icon archive from main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: icon-source
+          sparse-checkout: |
+            screenshot/icon2.zip
+          sparse-checkout-cone-mode: false
+
       - name: Install image inspection dependency
         run: python -m pip install --quiet Pillow
 
@@ -34,7 +43,7 @@ jobs:
           from zipfile import ZipFile
           import shutil
 
-          archive = Path("screenshot/icon2.zip")
+          archive = Path("icon-source/screenshot/icon2.zip")
           assert archive.is_file(), f"Arsip tidak ditemukan: {archive}"
           source = Path("/tmp/icon2-unpacked")
           source.mkdir(parents=True, exist_ok=True)
