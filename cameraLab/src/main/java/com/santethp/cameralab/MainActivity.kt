@@ -160,7 +160,7 @@ class MainActivity : Activity() {
 
     private fun matchWrap(topMargin: Int = 0) =
         LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            if (topMargin > 0) topMargin = topMargin
+            if (topMargin > 0) this.topMargin = topMargin
         }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
