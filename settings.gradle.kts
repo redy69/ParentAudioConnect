@@ -17,4 +17,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "ParentAudioConnect"
-include(":app")
+include(":app", ":cameraLab")
