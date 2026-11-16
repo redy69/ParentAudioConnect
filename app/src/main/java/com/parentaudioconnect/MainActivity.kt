@@ -154,9 +154,9 @@ private lateinit var playMp3Button: Button
     private lateinit var rootLayout: LinearLayout
     private lateinit var childrenContainer: LinearLayout
     private lateinit var actionButtonsRow: LinearLayout
-    private lateinit var addChildButton: AnimatedGifButton
+    private lateinit var addChildButton: ImageView
     private lateinit var selectedChildButton: Button
-    private lateinit var selectedChildAvatar: AnimatedGifIconView
+    private lateinit var selectedChildAvatar: ImageView
     private lateinit var childQuickStatusText: TextView
     private lateinit var childBatteryGlyph: StatusGlyphDrawable
     private lateinit var childNetworkGlyph: StatusGlyphDrawable
@@ -580,19 +580,16 @@ private var receivedMp3File: File? = null
         firstActionRow.addView(sendMp3Button, LinearLayout.LayoutParams(actionParams))
         secondActionRow.addView(cameraLiveButton, LinearLayout.LayoutParams(actionParams))
         actionButtonsRow.addView(firstActionRow)
-        addChildButton = AnimatedGifButton(R.raw.add_icon)
-        addChildButton.textSize = 24f
-        addChildButton.includeFontPadding = false
-        addChildButton.textAlignment = View.TEXT_ALIGNMENT_CENTER
-        addChildButton.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD))
-        addChildButton.contentDescription = "Tambah anak"
-        addChildButton.minimumHeight = dp(50)
-        addChildButton.minimumWidth = dp(50)
-        addChildButton.setPadding(0, 0, 0, 0)
-        addChildButton.gravity = Gravity.CENTER
-        addChildButton.stateListAnimator = null
-        addChildButton.layoutParams = LinearLayout.LayoutParams(dp(50), dp(50)).apply { setMargins(dp(3), 0, dp(2), 0) }
-        selectedChildAvatar = AnimatedGifIconView(R.raw.user_icon)
+        addChildButton = ImageView(this).apply {
+            setImageResource(R.drawable.menu_add_icon)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            contentDescription = "Tambah anak"
+            minimumHeight = dp(50)
+            minimumWidth = dp(50)
+            setPadding(dp(7), dp(7), dp(7), dp(7))
+            layoutParams = LinearLayout.LayoutParams(dp(50), dp(50)).apply { setMargins(dp(3), 0, dp(2), 0) }
+        }
+        selectedChildAvatar = createMenuIconView(R.drawable.menu_boy_icon)
         selectedChildButton = createButton("Pilih anak  ▾")
         selectedChildButton.gravity = Gravity.CENTER_VERTICAL
         selectedChildButton.setOnClickListener { toggleChildrenPanel() }
@@ -606,7 +603,6 @@ private var receivedMp3File: File? = null
         selectedChildButton.elevation = dp(1).toFloat()
         selectedChildButton.minimumHeight = dp(40)
         selectedChildButton.setTypeface(null, android.graphics.Typeface.BOLD)
-        addChildButton.setTextColor(Color.WHITE)
         addChildButton.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
             intArrayOf(Color.rgb(31, 105, 73), Color.rgb(25, 91, 67), Color.rgb(48, 128, 91))
@@ -2741,6 +2737,16 @@ private var receivedMp3File: File? = null
         }
     }
 
+    private fun createMenuIconView(drawableId: Int): ImageView {
+        return ImageView(this).apply {
+            setImageResource(drawableId)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            layoutParams = LinearLayout.LayoutParams(dp(32), dp(32)).apply {
+                marginEnd = dp(7)
+            }
+        }
+    }
+
     private fun createActionButton(icon: String, label: String, accent: Int): LinearLayout {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -2767,20 +2773,14 @@ private var receivedMp3File: File? = null
             contentDescription = label
         }
         val iconView: View = when (label) {
-            "CHAT ADMIN" -> android.widget.ImageView(this).apply {
-                setImageResource(R.drawable.whatsapp_icon)
-                scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-                layoutParams = LinearLayout.LayoutParams(dp(31), dp(31)).apply {
-                    marginEnd = dp(7)
-                }
-            }
-            "BICARA LIVE" -> AnimatedGifIconView(R.raw.santethp_live_icon)
-            "PUTAR MP3" -> AnimatedGifIconView(R.raw.santethp_mp3_icon)
-            "KAMERA LIVE" -> AnimatedGifIconView(R.raw.camera_live_icon)
-            "BLOKIR APLIKASI" -> AnimatedGifIconView(R.raw.block_app_icon)
-            "GALERI" -> AnimatedGifIconView(R.raw.galeri_icon)
-            "MAPS" -> AnimatedGifIconView(R.raw.map_location_icon)
-            "SERVER" -> AnimatedGifIconView(R.raw.server_icon)
+            "CHAT ADMIN" -> createMenuIconView(R.drawable.menu_whatsapp_icon)
+            "BICARA LIVE" -> createMenuIconView(R.drawable.menu_audio_icon)
+            "PUTAR MP3" -> createMenuIconView(R.drawable.menu_mp3_icon)
+            "KAMERA LIVE" -> createMenuIconView(R.drawable.menu_camera_icon)
+            "BLOKIR APLIKASI" -> createMenuIconView(R.drawable.menu_blocked_icon)
+            "GALERI" -> createMenuIconView(R.drawable.menu_gallery_icon)
+            "MAPS" -> createMenuIconView(R.drawable.menu_map_icon)
+            "SERVER" -> createMenuIconView(R.drawable.menu_server_icon)
             else -> TextView(this).apply {
                 text = icon
                 textSize = if (label == "SERVER") 20f else 19f
@@ -3191,7 +3191,7 @@ private var receivedMp3File: File? = null
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
                 ).apply { setMargins(0, dp(3), 0, dp(3)) }
             }
-            val phoneIcon = AnimatedGifIconView(R.raw.user_icon).apply {
+            val phoneIcon = createMenuIconView(R.drawable.menu_boy_icon).apply {
                 layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
                     rightMargin = dp(8)
                 }
