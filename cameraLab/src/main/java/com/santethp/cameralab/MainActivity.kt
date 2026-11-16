@@ -20,6 +20,7 @@ import com.google.firebase.FirebaseOptions
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import io.livekit.android.LiveKit
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.events.collect
@@ -58,6 +59,7 @@ class MainActivity : Activity() {
     private var role: Role? = null
     private var mode = Mode.CAMERA_AUDIO
     private var pairingCode: String? = null
+    private var pairingListener: ListenerRegistration? = null
     private var busy = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -172,9 +174,9 @@ class MainActivity : Activity() {
     private fun chooseRole(selected: Role) {
         role = selected
         if (selected == Role.SENDER) {
-            showStatus("HP ini akan mengirim kamera/mikrofon. Masukkan kode yang dibuat HP penerima.")
-        } else {
             createPairing()
+        } else {
+            showStatus("HP ini akan menerima media. Masukkan kode yang dibuat HP pengirim.")
         }
     }
 
@@ -208,8 +210,8 @@ class MainActivity : Activity() {
 
     private fun claimAndConnect(code: String) {
         if (busy) return
-        if (role != Role.SENDER) {
-            showStatus("Pilih KIRIM dari HP ini terlebih dahulu.")
+        if (role != Role.VIEWER) {
+            showStatus("Pilih TERIMA di HP ini terlebih dahulu.")
             return
         }
         if (!code.matches(Regex("^[A-HJ-NP-Z2-9]{8}$"))) {
@@ -255,7 +257,7 @@ class MainActivity : Activity() {
         val currentRole = role ?: return
         val permissions = if (currentRole == Role.SENDER && mode == Mode.CAMERA_AUDIO) {
             arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
-        } else if (currentRole == Role.SENDER || mode == Mode.AUDIO_ONLY) {
+        } else if (currentRole == Role.SENDER) {
             arrayOf(Manifest.permission.RECORD_AUDIO)
         } else emptyArray()
         val missing = permissions.filter {
@@ -274,11 +276,11 @@ class MainActivity : Activity() {
                     ?: throw IllegalStateException("Token autentikasi kosong")
                 val started = System.currentTimeMillis()
                 val response = withContext(Dispatchers.IO) {
-                    postJson("$WORKER_BASE/camera-token", JSONObject()
+                    postJson("$WORKER_BASE/token", JSONObject()
                         .put("idToken", idToken).put("code", code))
                 }
                 val tokenMs = System.currentTimeMillis() - started
-                val expectedRole = if (currentRole == Role.SENDER) "child" else "parent"
+                val expectedRole = if (currentRole == Role.SENDER) "parent" else "child"
                 if (response.optString("role") != expectedRole) {
                     throw IllegalStateException("Peran token tidak sesuai: ${response.optString("role")}")
                 }
@@ -408,6 +410,7 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         eventJob?.cancel()
+        pairingListener?.remove()
         scope.cancel()
         val active = room
         room = null
