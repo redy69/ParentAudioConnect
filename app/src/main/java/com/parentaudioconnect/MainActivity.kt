@@ -422,7 +422,7 @@ private var receivedMp3File: File? = null
             compoundDrawablePadding = dp(7)
             // Keep battery at the leading edge; network glyph is placed inline before its label. 
             val batteryDrawable = resources.getDrawable(R.drawable.battery_icon, theme).mutate()
-            batteryDrawable.setBounds(0, 0, dp(16), dp(16))
+            batteryDrawable.setBounds(0, 0, dp(19), dp(19))
             setCompoundDrawablesRelative(batteryDrawable, null, null, null)
             background = GradientDrawable(
                 GradientDrawable.Orientation.LEFT_RIGHT,
@@ -586,10 +586,10 @@ private var receivedMp3File: File? = null
             setImageResource(R.drawable.menu_add_icon)
             scaleType = ImageView.ScaleType.FIT_CENTER
             contentDescription = "Tambah anak"
-            minimumHeight = dp(50)
-            minimumWidth = dp(50)
-            setPadding(dp(7), dp(7), dp(7), dp(7))
-            layoutParams = LinearLayout.LayoutParams(dp(50), dp(50)).apply { setMargins(dp(3), 0, dp(2), 0) }
+            minimumHeight = dp(54)
+            minimumWidth = dp(54)
+            setPadding(dp(5), dp(5), dp(5), dp(5))
+            layoutParams = LinearLayout.LayoutParams(dp(54), dp(50)).apply { setMargins(dp(3), 0, dp(2), 0) }
         }
         selectedChildAvatar = createMenuIconView(R.drawable.menu_boy_icon)
         selectedChildButton = createButton("Pilih anak  ▾")
@@ -902,7 +902,7 @@ private var receivedMp3File: File? = null
         ))
         childHeaderRow.addView(childIdentityColumn, LinearLayout.LayoutParams(0, dp(42), 1f).apply { weight = 1f })
         val notificationBellContainer = FrameLayout(this).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(48), dp(42)).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(42), dp(42)).apply {
                 setMargins(dp(3), 0, dp(3), 0)
             }
         }
@@ -920,7 +920,7 @@ private var receivedMp3File: File? = null
             cornerRadius = dp(15).toFloat()
             setStroke(dp(1), Color.rgb(210, 223, 245))
         }
-        notificationBellContainer.addView(notificationsBellButton, FrameLayout.LayoutParams(dp(42), dp(42), Gravity.CENTER))
+        notificationBellContainer.addView(notificationsBellButton, FrameLayout.LayoutParams(dp(36), dp(36), Gravity.CENTER))
         notificationBadge = TextView(this).apply {
             textSize = 9.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -945,7 +945,7 @@ private var receivedMp3File: File? = null
         childHeaderRow.addView(notificationBellContainer)
         parentOnlyViews.add(notificationBellContainer)
         childHeaderRow.addView(addChildButton)
-        rootLayout.addView(childHeaderRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(42)))
+        rootLayout.addView(childHeaderRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)))
         parentOnlyViews.add(childHeaderRow)
         rootLayout.addView(childQuickStatusText, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(32)
@@ -1078,20 +1078,6 @@ private var receivedMp3File: File? = null
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(5), 0, dp(12))
         }
-        val mapsBack = TextView(this).apply {
-            text = "‹"
-            textSize = 34f
-            setTextColor(Color.rgb(24, 96, 70))
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                setColor(Color.WHITE)
-                cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.rgb(211, 230, 221))
-            }
-            layoutParams = LinearLayout.LayoutParams(dp(44), dp(44))
-            setOnClickListener { showParentDashboard() }
-            contentDescription = "Kembali ke dashboard"
-        }
         val mapsTitle = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
@@ -1106,7 +1092,6 @@ private var receivedMp3File: File? = null
             textSize = 12f
             setTextColor(Color.rgb(104, 117, 140))
         })
-        mapsHeader.addView(mapsBack)
         mapsHeader.addView(mapsTitle)
         mapsPage.addView(mapsHeader)
         mapsPage.addView(childLocationMapView, LinearLayout.LayoutParams(
@@ -2680,7 +2665,7 @@ private var receivedMp3File: File? = null
             super.onDraw(canvas)
             val duration = gif.duration().takeIf { it > 0 } ?: 1000
             gif.setTime(((SystemClock.uptimeMillis() - startedAt) % duration).toInt())
-            val side = dp(48).toFloat()
+            val side = dp(34).toFloat()
             val scale = minOf(side / gif.width().coerceAtLeast(1), side / gif.height().coerceAtLeast(1))
             canvas.save()
             canvas.translate((width - gif.width() * scale) / 2f, (height - gif.height() * scale) / 2f)
