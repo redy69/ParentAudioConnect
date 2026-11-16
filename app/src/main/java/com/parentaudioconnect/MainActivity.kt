@@ -199,6 +199,9 @@ private lateinit var playMp3Button: Button
         }
     }
     private var parentGalleryDialog: AlertDialog? = null
+    private var parentGalleryPage: LinearLayout? = null
+    private var parentGalleryGridScroll: ScrollView? = null
+    private var parentGalleryPreviewContent: LinearLayout? = null
     private var googleDriveAuthorization: GoogleDriveAuthorization? = null
     // Access tokens are short-lived; keep only in memory, never in preferences.
     private var googleDriveAccessToken: String? = null
@@ -1259,8 +1262,8 @@ private var receivedMp3File: File? = null
     override fun onPause() {
         stopChildPresenceRefresh()
         stopChildPairingVerification()
-        if (currentRole == "parent" && parentGalleryDialog?.isShowing == true) {
-            parentGalleryDialog?.dismiss()
+        if (currentRole == "parent" && isParentGalleryPageVisible()) {
+            closeParentGalleryPage()
         }
         super.onPause()
     }
@@ -1852,6 +1855,16 @@ private var receivedMp3File: File? = null
 
     @Deprecated("Deprecated in Android API")
     override fun onBackPressed() {
+        if (isParentGalleryPageVisible()) {
+            if (parentGalleryPreviewContent != null) {
+                parentGalleryPreviewContent?.let { parentGalleryPage?.removeView(it) }
+                parentGalleryPreviewContent = null
+                parentGalleryGridScroll?.visibility = View.VISIBLE
+            } else {
+                closeParentGalleryPage()
+            }
+            return
+        }
         val mapsPage = rootLayout.findViewWithTag<View>("santethp_maps_page")
         if (mapsPage?.visibility == View.VISIBLE) {
             showParentDashboard()
@@ -5078,7 +5091,7 @@ private var receivedMp3File: File? = null
                             if (childSnapshots[code]?.getBoolean("driveBackupEnabled") == true) {
                                 // The gallery dialog owns a separate parent P2P session.
                                 // Close it before the multi-child backup scheduler takes over.
-                                if (parentGalleryDialog?.isShowing == true) {
+                                if (isParentGalleryPageVisible()) {
                                     parentGalleryDialog?.dismiss()
                                     stopParentGalleryP2p()
                                 }
@@ -5166,73 +5179,69 @@ private var receivedMp3File: File? = null
             isFillViewport = true
             addView(list)
         }
-        val content = LinearLayout(this).apply {
+        val pageHeader = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(16), dp(10), dp(16), dp(8))
+            addView(TextView(this@MainActivity).apply {
+                text = "Galeri • " + name
+                textSize = 21f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.rgb(34, 91, 57))
+            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            addView(TextView(this@MainActivity).apply {
+                text = "↻"
+                textSize = 25f
+                gravity = Gravity.CENTER
+                setTextColor(Color.rgb(38, 119, 73))
+                contentDescription = "Muat ulang galeri"
+                setOnClickListener {
+                    list.removeAllViews()
+                    parentGalleryRows.clear()
+                    parentGalleryMediaItems.clear()
+                    parentGalleryThumbQueue.clear()
+                    parentGalleryThumbInFlight = null
+                    parentGalleryIndexRequested = if (parentGalleryUsingBackupService) parentDriveBackupBinder?.requestGalleryIndex() == true else parentGalleryProtocol?.requestIndex() == true
+                    if (parentGalleryIndexRequested) status.text = "Meminta daftar foto dan video terbaru…"
+                    else {
+                        status.text = "Sesi P2P tidak aktif. Menghubungkan ulang galeri…"
+                        closeParentGalleryPage()
+                        rootLayout.post { showParentGalleryStatus() }
+                    }
+                }
+            }, LinearLayout.LayoutParams(dp(42), dp(42)))
+        }
+        val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(10), dp(8), dp(10), dp(8))
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.rgb(7, 29, 22), Color.rgb(13, 48, 36), Color.rgb(8, 35, 27))
-            ).apply { cornerRadius = dp(18).toFloat() }
+            setBackgroundColor(Color.rgb(246, 251, 247))
+            addView(pageHeader)
             addView(status)
             addView(filterRow)
             addView(scroll, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
             ))
         }
+        page.tag = "santethp_parent_gallery_page"
         parentGalleryStatus = status
         parentGalleryList = list
         parentGalleryFilter = "Semua"
         parentGalleryFilterRow = filterRow
+        parentGalleryGridScroll = scroll
+        parentGalleryPreviewContent = null
         renderParentGalleryFilterTabs()
-        val dialog = SantetHpDialogBuilder()
-            .setTitle("Galeri • " + name)
-            .setView(content)
-            .setNegativeButton("Tutup", null)
-            .setNeutralButton("Muat ulang / sambung", null)
-            .create()
-        parentGalleryDialog = dialog
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                list.removeAllViews()
-                parentGalleryRows.clear()
-                parentGalleryMediaItems.clear()
-                parentGalleryThumbQueue.clear()
-                parentGalleryThumbInFlight = null
-                parentGalleryIndexRequested = if (parentGalleryUsingBackupService) parentDriveBackupBinder?.requestGalleryIndex() == true else parentGalleryProtocol?.requestIndex() == true
-                if (parentGalleryIndexRequested) {
-                    status.text = "Meminta daftar foto dan video terbaru…"
-                } else {
-                    status.text = "Sesi P2P tidak aktif. Membuka ulang koneksi galeri…"
-                    dialog.dismiss()
-                    rootLayout.post { showParentGalleryStatus() }
-                }
-            }
-        }
-        dialog.setOnDismissListener {
-            if (parentGalleryUsingBackupService) {
-                parentDriveBackupBinder?.closeGallery()
-                parentGalleryUsingBackupService = false
-            } else {
-                stopParentGalleryP2p()
-            }
-            parentGalleryDialog = null
-            parentGalleryStatus = null
-            parentGalleryList = null
-            parentGalleryFilterRow = null
-        }
-        dialog.show()
-        dialog.window?.setLayout(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        )
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        for (index in 0 until rootLayout.childCount) rootLayout.getChildAt(index).visibility = View.GONE
+        parentGalleryPage?.let { rootLayout.removeView(it) }
+        parentGalleryPage = page
+        rootLayout.addView(page, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+        ))
 
         if (backupServiceActive) {
             parentGalleryUsingBackupService = backupServiceActive
             parentDriveBackupBinder?.attachGalleryCallbacks(
                 onMediaIndex = { items ->
                     runOnUiThread {
-                        if (parentGalleryDialog?.isShowing != true) return@runOnUiThread
+                        if (!isParentGalleryPageVisible()) return@runOnUiThread
                         list.removeAllViews()
                         parentGalleryRows.clear()
                         parentGalleryMediaItems.clear()
@@ -5248,7 +5257,7 @@ private var receivedMp3File: File? = null
                 },
                 onThumbnail = { key, bytes ->
                     runOnUiThread {
-                        if (parentGalleryDialog?.isShowing != true) return@runOnUiThread
+                        if (!isParentGalleryPageVisible()) return@runOnUiThread
                         if (bytes.isNotEmpty()) {
                             val cachedThumb = galleryThumbnailCacheFile(key)
                             try {
@@ -5268,7 +5277,7 @@ private var receivedMp3File: File? = null
                 },
                 onStatus = { message ->
                     runOnUiThread {
-                        if (parentGalleryDialog?.isShowing == true) status.text = message
+                        if (isParentGalleryPageVisible()) status.text = message
                     }
                 },
                 onOriginalReady = { key, file, fileName, mime ->
@@ -5292,7 +5301,7 @@ private var receivedMp3File: File? = null
                 },
                 onState = { message ->
                     runOnUiThread {
-                        if (parentGalleryDialog?.isShowing == true) status.text = message
+                        if (isParentGalleryPageVisible()) status.text = message
                         if (message.contains("jalur data aktif") &&
                             childSnapshots[code]?.getBoolean("gallerySharingEnabled") == true &&
                             !parentGalleryIndexRequested
@@ -5320,7 +5329,7 @@ private var receivedMp3File: File? = null
                 sendFrame = { bytes, binary -> parentGalleryP2pManager?.send(bytes, binary) ?: false },
                 onMediaIndex = { items ->
                     runOnUiThread {
-                        if (parentGalleryDialog?.isShowing != true) return@runOnUiThread
+                        if (!isParentGalleryPageVisible()) return@runOnUiThread
                         list.removeAllViews()
                         parentGalleryRows.clear()
                         parentGalleryMediaItems.clear()
@@ -5336,7 +5345,7 @@ private var receivedMp3File: File? = null
                 },
                 onThumbnail = { key, bytes ->
                     runOnUiThread {
-                        if (parentGalleryDialog?.isShowing != true) return@runOnUiThread
+                        if (!isParentGalleryPageVisible()) return@runOnUiThread
                         if (bytes.isNotEmpty()) {
                             val cachedThumb = galleryThumbnailCacheFile(key)
                             try {
@@ -5356,7 +5365,7 @@ private var receivedMp3File: File? = null
                 },
                 onStatus = { message ->
                     runOnUiThread {
-                        if (parentGalleryDialog?.isShowing == true) status.text = message
+                        if (isParentGalleryPageVisible()) status.text = message
                     }
                 },
                 canReceiveBackup = { !googleDriveAccessToken.isNullOrBlank() },
@@ -5379,7 +5388,7 @@ private var receivedMp3File: File? = null
                                     file, fileName, mime, folderId, stableKey = key,
                                     progress = GoogleDriveUploader.ProgressListener { sent, total ->
                                         runOnUiThread {
-                                            if (parentGalleryDialog?.isShowing == true) {
+                                            if (isParentGalleryPageVisible()) {
                                                 status.text = "Mengunggah ke Google Drive: " +
                                                     android.text.format.Formatter.formatFileSize(this, sent) +
                                                     " / " + android.text.format.Formatter.formatFileSize(this, total)
@@ -5429,7 +5438,7 @@ private var receivedMp3File: File? = null
                 localRole = GalleryP2pManager.Role.PARENT,
                 onState = { message ->
                     runOnUiThread {
-                        if (parentGalleryDialog?.isShowing == true) status.text = message
+                        if (isParentGalleryPageVisible()) status.text = message
                         if (message.contains("jalur data aktif")) {
                             if (childSnapshots[code]?.getBoolean("gallerySharingEnabled") == true &&
                                 !parentGalleryIndexRequested
@@ -5453,6 +5462,26 @@ private var receivedMp3File: File? = null
             manager.start()
         }
 
+    }
+
+    private fun isParentGalleryPageVisible(): Boolean =
+        parentGalleryPage?.parent != null && parentGalleryPage?.visibility == View.VISIBLE
+
+    private fun closeParentGalleryPage() {
+        parentGalleryPage?.let { rootLayout.removeView(it) }
+        parentGalleryPage = null
+        parentGalleryGridScroll = null
+        parentGalleryPreviewContent = null
+        parentGalleryStatus = null
+        parentGalleryList = null
+        parentGalleryFilterRow = null
+        if (parentGalleryUsingBackupService) {
+            parentDriveBackupBinder?.closeGallery()
+            parentGalleryUsingBackupService = false
+        } else {
+            stopParentGalleryP2p()
+        }
+        showParentDashboard()
     }
 
     private fun renderParentGalleryFilterTabs() {
@@ -5595,7 +5624,7 @@ private var receivedMp3File: File? = null
     }
 
     private fun requestNextParentGalleryThumbnail() {
-        if (parentGalleryThumbInFlight != null || parentGalleryDialog?.isShowing != true) return
+        if (parentGalleryThumbInFlight != null || !isParentGalleryPageVisible()) return
         val next = parentGalleryThumbQueue.removeFirstOrNull() ?: return
         parentGalleryThumbInFlight = next
         val requested = if (parentGalleryUsingBackupService) {
@@ -6307,7 +6336,7 @@ private var receivedMp3File: File? = null
             prefs.getString("parent_drive_backup_child_queue_json", null) == queueJson
         ) return
 
-        if (parentGalleryDialog?.isShowing == true) {
+        if (isParentGalleryPageVisible()) {
             parentGalleryDialog?.dismiss()
             stopParentGalleryP2p()
         }
