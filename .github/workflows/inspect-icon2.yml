@@ -21,6 +21,10 @@ jobs:
           ref: ui/dark-emerald-glass-dashboard
           fetch-depth: 1
 
+      - name: Install image inspection dependency
+        run: python -m pip install --quiet Pillow
+
+
       - name: Verify and extract the supplied archive
         shell: bash
         run: |
@@ -63,11 +67,6 @@ jobs:
         env:
           PYTHONUNBUFFERED: "1"
 
-      - name: Install image inspection dependency
-        run: python -m pip install --quiet Pillow
-
-      - name: Install image inspection dependency
-        run: python -m pip install --quiet Pillow
 
       - name: Create icon contact sheet
         run: |
