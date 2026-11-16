@@ -291,7 +291,7 @@ class MainActivity : Activity() {
                     ?: throw IllegalStateException("Token autentikasi kosong")
                 val started = System.currentTimeMillis()
                 val response = withContext(Dispatchers.IO) {
-                    postJson("$WORKER_BASE/token", JSONObject()
+                    postJson("$WORKER_BASE/camera-lab/token", JSONObject()
                         .put("idToken", idToken).put("code", code))
                 }
                 val tokenMs = System.currentTimeMillis() - started
