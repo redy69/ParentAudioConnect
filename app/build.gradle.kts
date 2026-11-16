@@ -25,8 +25,13 @@ tasks.named("preBuild").configure {
 }
 
 val appVersionCode = providers.gradleProperty("versionCode").orElse("1").get().toInt()
+val meteredTurnApiKey = System.getenv("METERED_TURN_API_KEY")
+    ?: providers.gradleProperty("meteredTurnApiKey").orElse("").get()
 
 android {
+    buildFeatures {
+        buildConfig = true
+    }
     namespace = "com.santethp"
     compileSdk = 35
 
@@ -36,6 +41,7 @@ android {
         targetSdk = 35
         versionCode = appVersionCode
         versionName = "1.0.$appVersionCode"
+        buildConfigField("String", "METERED_TURN_API_KEY", "\\"${meteredTurnApiKey}\\"")
     }
 
     signingConfigs {
