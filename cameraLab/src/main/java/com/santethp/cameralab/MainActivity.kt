@@ -64,7 +64,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         try {
             val app = FirebaseApp.initializeApp(this, FirebaseOptions.Builder()
-                .setApplicationId("1:510992503464:android:f9f116e0f498d65727289d")
+                .setApplicationId("1:510992503464:android:dc7ad2dcec068eb927289d")
                 .setApiKey("AIzaSyArnd_Ejlu045Sgu_UYKaD0BLs3BtFLTDg")
                 .setProjectId("parentaudioconnect")
                 .setGcmSenderId("510992503464")
@@ -192,13 +192,13 @@ class MainActivity : Activity() {
             "parentUid" to auth.currentUser!!.uid,
             "childUid" to null,
             "createdAt" to Timestamp(Date(now)),
-            "expiresAt" to Timestamp(Date(now + 15 * 60 * 1000))
+            "expiresAt" to Timestamp(Date(now + 5 * 60 * 1000))
         )
         db.collection("pairings").document(code).set(data)
             .addOnSuccessListener {
                 pairingCode = code
                 busy = false
-                showStatus("KODE PASANGAN: $code\nMasukkan kode ini di HP pengirim. Berlaku 15 menit.")
+                showStatus("KODE PASANGAN: $code\nMasukkan kode ini di HP pengirim. Berlaku 5 menit.")
             }
             .addOnFailureListener {
                 busy = false
