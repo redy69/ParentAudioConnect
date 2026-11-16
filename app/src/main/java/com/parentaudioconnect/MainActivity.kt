@@ -200,6 +200,9 @@ private lateinit var playMp3Button: Button
     }
     private var parentGalleryDialog: AlertDialog? = null
     private var parentGalleryHost: ViewGroup? = null
+    private val activeSantetDialogs = linkedSetOf<AlertDialog>()
+    private var mapsPageOverlay: View? = null
+    private var mapsPageOriginalIndex: Int = -1
     private var parentGalleryPage: LinearLayout? = null
     private var parentGalleryGridScroll: ScrollView? = null
     private var parentGalleryPreviewContent: LinearLayout? = null
@@ -1861,8 +1864,8 @@ private var receivedMp3File: File? = null
             }
             return
         }
-        val mapsPage = rootLayout.findViewWithTag<View>("santethp_maps_page")
-        if (mapsPage?.visibility == View.VISIBLE) {
+        if (mapsPageOverlay?.parent != null) {
+            restoreMapsPageToDashboard()
             showParentDashboard()
             return
         }
@@ -1884,10 +1887,37 @@ private var receivedMp3File: File? = null
 
     private fun showMapsPage() {
         if (currentRole != "parent") return
-        for (index in 0 until rootLayout.childCount) {
-            rootLayout.getChildAt(index).visibility = View.GONE
+        val page = rootLayout.findViewWithTag<View>("santethp_maps_page") ?: return
+        dismissSantetDialogsForFullPage()
+        if (page.parent is ViewGroup) {
+            val originalParent = page.parent as ViewGroup
+            mapsPageOriginalIndex = originalParent.indexOfChild(page)
+            originalParent.removeView(page)
         }
-        rootLayout.findViewWithTag<View>("santethp_maps_page")?.visibility = View.VISIBLE
+        val host = findViewById<ViewGroup>(android.R.id.content)
+        mapsPageOverlay = page
+        page.visibility = View.VISIBLE
+        page.elevation = dp(24).toFloat()
+        host.addView(page, ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+        ))
+    }
+
+    private fun restoreMapsPageToDashboard() {
+        val page = mapsPageOverlay ?: return
+        (page.parent as? ViewGroup)?.removeView(page)
+        page.visibility = View.GONE
+        val index = mapsPageOriginalIndex.coerceIn(0, rootLayout.childCount)
+        rootLayout.addView(page, index)
+        mapsPageOverlay = null
+        mapsPageOriginalIndex = -1
+    }
+
+    private fun dismissSantetDialogsForFullPage() {
+        activeSantetDialogs.toList().forEach { dialog ->
+            try { if (dialog.isShowing) dialog.dismiss() } catch (_: Exception) { }
+        }
+        activeSantetDialogs.clear()
     }
 
     private fun requestParentNotificationPermission() {
@@ -1949,6 +1979,7 @@ private var receivedMp3File: File? = null
     }
 
     private fun showParentDashboard() {
+        if (mapsPageOverlay?.parent != null) restoreMapsPageToDashboard()
         rootLayout.findViewWithTag<View>("santethp_brand_header")?.visibility = View.VISIBLE
         requestParentNotificationPermission()
         childLocationMapView.setMapTapMode(false)
@@ -2188,6 +2219,8 @@ private var receivedMp3File: File? = null
 
         override fun show(): AlertDialog {
             val dialog = super.show()
+            activeSantetDialogs.add(dialog)
+            dialog.setOnDismissListener { activeSantetDialogs.remove(dialog) }
             styleDialogWhenLaidOut(dialog)
             return dialog
         }
@@ -5226,7 +5259,9 @@ private var receivedMp3File: File? = null
         parentGalleryPreviewContent = null
         renderParentGalleryFilterTabs()
         // Mount the gallery as a true screen overlay above the entire dashboard,
-        // not as the last child of the vertical dashboard layout.
+        // not as the last child of the vertical dashboard layout. Close any older
+        // in-app dialog window first so it cannot float above this page.
+        dismissSantetDialogsForFullPage()
         parentGalleryPage?.let { oldPage ->
             (oldPage.parent as? ViewGroup)?.removeView(oldPage)
         }
