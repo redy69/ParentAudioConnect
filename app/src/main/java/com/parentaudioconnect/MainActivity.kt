@@ -1151,19 +1151,19 @@ private var receivedMp3File: File? = null
                 ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
             })
             details.addView(TextView(this).apply {
-                text = if (connected) "● ONLINE  •  Terhubung" else "○ OFFLINE  •  Menunggu koneksi"
+                text = if (connected) "● ONLINE" else "○ OFFLINE"
                 contentDescription = if (connected) "Perangkat $name sedang online dan terhubung" else "Perangkat $name sedang offline dan menunggu koneksi"
                 textSize = 10f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 letterSpacing = 0.005f
-                setPadding(dp(8), dp(4), dp(8), dp(4))
+                setPadding(dp(8), dp(3), dp(8), dp(3))
                 setTextColor(if (connected) Color.rgb(24, 128, 82) else Color.rgb(105, 116, 137))
                 background = GradientDrawable().apply {
                     setColor(if (connected) Color.rgb(226, 247, 237) else Color.rgb(239, 243, 249))
-                    cornerRadius = dp(8).toFloat()
+                    cornerRadius = dp(10).toFloat()
                 }
-                maxLines = 2
-                setLineSpacing(dp(1).toFloat(), 1f)
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
             })
             row.addView(details)
             if (selectedChildCode == code) row.addView(TextView(this).apply {
