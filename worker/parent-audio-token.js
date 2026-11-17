@@ -316,7 +316,7 @@ export default {
         // return the remaining candidates. After a successful connection the
         // parent saves the winning server and notifies the child with that ID.
         // Child requests and audio requests remain pinned to their paired server.
-        if (kind === "camera" && isParent && !requestedServerId) {
+        if ((kind === "camera" || kind === "audio") && isParent && !requestedServerId) {
           const remaining = projects.filter(project => project.id !== preferredServerId);
           projects.splice(0, projects.length, ...exact, ...remaining);
           responsePreferredServerId = "";
