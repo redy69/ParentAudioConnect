@@ -166,7 +166,7 @@ class LiveConversationPage(
         textSize = 13f
         setTextColor(Color.WHITE)
         setTypeface(Typeface.DEFAULT, Typeface.BOLD)
-        isAllCaps = false
+        setAllCaps(false)
         minHeight = dp(54)
         background = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, colors).apply {
             cornerRadius = dp(16).toFloat()
