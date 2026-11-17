@@ -294,6 +294,7 @@ private var receivedMp3File: File? = null
     private const val PARENT_MEDIA_WRITE_PERMISSION = 1010
     private const val PARENT_MEDIA_PICKER = 1011
     private const val BACKUP_MEDIA_PERMISSION = 1012
+    private const val CAMERA_AUDIO_PERMISSION = 1013
 }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -4205,7 +4206,31 @@ private var receivedMp3File: File? = null
             requestPermissions(arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION)
             return
         }
-        armRemoteCameraStandby()
+        requestCameraAudioConsent()
+    }
+
+    private fun requestCameraAudioConsent() {
+        if (currentRole != "child") return
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        val micPermissionGranted =
+            checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        SantetHpDialogBuilder()
+            .setTitle("Suara saat Kamera Live")
+            .setMessage("Apakah Anda mengizinkan mikrofon HP ini mengirim suara lingkungan ke HP orang tua saat Kamera Live berlangsung? Suara hanya aktif selama kamera berjalan. Notifikasi SantetHP akan menampilkan statusnya, dan suara dapat dimatikan kapan saja dari notifikasi.")
+            .setNegativeButton("Kamera saja") { _, _ ->
+                prefs.edit().putBoolean("remote_camera_audio_consent", false).apply()
+                armRemoteCameraStandby()
+            }
+            .setPositiveButton("Izinkan suara") { _, _ ->
+                if (micPermissionGranted) {
+                    prefs.edit().putBoolean("remote_camera_audio_consent", true).apply()
+                    armRemoteCameraStandby()
+                } else {
+                    requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), CAMERA_AUDIO_PERMISSION)
+                }
+            }
+            .setNeutralButton("Batal", null)
+            .show()
     }
 
     private fun armRemoteCameraStandby() {
@@ -7496,9 +7521,22 @@ private fun playReceivedMp3() {
 
         if (requestCode == CAMERA_PERMISSION) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                armRemoteCameraStandby()
+                requestCameraAudioConsent()
             } else {
                 statusText.text = "Izin kamera tidak diberikan. Fitur kamera jarak jauh tetap nonaktif."
+            }
+        }
+
+        if (requestCode == CAMERA_AUDIO_PERMISSION) {
+            val granted = grantResults.isNotEmpty() &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED
+            getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                .putBoolean("remote_camera_audio_consent", granted).apply()
+            if (granted) {
+                armRemoteCameraStandby()
+            } else {
+                Toast.makeText(this, "Izin mikrofon tidak diberikan. Kamera tetap dapat digunakan tanpa suara.", Toast.LENGTH_LONG).show()
+                armRemoteCameraStandby()
             }
         }
 
