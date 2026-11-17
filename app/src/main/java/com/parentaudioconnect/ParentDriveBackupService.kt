@@ -127,6 +127,7 @@ class ParentDriveBackupService : Service() {
         }
         if (!wasPaused) {
             if (!stopping) stopP2pTransport()
+            startAsForeground("Backup dijeda sementara • aktivitas media sedang berjalan")
             updateStatus("Backup dijeda sementara • aktivitas media sedang berjalan")
         }
     }

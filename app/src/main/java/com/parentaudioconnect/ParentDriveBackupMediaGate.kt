@@ -23,6 +23,7 @@ object ParentDriveBackupMediaGate {
         val active = app.getSharedPreferences("parent_audio", Context.MODE_PRIVATE)
             .getBoolean("parent_drive_backup_service_active", false)
         if (!active) return false
+        updateDiagnosticReason(app, reason, true)
         send(app, ParentDriveBackupService.ACTION_PAUSE_FOR_MEDIA, reason)
         return true
     }
@@ -32,7 +33,16 @@ object ParentDriveBackupMediaGate {
         val active = app.getSharedPreferences("parent_audio", Context.MODE_PRIVATE)
             .getBoolean("parent_drive_backup_service_active", false)
         if (!active) return
+        updateDiagnosticReason(app, reason, false)
         send(app, ParentDriveBackupService.ACTION_RESUME_AFTER_MEDIA, reason)
+    }
+
+    private fun updateDiagnosticReason(context: Context, reason: String, active: Boolean) {
+        val prefs = context.getSharedPreferences("parent_audio", Context.MODE_PRIVATE)
+        val reasons = prefs.getStringSet("crash_diag_active_media", emptySet())
+            ?.toMutableSet() ?: mutableSetOf()
+        if (active) reasons.add(reason) else reasons.remove(reason)
+        prefs.edit().putStringSet("crash_diag_active_media", reasons).apply()
     }
 
     private fun send(context: Context, action: String, reason: String) {
