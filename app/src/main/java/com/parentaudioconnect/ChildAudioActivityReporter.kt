@@ -6,9 +6,9 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 
 /**
- * Publishes child-side playback state to the paired document so the parent app
- * can show what is currently playing. This reports playback state only;
- * it does not enable or access the child's microphone.
+ * Publishes child-side live-audio activity to the paired document so the parent
+ * app can show when a live audio stream or an authorized conversation is active.
+ * Microphone access itself remains controlled by ChildAudioConnectionService.
  */
 object ChildAudioActivityReporter {
     private const val TAG = "ChildAudioActivity"
