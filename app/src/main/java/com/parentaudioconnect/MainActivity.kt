@@ -7401,6 +7401,7 @@ private var receivedMp3File: File? = null
         }
 
         activeConversationCode = code
+        conversationChildAudioTrackActive = false
         renderLiveConversationPage("Menghubungkan ruang percakapan…")
         val continueOnRoom = {
             val serverId = activeLiveKitServerId
@@ -7428,7 +7429,6 @@ private var receivedMp3File: File? = null
                                     isConversationActive = true
                                     isMicrophoneActive = true
                                     parentConversationMuted = false
-                                    conversationChildAudioTrackActive = false
                                     if (!parentDriveBackupPausedForAudioLive) {
                                         parentDriveBackupPausedForAudioLive = ParentDriveBackupMediaGate.pause(
                                             this@MainActivity,
