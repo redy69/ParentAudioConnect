@@ -213,6 +213,22 @@ class RemoteCameraService : Service() {
                 try { newRoom.release() } catch (_: Exception) { }
                 throw IllegalStateException("Koneksi kamera terputus saat proses penyambungan")
             }
+
+            // The parent may select a different LiveKit server while this initial
+            // child connection is still handshaking. Never publish the camera into
+            // the stale room: reconnect using the latest server ID first.
+            val requiredServerId = preferredServerId
+            if (requiredServerId != null && requiredServerId != activeServerId) {
+                room = null
+                cameraTrack = null
+                try { newRoom.disconnect() } catch (_: Exception) { }
+                try { newRoom.release() } catch (_: Exception) { }
+                activeServerId = null
+                updateNotification("Server kamera berubah • menyambungkan ke server pilihan orang tua…")
+                scheduleCameraReconnect()
+                return
+            }
+
             newRoom.localParticipant.setMicrophoneEnabled(false)
             updateNotification("Siaga kamera aktif • menunggu permintaan orang tua")
             val queuedRequestId = pendingCameraRequestId
