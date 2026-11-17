@@ -138,15 +138,15 @@ class LiveConversationPage(
 
         scroll.addView(content)
         addView(scroll, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
-        render(false, false, "Siap memulai percakapan")
+        render(false, false, false, "Siap memulai percakapan")
     }
 
-    fun render(active: Boolean, parentMuted: Boolean, status: String) {
+    fun render(sessionActive: Boolean, audioActive: Boolean, parentMuted: Boolean, status: String) {
         statusText.text = status
-        equalizer.setActive(active)
-        startButton.visibility = if (active) GONE else VISIBLE
-        muteButton.visibility = if (active) VISIBLE else GONE
-        endButton.visibility = if (active) VISIBLE else GONE
+        equalizer.setActive(audioActive)
+        startButton.visibility = if (sessionActive) GONE else VISIBLE
+        muteButton.visibility = if (sessionActive) VISIBLE else GONE
+        endButton.visibility = if (sessionActive) VISIBLE else GONE
         muteButton.text = if (parentMuted) "NYALAKAN MIKROFON ORTU" else "MUTE ORTU"
     }
 
