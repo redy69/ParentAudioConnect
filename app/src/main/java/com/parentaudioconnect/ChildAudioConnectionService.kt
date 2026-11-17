@@ -459,7 +459,7 @@ class ChildAudioConnectionService : Service() {
         ) return false
 
         pendingTalkMicEnabled = enabled
-        if (enabled && !serverId.isNullOrBlank() && connectedServerId != serverId) {
+        if (!serverId.isNullOrBlank() && connectedServerId != serverId) {
             preferredServerId = serverId
             reconnectForConversationServer(serverId)
         } else {
@@ -489,7 +489,7 @@ class ChildAudioConnectionService : Service() {
                 connecting = true
                 connectWithRetry()
             } else if (room != null && isActive) {
-                applyTalkMicrophoneState(true)
+                applyTalkMicrophoneState(pendingTalkMicEnabled ?: false)
             }
         }
     }
