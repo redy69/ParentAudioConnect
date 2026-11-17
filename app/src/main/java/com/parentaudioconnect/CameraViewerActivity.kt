@@ -46,6 +46,9 @@ class CameraViewerActivity : Activity() {
     private var reconnectJob: kotlinx.coroutines.Job? = null
     private var connecting = false
     private lateinit var renderer: SurfaceViewRenderer
+    // A failed LiveKit candidate may already have initialized this view.
+    // Release it before sharing the renderer with the next candidate's EGL context.
+    private var rendererInitAttempted = false
     private lateinit var status: TextView
     private lateinit var cameraFacingLabel: TextView
     private var code: String = ""
@@ -202,6 +205,14 @@ class CameraViewerActivity : Activity() {
                         // Publish the candidate reference before connect so an immediate
                         // disconnect during the handshake is observable by the event collector.
                         room = candidateRoom
+                        if (rendererInitAttempted) {
+                            try {
+                                renderer.release()
+                            } catch (_: Exception) {
+                                // Continue with a fresh initialization attempt.
+                            }
+                        }
+                        rendererInitAttempted = true
                         candidateRoom.initVideoRenderer(renderer)
                         roomEventsJob?.cancel()
                         roomEventsJob = launch {
