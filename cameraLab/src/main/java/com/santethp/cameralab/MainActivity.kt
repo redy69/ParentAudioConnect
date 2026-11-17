@@ -54,6 +54,8 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var codeInput: EditText
     private lateinit var videoRenderer: SurfaceViewRenderer
+    private lateinit var micButton: Button
+    private var microphoneEnabled = false
     private var room: Room? = null
     private var eventJob: kotlinx.coroutines.Job? = null
     private var role: Role? = null
@@ -143,6 +145,13 @@ class MainActivity : Activity() {
         root.addView(roleRow, matchWrap())
         sender.setOnClickListener { chooseRole(Role.SENDER) }
         viewer.setOnClickListener { chooseRole(Role.VIEWER) }
+
+        micButton = actionButton("MIC BELUM AKTIF").apply {
+            isEnabled = false
+            visibility = View.GONE
+        }
+        root.addView(micButton, matchWrap(dp(6)))
+        micButton.setOnClickListener { toggleMicrophone() }
 
         codeInput = EditText(this).apply {
             hint = "Kode 8 karakter dari HP pengirim"
@@ -345,6 +354,10 @@ class MainActivity : Activity() {
                 )
                 if (currentRole == Role.SENDER) {
                     connected.localParticipant.setMicrophoneEnabled(true)
+                    microphoneEnabled = true
+                    micButton.visibility = View.VISIBLE
+                    micButton.isEnabled = true
+                    micButton.text = "MUTE MIC"
                     if (mode == Mode.CAMERA_AUDIO) {
                         connected.localParticipant.videoTrackCaptureDefaults =
                             connected.localParticipant.videoTrackCaptureDefaults.copy(
@@ -357,6 +370,8 @@ class MainActivity : Activity() {
                         showStatus("MENGIRIM AUDIO LIVE • mikrofon aktif")
                     }
                 } else {
+                    micButton.visibility = View.GONE
+                    micButton.isEnabled = false
                     if (mode == Mode.CAMERA_AUDIO) {
                         showStatus("Menunggu video dan audio dari HP pengirim…")
                     } else {
@@ -383,6 +398,22 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun toggleMicrophone() {
+        val active = room ?: return
+        if (role != Role.SENDER) return
+        scope.launch {
+            try {
+                val nextEnabled = !microphoneEnabled
+                active.localParticipant.setMicrophoneEnabled(nextEnabled)
+                microphoneEnabled = nextEnabled
+                micButton.text = if (nextEnabled) "MUTE MIC" else "NYALAKAN MIC"
+                showStatus(if (nextEnabled) "Mikrofon aktif. Video tetap berjalan." else "Mikrofon dimatikan. Video tetap berjalan.")
+            } catch (error: Exception) {
+                showStatus("Gagal mengubah mikrofon: ${error.localizedMessage ?: "coba lagi"}")
+            }
+        }
+    }
+
     private fun stopSession() {
         scope.launch {
             val active = room
@@ -391,6 +422,12 @@ class MainActivity : Activity() {
             eventJob = null
             try { active?.localParticipant?.setCameraEnabled(false) } catch (_: Exception) { }
             try { active?.localParticipant?.setMicrophoneEnabled(false) } catch (_: Exception) { }
+            microphoneEnabled = false
+            if (::micButton.isInitialized) {
+                micButton.text = "MIC BELUM AKTIF"
+                micButton.isEnabled = false
+                micButton.visibility = View.GONE
+            }
             try { active?.disconnect() } catch (_: Exception) { }
             try { active?.release() } catch (_: Exception) { }
             showStatus("Sesi dihentikan. Kamera dan mikrofon tidak aktif.")
