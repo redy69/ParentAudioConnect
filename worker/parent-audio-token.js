@@ -333,10 +333,7 @@ export default {
               message: {
                 token: childFcmToken,
                 data: { command, code, serverId: fields.audioLiveKitServerId?.stringValue || "main" },
-                android: {
-                  priority: action.startsWith("talk_") ? "HIGH" : "NORMAL",
-                  ttl: "30s"
-                }
+                android: { priority: "HIGH", ttl: "30s" }
               }
             })
           }
