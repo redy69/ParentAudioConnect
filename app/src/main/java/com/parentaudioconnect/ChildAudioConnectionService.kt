@@ -45,8 +45,9 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * Receive-only background connection for a paired child device.
- * The child's microphone is never enabled by this service.
+ * Persistent audio transport for a paired child device.
+ * The microphone stays disabled until an authenticated parent command enables
+ * it during a consented, prepared foreground-service session.
  */
 class ChildAudioConnectionService : Service() {
 
