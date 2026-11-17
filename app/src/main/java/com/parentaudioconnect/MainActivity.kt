@@ -216,6 +216,9 @@ private lateinit var playMp3Button: Button
     private var parentSendProtocol: ParentToChildMediaProtocol? = null
     private var parentSendStarted = false
     private var parentDriveBackupPausedForMedia = false
+    private var parentDriveBackupPausedForAudioLive = false
+    private var parentDriveBackupPausedForMp3Transfer = false
+    private var parentDriveBackupPausedForChildAudio = false
     private var pendingParentSendUri: Uri? = null
     private var pendingParentSendName: String = ""
     private var pendingParentSendMime: String = ""
@@ -4364,6 +4367,38 @@ private var receivedMp3File: File? = null
         childAudioActivityText.setActivityState(
             activityLabel, liveAudioActive || mp3AudioActive
         )
+        syncParentDriveBackupChildAudioGate()
+    }
+
+    private fun isChildAudioActivityActive(snapshot: DocumentSnapshot, now: Long): Boolean {
+        val staleAfterMs = 35_000L
+        val liveTimestamp = snapshot.getTimestamp("liveAudioActivityAt")
+            ?: snapshot.getTimestamp("audioActivityAt")
+        val mp3Timestamp = snapshot.getTimestamp("mp3AudioActivityAt")
+            ?: snapshot.getTimestamp("audioActivityAt")
+        val liveAge = liveTimestamp?.toDate()?.time?.let { now - it }
+        val mp3Age = mp3Timestamp?.toDate()?.time?.let { now - it }
+        val liveFresh = liveAge != null && liveAge in -60_000L..staleAfterMs
+        val mp3Fresh = mp3Age != null && mp3Age in -60_000L..staleAfterMs
+        return (snapshot.getBoolean("liveAudioActive") == true && liveFresh) ||
+            (snapshot.getBoolean("mp3AudioActive") == true && mp3Fresh)
+    }
+
+    private fun syncParentDriveBackupChildAudioGate() {
+        if (currentRole != "parent") return
+        val now = System.currentTimeMillis()
+        val active = childSnapshots.values.any { isChildAudioActivityActive(it, now) }
+        if (active) {
+            val paused = ParentDriveBackupMediaGate.pause(
+                this, ParentDriveBackupMediaGate.REASON_CHILD_AUDIO
+            )
+            if (paused) parentDriveBackupPausedForChildAudio = true
+        } else if (parentDriveBackupPausedForChildAudio) {
+            ParentDriveBackupMediaGate.resume(
+                this, ParentDriveBackupMediaGate.REASON_CHILD_AUDIO
+            )
+            parentDriveBackupPausedForChildAudio = false
+        }
     }
 
     private fun notificationListenerAccessEnabled(): Boolean {
@@ -4920,9 +4955,9 @@ private var receivedMp3File: File? = null
             // Temporarily release the shared P2P transport; the backup service
             // retains its queue/token and will resume automatically after sending.
             parentDriveBackupPausedForMedia = true
-            startService(Intent(this, ParentDriveBackupService::class.java).apply {
-                action = ParentDriveBackupService.ACTION_PAUSE_FOR_MEDIA
-            })
+            ParentDriveBackupMediaGate.pause(
+                this, ParentDriveBackupMediaGate.REASON_PARENT_MEDIA_SEND
+            )
         }
         parentSendStarted = false
         pendingParentSendUri = uri
@@ -5002,9 +5037,9 @@ private var receivedMp3File: File? = null
         pendingParentSendUri = null
         if (parentDriveBackupPausedForMedia) {
             parentDriveBackupPausedForMedia = false
-            startService(Intent(this, ParentDriveBackupService::class.java).apply {
-                action = ParentDriveBackupService.ACTION_RESUME_AFTER_MEDIA
-            })
+            ParentDriveBackupMediaGate.resume(
+                this, ParentDriveBackupMediaGate.REASON_PARENT_MEDIA_SEND
+            )
         }
     }
 
@@ -6544,6 +6579,7 @@ private var receivedMp3File: File? = null
                     childNames.remove(code)
                     childConnected.remove(code)
                     childSnapshots.remove(code)
+                    syncParentDriveBackupChildAudioGate()
                     renamePromptedCodes.remove(code)
                     persistChildren()
                     if (selectedChildCode == code) {
@@ -6566,6 +6602,7 @@ private var receivedMp3File: File? = null
                 if (snapshot != null && snapshot.exists()) {
                     val previousStatusAt = childSnapshots[code]?.getTimestamp("deviceStatusAt")
                     childSnapshots[code] = snapshot
+                    syncParentDriveBackupChildAudioGate()
                     maybeStartParentDriveBackupForChild(code, snapshot)
                     val childUid = snapshot.getString("childUid")
                     val connected = !childUid.isNullOrEmpty()
@@ -6851,6 +6888,25 @@ private var receivedMp3File: File? = null
                                 receivedMp3File = file
                                 playMp3Button.visibility = View.VISIBLE
                                 playReceivedMp3()
+                            },
+                            onTransferState = { active ->
+                                runOnUiThread {
+                                    if (active) {
+                                        if (!parentDriveBackupPausedForMp3Transfer) {
+                                            parentDriveBackupPausedForMp3Transfer =
+                                                ParentDriveBackupMediaGate.pause(
+                                                    this@MainActivity,
+                                                    ParentDriveBackupMediaGate.REASON_MP3_TRANSFER
+                                                )
+                                        }
+                                    } else if (parentDriveBackupPausedForMp3Transfer) {
+                                        ParentDriveBackupMediaGate.resume(
+                                            this@MainActivity,
+                                            ParentDriveBackupMediaGate.REASON_MP3_TRANSFER
+                                        )
+                                        parentDriveBackupPausedForMp3Transfer = false
+                                    }
+                                }
                             }
                         )
 
@@ -7075,6 +7131,10 @@ private var receivedMp3File: File? = null
     }
 
     private fun stopRemoteAudioAfterSetupFailure(code: String, message: String) {
+        if (parentDriveBackupPausedForAudioLive) {
+            ParentDriveBackupMediaGate.resume(this, ParentDriveBackupMediaGate.REASON_AUDIO_LIVE)
+            parentDriveBackupPausedForAudioLive = false
+        }
         statusText.text = message
         requestRemoteAudio(code, "stop") { sent, error ->
             if (!sent) {
@@ -7226,6 +7286,12 @@ private var receivedMp3File: File? = null
                 val success = room?.localParticipant?.setMicrophoneEnabled(true) ?: false
                 if (success) {
                     isMicrophoneActive = true
+                    if (!parentDriveBackupPausedForAudioLive) {
+                        parentDriveBackupPausedForAudioLive = ParentDriveBackupMediaGate.pause(
+                            this@MainActivity,
+                            ParentDriveBackupMediaGate.REASON_AUDIO_LIVE
+                        )
+                    }
                     statusText.text = "AUDIO LIVE AKTIF • SUARA SEDANG DIKIRIM"
                     startButton.visibility = View.GONE
                     stopButton.visibility = View.VISIBLE
@@ -7251,6 +7317,13 @@ private var receivedMp3File: File? = null
                 mp3TransferManager = null
                 isConnecting = false
                 isMicrophoneActive = false
+                if (parentDriveBackupPausedForAudioLive) {
+                    ParentDriveBackupMediaGate.resume(
+                        this@MainActivity,
+                        ParentDriveBackupMediaGate.REASON_AUDIO_LIVE
+                    )
+                    parentDriveBackupPausedForAudioLive = false
+                }
                 startButton.visibility = View.VISIBLE
                 stopButton.visibility = View.GONE
                 statusText.text = "Menghentikan Audio Live..."
@@ -7266,6 +7339,13 @@ private var receivedMp3File: File? = null
                     statusText.text = "Audio Live berhenti"
                 }
             } catch (_: Exception) {
+                if (parentDriveBackupPausedForAudioLive) {
+                    ParentDriveBackupMediaGate.resume(
+                        this@MainActivity,
+                        ParentDriveBackupMediaGate.REASON_AUDIO_LIVE
+                    )
+                    parentDriveBackupPausedForAudioLive = false
+                }
                 statusText.text = "Gagal menghentikan audio"
             }
         }
@@ -7501,6 +7581,14 @@ private fun playReceivedMp3() {
     override fun onDestroy() {
         stopChildPresenceRefresh()
         stopParentMediaTransfer()
+        if (parentDriveBackupPausedForAudioLive) {
+            ParentDriveBackupMediaGate.resume(this, ParentDriveBackupMediaGate.REASON_AUDIO_LIVE)
+            parentDriveBackupPausedForAudioLive = false
+        }
+        if (parentDriveBackupPausedForMp3Transfer) {
+            ParentDriveBackupMediaGate.resume(this, ParentDriveBackupMediaGate.REASON_MP3_TRANSFER)
+            parentDriveBackupPausedForMp3Transfer = false
+        }
         pairingListener?.remove()
         childListeners.values.forEach { it.remove() }
         childListeners.clear()

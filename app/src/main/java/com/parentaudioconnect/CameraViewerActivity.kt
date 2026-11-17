@@ -54,6 +54,7 @@ class CameraViewerActivity : Activity() {
     private var code: String = ""
     private var facing = "back"
     private var stopping = false
+    private var backupPauseAcquired = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,6 +63,9 @@ class CameraViewerActivity : Activity() {
             finish()
             return
         }
+        backupPauseAcquired = ParentDriveBackupMediaGate.pause(
+            this, ParentDriveBackupMediaGate.REASON_CAMERA_LIVE
+        )
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -423,6 +427,10 @@ class CameraViewerActivity : Activity() {
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
                 try { activeRoom.disconnect() } finally { activeRoom.release() }
             }
+        }
+        if (backupPauseAcquired) {
+            ParentDriveBackupMediaGate.resume(this, ParentDriveBackupMediaGate.REASON_CAMERA_LIVE)
+            backupPauseAcquired = false
         }
         super.onDestroy()
     }

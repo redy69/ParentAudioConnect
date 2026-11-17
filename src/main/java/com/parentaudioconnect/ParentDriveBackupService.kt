@@ -1,0 +1,572 @@
+package com.santethp
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.IBinder
+import android.util.Log
+import androidx.core.app.NotificationCompat
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
+
+/** Parent-side foreground transport for the child's separately consented Drive backup queue. */
+class ParentDriveBackupService : Service() {
+    inner class LocalBinder : android.os.Binder() {
+        fun openGallery(code: String, name: String): Boolean = openGalleryForChild(code, name)
+        fun attachGalleryCallbacks(
+            onMediaIndex: (List<GalleryP2pGalleryProtocol.RemoteMedia>) -> Unit,
+            onThumbnail: (String, ByteArray) -> Unit,
+            onStatus: (String) -> Unit,
+            onOriginalReady: (String, java.io.File, String, String) -> Unit,
+            onState: (String) -> Unit
+        ) {
+            galleryStateListener = onState
+            setGalleryCallbacks(onMediaIndex, onThumbnail, onStatus, onOriginalReady)
+        }
+        fun requestGalleryIndex(): Boolean = protocol?.requestIndex() == true
+        fun requestGalleryThumbnail(key: String): Boolean = protocol?.requestThumbnail(key) == true
+        fun requestGalleryOriginal(key: String): Boolean = protocol?.requestOriginal(key) == true
+        fun closeGallery() = releaseGalleryForChild()
+    }
+
+    private val binder = LocalBinder()
+    @Volatile private var galleryStateListener: ((String) -> Unit)? = null
+    @Volatile private var galleryMediaIndexCallback: ((List<GalleryP2pGalleryProtocol.RemoteMedia>) -> Unit)? = null
+    @Volatile private var galleryThumbnailCallback: ((String, ByteArray) -> Unit)? = null
+    @Volatile private var galleryStatusCallback: ((String) -> Unit)? = null
+    @Volatile private var galleryOriginalReadyCallback: ((String, java.io.File, String, String) -> Unit)? = null
+    @Volatile private var transportConnected = false
+    @Volatile private var galleryPinned = false
+    private var preGalleryPairingCode: String? = null
+    private var preGalleryQueueIndex: Int = 0
+
+    companion object {
+        const val ACTION_START = "com.santethp.action.START_PARENT_DRIVE_BACKUP"
+        const val ACTION_STOP = "com.santethp.action.STOP_PARENT_DRIVE_BACKUP"
+        const val ACTION_PAUSE_FOR_MEDIA = "com.santethp.action.PAUSE_PARENT_DRIVE_FOR_MEDIA"
+        const val ACTION_RESUME_AFTER_MEDIA = "com.santethp.action.RESUME_PARENT_DRIVE_AFTER_MEDIA"
+        const val EXTRA_PAIR_CODE = "pair_code"
+        const val EXTRA_ACCESS_TOKEN = "drive_access_token"
+        const val EXTRA_CHILD_NAME = "child_name"
+        const val EXTRA_CHILD_QUEUE_JSON = "child_queue_json"
+        private const val TAG = "SantetHP-ParentBackup"
+        private const val CHANNEL_ID = "parent_drive_backup"
+        private const val NOTIFICATION_ID = 4310
+    }
+
+    private var manager: GalleryP2pManager? = null
+    private var protocol: GalleryP2pGalleryProtocol? = null
+    private var consentListener: ListenerRegistration? = null
+    private var folderId: String? = null
+    private var accessToken: String? = null
+    private val reconnectHandler = Handler(Looper.getMainLooper())
+    private val networkGateRunnable = object : Runnable {
+        override fun run() {
+            if (stopping) return
+            if (canUseBackupNetwork()) {
+                protocol?.requestNextBackup()
+            } else {
+                updateStatus("Backup dijeda • HP orang tua menunggu koneksi Wi-Fi")
+            }
+            reconnectHandler.postDelayed(this, 15000L)
+        }
+    }
+
+    private fun canUseBackupNetwork(): Boolean {
+        val wifiOnly = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            .getBoolean("drive_backup_wifi_only", true)
+        return BackupNetworkPolicy.canUseBackupNetwork(this, wifiOnly)
+    }
+    @Volatile private var stopping = false
+    private var pairingCode: String? = null
+    private var childDisplayName: String = "HP Anak"
+    private var childQueue: List<Pair<String, String>> = emptyList()
+    private var childQueueIndex: Int = 0
+    private val childRotationRunnable = Runnable {
+        advanceToNextChild("Batas waktu giliran anak tercapai")
+    }
+    private val roundRestartRunnable = Runnable {
+        stopping = false
+        childQueueIndex = 0
+        activateQueuedChild()
+    }
+    private val reconnectRunnable = Runnable {
+        val code = pairingCode
+        if (!stopping && !code.isNullOrBlank() &&
+            getSharedPreferences("parent_audio", MODE_PRIVATE).getBoolean("parent_drive_backup_service_active", false)
+        ) {
+            stopP2pTransport()
+            startTransport(code)
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        createNotificationChannel()
+    }
+
+    override fun onBind(intent: Intent?): IBinder = binder
+
+    private fun setGalleryCallbacks(
+        onMediaIndex: (List<GalleryP2pGalleryProtocol.RemoteMedia>) -> Unit,
+        onThumbnail: (String, ByteArray) -> Unit,
+        onStatus: (String) -> Unit,
+        onOriginalReady: (String, java.io.File, String, String) -> Unit
+    ) {
+        galleryMediaIndexCallback = onMediaIndex
+        galleryThumbnailCallback = onThumbnail
+        galleryStatusCallback = onStatus
+        galleryOriginalReadyCallback = onOriginalReady
+        protocol?.attachGalleryCallbacks(onMediaIndex, onThumbnail, onStatus, onOriginalReady)
+    }
+
+    @Synchronized
+    private fun openGalleryForChild(code: String, name: String): Boolean {
+        if (code.isBlank() || stopping || accessToken.isNullOrBlank()) return false
+        if (!galleryPinned) {
+            preGalleryPairingCode = pairingCode
+            preGalleryQueueIndex = childQueueIndex
+        }
+        galleryPinned = true
+        reconnectHandler.removeCallbacks(childRotationRunnable)
+        reconnectHandler.removeCallbacks(roundRestartRunnable)
+        if (pairingCode != code || manager == null) {
+            updateStatus("Membuka Galeri Anak: $name")
+            stopP2pTransport()
+            consentListener?.remove()
+            consentListener = null
+            pairingCode = code
+            childDisplayName = name.ifBlank { "HP Anak" }
+            listenForConsent(code)
+            startTransport(code)
+        } else {
+            updateStatus("Galeri Anak aktif • backup tetap berjalan sesuai aturan Wi-Fi")
+            if (transportConnected) galleryStateListener?.invoke("P2P TERHUBUNG • Galeri siap")
+        }
+        return true
+    }
+
+    @Synchronized
+    private fun releaseGalleryForChild() {
+        protocol?.cancelOriginal()
+        protocol?.detachGalleryCallbacks()
+        galleryMediaIndexCallback = null
+        galleryThumbnailCallback = null
+        galleryStatusCallback = null
+        galleryOriginalReadyCallback = null
+        galleryStateListener = null
+        if (!galleryPinned) return
+        galleryPinned = false
+        val restoreCode = preGalleryPairingCode
+        val restoreIndex = preGalleryQueueIndex
+        preGalleryPairingCode = null
+        if (!restoreCode.isNullOrBlank() && restoreCode != pairingCode) {
+            val target = childQueue.firstOrNull { it.first == restoreCode }
+            childQueueIndex = if (restoreIndex in childQueue.indices) restoreIndex
+                else childQueue.indexOfFirst { it.first == restoreCode }.coerceAtLeast(0)
+            updateStatus("Galeri ditutup • melanjutkan antrean backup")
+            stopP2pTransport()
+            consentListener?.remove()
+            consentListener = null
+            pairingCode = target?.first ?: restoreCode
+            childDisplayName = target?.second ?: "HP Anak"
+            listenForConsent(pairingCode!!)
+            startTransport(pairingCode!!)
+        } else if (childQueue.size > 1) {
+            scheduleChildRotationTimeout()
+            if (canUseBackupNetwork()) protocol?.requestNextBackup()
+        }
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_PAUSE_FOR_MEDIA) {
+            if (!stopping) {
+                stopP2pTransport()
+                updateStatus("Backup dijeda sementara • sedang mengirim media ke HP anak")
+            }
+            return START_STICKY
+        }
+        if (intent?.action == ACTION_RESUME_AFTER_MEDIA) {
+            val resumeCode = pairingCode
+            if (!resumeCode.isNullOrBlank() && stopping &&
+                getSharedPreferences("parent_audio", MODE_PRIVATE)
+                    .getBoolean("parent_drive_backup_service_active", false)
+            ) {
+                updateStatus("Pengiriman selesai • melanjutkan backup Google Drive")
+                startTransport(resumeCode)
+                if (childQueue.size > 1) scheduleChildRotationTimeout()
+            }
+            return START_STICKY
+        }
+        if (intent?.action == ACTION_STOP) {
+            stopTransport(clearSavedState = true)
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        val code = intent?.getStringExtra(EXTRA_PAIR_CODE)
+        val token = intent?.getStringExtra(EXTRA_ACCESS_TOKEN)
+        val displayName = intent?.getStringExtra(EXTRA_CHILD_NAME)?.trim().orEmpty()
+        val queueJson = intent?.getStringExtra(EXTRA_CHILD_QUEUE_JSON)
+        if (!queueJson.isNullOrBlank()) {
+            try {
+                val array = org.json.JSONArray(queueJson)
+                childQueue = (0 until array.length()).mapNotNull { index ->
+                    val item = array.optJSONObject(index) ?: return@mapNotNull null
+                    val childCode = item.optString("code").trim()
+                    val childName = item.optString("name", "HP Anak").trim()
+                    if (childCode.isBlank()) null else childCode to childName.ifBlank { "HP Anak" }
+                }.distinctBy { it.first }
+                childQueueIndex = childQueue.indexOfFirst { it.first == code }.coerceAtLeast(0)
+            } catch (_: Exception) { childQueue = emptyList() }
+        }
+        if (code.isNullOrBlank() || token.isNullOrBlank()) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        if (accessToken != token) folderId = null
+        accessToken = token
+        if (displayName.isNotBlank()) childDisplayName = displayName
+        if (manager != null) {
+            updateStatus("Memperbarui daftar antrean backup perangkat anak")
+            stopP2pTransport()
+            consentListener?.remove()
+            consentListener = null
+        }
+        getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+            .putBoolean("parent_drive_backup_service_active", true)
+            .putString("parent_drive_backup_pair_code", code)
+            .putString("parent_drive_backup_child_name", childDisplayName)
+            .apply()
+        startAsForeground("Menunggu koneksi HP anak untuk backup media baru")
+        stopping = false
+        pairingCode = code
+        listenForConsent(code)
+        startTransport(code)
+        if (childQueue.size > 1) scheduleChildRotationTimeout()
+        return START_STICKY
+    }
+
+    private fun startAsForeground(message: String) {
+        val notification = buildNotification(message)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
+    }
+
+    private fun buildNotification(message: String): Notification =
+        NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_menu_upload)
+            .setContentTitle("SantetHP • Backup Google Drive")
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(
+                "$message. Hanya media baru yang telah disetujui dari HP anak yang diproses."
+            ))
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+
+    private fun updateStatus(message: String) {
+        getSystemService(NotificationManager::class.java)
+            .notify(NOTIFICATION_ID, buildNotification(message))
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID, "Backup Google Drive SantetHP", NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Status backup foto dan video baru dari perangkat anak yang telah disetujui"
+                setShowBadge(false)
+            }
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        }
+    }
+
+    private fun listenForConsent(code: String) {
+        consentListener?.remove()
+        consentListener = FirebaseFirestore.getInstance().collection("pairings").document(code)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.w(TAG, "Tidak dapat memeriksa status persetujuan backup", error)
+                    return@addSnapshotListener
+                }
+                val wifiOnly = snapshot?.getBoolean("driveBackupWifiOnly") ?: true
+                getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                    .putBoolean("drive_backup_wifi_only", wifiOnly).apply()
+                if (snapshot?.getBoolean("driveBackupEnabled") != true) {
+                    if (galleryPinned) {
+                        updateStatus("Backup anak ini tidak aktif • Galeri Anak tetap tersambung")
+                        return@addSnapshotListener
+                    }
+                    if (childQueue.size > 1) {
+                        updateStatus("Izin backup $childDisplayName tidak aktif • lanjut ke perangkat anak berikutnya")
+                        advanceToNextChild("Izin backup tidak aktif")
+                    } else {
+                        updateStatus("Persetujuan backup dari HP anak tidak aktif")
+                        stopTransport()
+                        stopSelf()
+                    }
+                } else if (canUseBackupNetwork()) {
+                    protocol?.requestNextBackup()
+                }
+            }
+    }
+
+    private fun startTransport(code: String) {
+        val transportChildName = childDisplayName
+        stopping = false
+        reconnectHandler.removeCallbacks(networkGateRunnable)
+        reconnectHandler.post(networkGateRunnable)
+        lateinit var activeProtocol: GalleryP2pGalleryProtocol
+        val activeManager = GalleryP2pManager(
+            context = applicationContext,
+            pairingCode = code,
+            localRole = GalleryP2pManager.Role.PARENT,
+            onState = { message ->
+                Log.i(TAG, message)
+                updateStatus(message)
+                if (message.contains("P2P TERHUBUNG")) {
+                    transportConnected = true
+                    reconnectHandler.removeCallbacks(reconnectRunnable)
+                    reconnectHandler.removeCallbacks(childRotationRunnable)
+                    galleryStateListener?.invoke(message)
+                    if (!galleryPinned && childQueue.size > 1) scheduleChildRotationTimeout()
+                    if (canUseBackupNetwork()) activeProtocol.requestNextBackup()
+                } else {
+                    if (message.contains("terputus") || message.contains("gagal") || message.contains("ditutup")) {
+                        transportConnected = false
+                    }
+                    galleryStateListener?.invoke(message)
+                }
+                if (!stopping && !galleryPinned &&
+                    (message.contains("terputus") || message.contains("gagal") || message.contains("ditutup"))
+                ) {
+                    reconnectHandler.removeCallbacks(reconnectRunnable)
+                    reconnectHandler.postDelayed(reconnectRunnable, 30000L)
+                    if (childQueue.size > 1) scheduleChildRotationTimeout()
+                }
+            },
+            onData = { bytes, binary -> activeProtocol.onFrame(bytes, binary) }
+        )
+        activeProtocol = GalleryP2pGalleryProtocol(
+            context = applicationContext,
+            role = GalleryP2pManager.Role.PARENT,
+            sendFrame = { bytes, binary -> activeManager.send(bytes, binary) },
+            onMediaIndex = { },
+            onThumbnail = { _, _ -> },
+            onStatus = ::updateStatus,
+            canReceiveBackup = { !accessToken.isNullOrBlank() && canUseBackupNetwork() },
+            onBackupQueueEmpty = { if (!galleryPinned && childQueue.size > 1) advanceToNextChild("Antrean anak selesai") },
+            onBackupFileReady = { key, file, name, mime, complete ->
+                val token = accessToken
+                if (!canUseBackupNetwork()) {
+                    file.delete()
+                    updateStatus("Backup dijeda • menunggu Wi-Fi sebelum upload")
+                    complete(false)
+                } else if (token.isNullOrBlank()) {
+                    file.delete()
+                    complete(false)
+                } else {
+                    Thread {
+                        try {
+                            val uploader = GoogleDriveUploader(token)
+                            val rootFolder = folderId ?: uploader.ensureBackupFolder().also { folderId = it }
+                            val childKey = java.security.MessageDigest.getInstance("SHA-256")
+                                .digest(code.toByteArray(Charsets.UTF_8))
+                                .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+                            val backupPrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+                            val customFolderName = backupPrefs.getString("parent_drive_child_folder_name_$childKey", null)
+                            val childFolder = uploader.ensureChildFolder(
+                                childKey, customFolderName?.takeIf { it.isNotBlank() } ?: transportChildName, rootFolder
+                            )
+                            backupPrefs.edit().putString("parent_drive_child_folder_id_$childKey", childFolder).apply()
+                            if (backupPrefs.getBoolean("parent_drive_child_folder_rename_pending_$childKey", false)) {
+                                uploader.renameFolder(
+                                    childFolder,
+                                    customFolderName?.takeIf { it.isNotBlank() } ?: transportChildName
+                                )
+                                backupPrefs.edit().putBoolean("parent_drive_child_folder_rename_pending_$childKey", false).apply()
+                            }
+                            val mediaType = if (mime.startsWith("video/")) "video" else "photo"
+                            val mediaFolder = uploader.ensureMediaFolder(childKey, mediaType, childFolder)
+                            val driveStableKey = java.security.MessageDigest.getInstance("SHA-256")
+                                .digest("$childKey:$key".toByteArray(Charsets.UTF_8))
+                                .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+                            uploader.uploadFile(
+                                file, name, mime, mediaFolder, stableKey = driveStableKey,
+                                progress = GoogleDriveUploader.ProgressListener { sent, total ->
+                                    updateStatus(
+                                        "Mengunggah ke Google Drive: " +
+                                            android.text.format.Formatter.formatFileSize(this, sent) +
+                                            " / " + android.text.format.Formatter.formatFileSize(this, total)
+                                    )
+                                },
+                                canContinue = { canUseBackupNetwork() }
+                            )
+                            file.delete()
+                            val stats = getSharedPreferences("parent_audio", MODE_PRIVATE)
+                            val successCount = stats.getInt("parent_drive_backup_success_count", 0) + 1
+                            stats.edit()
+                                .putInt("parent_drive_backup_success_count", successCount)
+                                .putString("parent_drive_backup_last_result", "Berhasil: $name")
+                                .putLong("parent_drive_backup_last_result_at", System.currentTimeMillis())
+                                .apply()
+                            updateStatus("Backup berhasil: $name • total $successCount file")
+                            complete(true)
+                        } catch (error: Exception) {
+                            file.delete()
+                            Log.e(TAG, "Upload Drive gagal", error)
+                            val authorizationFailure = error.message.orEmpty().contains("401") ||
+                                error.message.orEmpty().contains("403")
+                            if (authorizationFailure) {
+                                getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                                    .putBoolean("parent_drive_backup_reauth_required", true).apply()
+                            }
+                            val stats = getSharedPreferences("parent_audio", MODE_PRIVATE)
+                            val failedCount = stats.getInt("parent_drive_backup_failed_count", 0) + 1
+                            stats.edit()
+                                .putInt("parent_drive_backup_failed_count", failedCount)
+                                .putString("parent_drive_backup_last_result", "Gagal: $name")
+                                .putLong("parent_drive_backup_last_result_at", System.currentTimeMillis())
+                                .apply()
+                            updateStatus(
+                                if (authorizationFailure) {
+                                    "Izin Google Drive kedaluwarsa/ditolak • buka SantetHP untuk otorisasi ulang"
+                                } else {
+                                    "Upload gagal: $name • file tetap di antrean • total gagal $failedCount"
+                                }
+                            )
+                            complete(false)
+                            if (!authorizationFailure && childQueue.size > 1) {
+                                reconnectHandler.postDelayed({
+                                    advanceToNextChild("Upload gagal • file akan dicoba lagi pada putaran berikutnya")
+                                }, 3000L)
+                            } else if (!authorizationFailure &&
+                                (error is java.io.IOException || error.message.orEmpty().contains("(5"))
+                            ) {
+                                reconnectHandler.postDelayed({ protocol?.requestNextBackup() }, 30000L)
+                            }
+                        }
+                    }.start()
+                }
+            }
+        )
+        protocol = activeProtocol
+        manager = activeManager
+        val mediaIndexCallback = galleryMediaIndexCallback
+        val thumbnailCallback = galleryThumbnailCallback
+        val statusCallback = galleryStatusCallback
+        val originalReadyCallback = galleryOriginalReadyCallback
+        if (mediaIndexCallback != null && thumbnailCallback != null &&
+            statusCallback != null && originalReadyCallback != null
+        ) {
+            activeProtocol.attachGalleryCallbacks(
+                mediaIndexCallback, thumbnailCallback, statusCallback, originalReadyCallback
+            )
+        }
+        activeManager.start()
+    }
+
+    private fun scheduleChildRotationTimeout() {
+        reconnectHandler.removeCallbacks(childRotationRunnable)
+        reconnectHandler.postDelayed(childRotationRunnable, 45000L)
+    }
+
+    @Synchronized
+    private fun advanceToNextChild(reason: String) {
+        if (stopping || galleryPinned || childQueue.size <= 1) return
+        reconnectHandler.removeCallbacks(childRotationRunnable)
+        reconnectHandler.removeCallbacks(reconnectRunnable)
+        val nextIndex = childQueueIndex + 1
+        if (nextIndex >= childQueue.size) {
+            updateStatus("Putaran backup semua anak selesai • mengulang pemeriksaan dalam 1 menit")
+            stopP2pTransport()
+            reconnectHandler.removeCallbacks(roundRestartRunnable)
+            reconnectHandler.postDelayed(roundRestartRunnable, 60000L)
+            return
+        }
+        childQueueIndex = nextIndex
+        activateQueuedChild()
+    }
+
+    private fun activateQueuedChild() {
+        if (stopping || galleryPinned || childQueue.isEmpty() || childQueueIndex !in childQueue.indices) return
+        val (nextCode, nextName) = childQueue[childQueueIndex]
+        if (pairingCode == nextCode && manager != null) {
+            scheduleChildRotationTimeout()
+            protocol?.requestNextBackup()
+            return
+        }
+        updateStatus("Bergantian backup: $nextName")
+        stopP2pTransport()
+        consentListener?.remove()
+        consentListener = null
+        pairingCode = nextCode
+        childDisplayName = nextName
+        getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+            .putString("parent_drive_backup_pair_code", nextCode)
+            .putString("parent_drive_backup_child_name", nextName)
+            .apply()
+        listenForConsent(nextCode)
+        startTransport(nextCode)
+        scheduleChildRotationTimeout()
+    }
+
+    private fun stopP2pTransport() {
+        stopping = true
+        transportConnected = false
+        reconnectHandler.removeCallbacks(reconnectRunnable)
+        reconnectHandler.removeCallbacks(networkGateRunnable)
+        reconnectHandler.removeCallbacks(childRotationRunnable)
+        reconnectHandler.removeCallbacks(roundRestartRunnable)
+        protocol?.close()
+        protocol = null
+        manager?.close()
+        manager = null
+    }
+
+    private fun stopTransport(clearSavedState: Boolean = true) {
+        stopP2pTransport()
+        consentListener?.remove()
+        consentListener = null
+        accessToken = null
+        folderId = null
+        pairingCode = null
+        childDisplayName = "HP Anak"
+        childQueue = emptyList()
+        childQueueIndex = 0
+        galleryPinned = false
+        preGalleryPairingCode = null
+        galleryStateListener = null
+        galleryMediaIndexCallback = null
+        galleryThumbnailCallback = null
+        galleryStatusCallback = null
+        galleryOriginalReadyCallback = null
+        if (clearSavedState) {
+            getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                .putBoolean("parent_drive_backup_service_active", false)
+                .remove("parent_drive_backup_pair_code")
+                .remove("parent_drive_backup_authorized_at")
+                .remove("parent_drive_backup_reauth_required")
+                .remove("parent_drive_backup_child_queue_json")
+                .apply()
+        }
+    }
+
+    override fun onDestroy() {
+        // Preserve the user's requested backup state on an OS/process stop so
+        // MainActivity can obtain a fresh short-lived token when reopened.
+        stopTransport(clearSavedState = false)
+        super.onDestroy()
+    }
+}

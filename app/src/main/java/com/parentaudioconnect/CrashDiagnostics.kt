@@ -41,6 +41,9 @@ object CrashDiagnostics {
                     val role = prefs.getString("pair_role", "belum dipilih") ?: "belum dipilih"
                     val activity = prefs.getString("crash_diag_last_activity", "tidak diketahui")
                         ?: "tidak diketahui"
+                    val mediaState = prefs.getStringSet("crash_diag_active_media", emptySet())
+                        ?.sorted()?.joinToString(", ")?.ifBlank { "tidak ada" } ?: "tidak ada"
+                    val driveBackupActive = prefs.getBoolean("parent_drive_backup_service_active", false)
                     val stack = StringWriter().also { writer ->
                         throwable.printStackTrace(PrintWriter(writer))
                     }.toString()
@@ -64,6 +67,8 @@ object CrashDiagnostics {
                         Android API: ${Build.VERSION.SDK_INT}
                         Peran perangkat: $role
                         Layar terakhir: $activity
+                        Backup Google Drive aktif: $driveBackupActive
+                        Aktivitas media tercatat: $mediaState
                         Thread: ${thread.name}
                         Penyebab:
                         $stack
@@ -125,13 +130,15 @@ object CrashDiagnostics {
             exits.filter { it.timestamp > lastRecorded && it.reason in relevantReasons }
                 .sortedBy { it.timestamp }
                 .forEach { info ->
-                    val trace = try {
-                        info.traceInputStream?.use { input ->
-                            input.bufferedReader().readText().takeLast(40_000)
-                        }.orEmpty()
-                    } catch (_: Exception) {
-                        ""
-                    }
+                    // Android native tombstone streams may be binary protobuf data;
+                    // decoding them as UTF-8 creates unreadable garbage in the shared report.
+                    try { info.traceInputStream?.close() } catch (_: Exception) { }
+                    val role = prefs.getString("pair_role", "belum dipilih") ?: "belum dipilih"
+                    val activity = prefs.getString("crash_diag_last_activity", "tidak diketahui")
+                        ?: "tidak diketahui"
+                    val mediaState = prefs.getStringSet("crash_diag_active_media", emptySet())
+                        ?.sorted()?.joinToString(", ")?.ifBlank { "tidak ada" } ?: "tidak ada"
+                    val driveBackupActive = prefs.getBoolean("parent_drive_backup_service_active", false)
                     val time = SimpleDateFormat(
                         "yyyy-MM-dd HH:mm:ss",
                         Locale.getDefault()
@@ -143,13 +150,16 @@ object CrashDiagnostics {
                         Waktu: $time
                         Perangkat: ${Build.MANUFACTURER} ${Build.MODEL}
                         Android API: ${Build.VERSION.SDK_INT}
+                        Peran perangkat: $role
+                        Layar terakhir: $activity
+                        Backup Google Drive aktif: $driveBackupActive
+                        Aktivitas media tercatat: $mediaState
                         Alasan: ${reasonLabel(info.reason)}
                         Keterangan: ${info.description ?: "tidak tersedia"}
                         Proses: ${info.processName}
                         Status: ${info.status}
                         Kepentingan proses: ${info.importance}
-                        Jejak sistem:
-                        $trace
+                        Jejak sistem: tidak disertakan karena format jejak Android dapat berupa biner
                         """.trimIndent()
                     )
                     prefs.edit().putLong(LAST_EXIT_TIME_KEY, info.timestamp).apply()

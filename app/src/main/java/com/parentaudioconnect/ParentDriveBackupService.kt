@@ -51,6 +51,7 @@ class ParentDriveBackupService : Service() {
         const val ACTION_STOP = "com.santethp.action.STOP_PARENT_DRIVE_BACKUP"
         const val ACTION_PAUSE_FOR_MEDIA = "com.santethp.action.PAUSE_PARENT_DRIVE_FOR_MEDIA"
         const val ACTION_RESUME_AFTER_MEDIA = "com.santethp.action.RESUME_PARENT_DRIVE_AFTER_MEDIA"
+        const val EXTRA_MEDIA_REASON = "media_pause_reason"
         const val EXTRA_PAIR_CODE = "pair_code"
         const val EXTRA_ACCESS_TOKEN = "drive_access_token"
         const val EXTRA_CHILD_NAME = "child_name"
@@ -58,6 +59,7 @@ class ParentDriveBackupService : Service() {
         private const val TAG = "SantetHP-ParentBackup"
         private const val CHANNEL_ID = "parent_drive_backup"
         private const val NOTIFICATION_ID = 4310
+        private const val CHILD_AUDIO_PAUSE_TIMEOUT_MS = 45_000L
     }
 
     private var manager: GalleryP2pManager? = null
@@ -66,6 +68,29 @@ class ParentDriveBackupService : Service() {
     private var folderId: String? = null
     private var accessToken: String? = null
     private val reconnectHandler = Handler(Looper.getMainLooper())
+    private val mediaPauseReasons = mutableMapOf<String, Long>()
+    private val childAudioPauseTimeoutRunnable = object : Runnable {
+        override fun run() {
+            val lastActiveAt = synchronized(mediaPauseReasons) {
+                mediaPauseReasons[ParentDriveBackupMediaGate.REASON_CHILD_AUDIO]
+            } ?: return
+            val remaining = CHILD_AUDIO_PAUSE_TIMEOUT_MS - (System.currentTimeMillis() - lastActiveAt)
+            if (remaining > 0L) {
+                reconnectHandler.postDelayed(this, remaining)
+                return
+            }
+            synchronized(mediaPauseReasons) {
+                mediaPauseReasons.remove(ParentDriveBackupMediaGate.REASON_CHILD_AUDIO)
+            }
+            val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            val reasons = prefs.getStringSet("crash_diag_active_media", emptySet())
+                ?.toMutableSet() ?: mutableSetOf()
+            reasons.remove(ParentDriveBackupMediaGate.REASON_CHILD_AUDIO)
+            prefs.edit().putStringSet("crash_diag_active_media", reasons).apply()
+            updateStatus("Aktivitas audio anak tidak lagi terdeteksi • memeriksa backup")
+            if (!isMediaPaused()) resumeBackupAfterMedia()
+        }
+    }
     private val networkGateRunnable = object : Runnable {
         override fun run() {
             if (stopping) return
@@ -83,6 +108,60 @@ class ParentDriveBackupService : Service() {
             .getBoolean("drive_backup_wifi_only", true)
         return BackupNetworkPolicy.canUseBackupNetwork(this, wifiOnly)
     }
+
+    private fun isMediaPaused(): Boolean =
+        synchronized(mediaPauseReasons) { mediaPauseReasons.isNotEmpty() }
+
+    private fun pauseForMedia(reasonValue: String) {
+        val reason = reasonValue.trim().take(64).ifBlank {
+            ParentDriveBackupMediaGate.REASON_PARENT_MEDIA_SEND
+        }
+        val wasPaused = synchronized(mediaPauseReasons) {
+            val alreadyPaused = mediaPauseReasons.isNotEmpty()
+            mediaPauseReasons[reason] = System.currentTimeMillis()
+            alreadyPaused
+        }
+        if (reason == ParentDriveBackupMediaGate.REASON_CHILD_AUDIO) {
+            reconnectHandler.removeCallbacks(childAudioPauseTimeoutRunnable)
+            reconnectHandler.postDelayed(childAudioPauseTimeoutRunnable, CHILD_AUDIO_PAUSE_TIMEOUT_MS)
+        }
+        if (!wasPaused) {
+            if (!stopping) stopP2pTransport()
+            updateStatus("Backup dijeda sementara • aktivitas media sedang berjalan")
+        }
+    }
+
+    private fun resumeAfterMedia(reasonValue: String) {
+        val reason = reasonValue.trim().take(64).ifBlank {
+            ParentDriveBackupMediaGate.REASON_PARENT_MEDIA_SEND
+        }
+        val removed = synchronized(mediaPauseReasons) {
+            mediaPauseReasons.remove(reason) != null
+        }
+        if (!removed) return
+        if (reason == ParentDriveBackupMediaGate.REASON_CHILD_AUDIO) {
+            reconnectHandler.removeCallbacks(childAudioPauseTimeoutRunnable)
+        }
+        if (isMediaPaused()) {
+            updateStatus("Backup tetap dijeda • masih ada aktivitas media")
+            return
+        }
+        resumeBackupAfterMedia()
+    }
+
+    private fun resumeBackupAfterMedia() {
+        val resumeCode = pairingCode
+        if (!resumeCode.isNullOrBlank() && stopping &&
+            !accessToken.isNullOrBlank() &&
+            getSharedPreferences("parent_audio", MODE_PRIVATE)
+                .getBoolean("parent_drive_backup_service_active", false)
+        ) {
+            updateStatus("Aktivitas media selesai • melanjutkan backup Google Drive")
+            startTransport(resumeCode)
+            if (childQueue.size > 1) scheduleChildRotationTimeout()
+        }
+    }
+
     @Volatile private var stopping = false
     private var pairingCode: String? = null
     private var childDisplayName: String = "HP Anak"
@@ -186,25 +265,18 @@ class ParentDriveBackupService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_PAUSE_FOR_MEDIA) {
-            if (!stopping) {
-                stopP2pTransport()
-                updateStatus("Backup dijeda sementara • sedang mengirim media ke HP anak")
-            }
+            pauseForMedia(intent.getStringExtra(EXTRA_MEDIA_REASON)
+                ?: ParentDriveBackupMediaGate.REASON_PARENT_MEDIA_SEND)
             return START_STICKY
         }
         if (intent?.action == ACTION_RESUME_AFTER_MEDIA) {
-            val resumeCode = pairingCode
-            if (!resumeCode.isNullOrBlank() && stopping &&
-                getSharedPreferences("parent_audio", MODE_PRIVATE)
-                    .getBoolean("parent_drive_backup_service_active", false)
-            ) {
-                updateStatus("Pengiriman selesai • melanjutkan backup Google Drive")
-                startTransport(resumeCode)
-                if (childQueue.size > 1) scheduleChildRotationTimeout()
-            }
+            resumeAfterMedia(intent.getStringExtra(EXTRA_MEDIA_REASON)
+                ?: ParentDriveBackupMediaGate.REASON_PARENT_MEDIA_SEND)
             return START_STICKY
         }
         if (intent?.action == ACTION_STOP) {
+            synchronized(mediaPauseReasons) { mediaPauseReasons.clear() }
+            reconnectHandler.removeCallbacks(childAudioPauseTimeoutRunnable)
             stopTransport(clearSavedState = true)
             stopSelf()
             return START_NOT_STICKY
@@ -244,11 +316,16 @@ class ParentDriveBackupService : Service() {
             .putString("parent_drive_backup_child_name", childDisplayName)
             .apply()
         startAsForeground("Menunggu koneksi HP anak untuk backup media baru")
-        stopping = false
         pairingCode = code
         listenForConsent(code)
-        startTransport(code)
-        if (childQueue.size > 1) scheduleChildRotationTimeout()
+        if (isMediaPaused()) {
+            stopping = true
+            updateStatus("Backup dijeda sementara • aktivitas media sedang berjalan")
+        } else {
+            stopping = false
+            startTransport(code)
+            if (childQueue.size > 1) scheduleChildRotationTimeout()
+        }
         return START_STICKY
     }
 
@@ -323,6 +400,11 @@ class ParentDriveBackupService : Service() {
     }
 
     private fun startTransport(code: String) {
+        if (isMediaPaused()) {
+            stopping = true
+            updateStatus("Backup menunggu aktivitas media selesai")
+            return
+        }
         val transportChildName = childDisplayName
         stopping = false
         reconnectHandler.removeCallbacks(networkGateRunnable)
@@ -365,13 +447,16 @@ class ParentDriveBackupService : Service() {
             onMediaIndex = { },
             onThumbnail = { _, _ -> },
             onStatus = ::updateStatus,
-            canReceiveBackup = { !accessToken.isNullOrBlank() && canUseBackupNetwork() },
+            canReceiveBackup = { !accessToken.isNullOrBlank() && canUseBackupNetwork() && !isMediaPaused() },
             onBackupQueueEmpty = { if (!galleryPinned && childQueue.size > 1) advanceToNextChild("Antrean anak selesai") },
             onBackupFileReady = { key, file, name, mime, complete ->
                 val token = accessToken
-                if (!canUseBackupNetwork()) {
+                if (!canUseBackupNetwork() || isMediaPaused()) {
                     file.delete()
-                    updateStatus("Backup dijeda • menunggu Wi-Fi sebelum upload")
+                    updateStatus(
+                        if (isMediaPaused()) "Backup dijeda sementara • aktivitas media sedang berjalan"
+                        else "Backup dijeda • menunggu Wi-Fi sebelum upload"
+                    )
                     complete(false)
                 } else if (token.isNullOrBlank()) {
                     file.delete()
@@ -411,7 +496,7 @@ class ParentDriveBackupService : Service() {
                                             " / " + android.text.format.Formatter.formatFileSize(this, total)
                                     )
                                 },
-                                canContinue = { canUseBackupNetwork() }
+                                canContinue = { canUseBackupNetwork() && !isMediaPaused() }
                             )
                             file.delete()
                             val stats = getSharedPreferences("parent_audio", MODE_PRIVATE)
@@ -425,36 +510,42 @@ class ParentDriveBackupService : Service() {
                             complete(true)
                         } catch (error: Exception) {
                             file.delete()
-                            Log.e(TAG, "Upload Drive gagal", error)
-                            val authorizationFailure = error.message.orEmpty().contains("401") ||
-                                error.message.orEmpty().contains("403")
-                            if (authorizationFailure) {
-                                getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
-                                    .putBoolean("parent_drive_backup_reauth_required", true).apply()
-                            }
-                            val stats = getSharedPreferences("parent_audio", MODE_PRIVATE)
-                            val failedCount = stats.getInt("parent_drive_backup_failed_count", 0) + 1
-                            stats.edit()
-                                .putInt("parent_drive_backup_failed_count", failedCount)
-                                .putString("parent_drive_backup_last_result", "Gagal: $name")
-                                .putLong("parent_drive_backup_last_result_at", System.currentTimeMillis())
-                                .apply()
-                            updateStatus(
+                            if (isMediaPaused()) {
+                                Log.i(TAG, "Upload ditunda karena aktivitas media aktif; file akan diminta ulang dari antrean anak")
+                                updateStatus("Backup dijeda sementara • file tetap dalam antrean HP anak")
+                                complete(false)
+                            } else {
+                                Log.e(TAG, "Upload Drive gagal", error)
+                                val authorizationFailure = error.message.orEmpty().contains("401") ||
+                                    error.message.orEmpty().contains("403")
                                 if (authorizationFailure) {
-                                    "Izin Google Drive kedaluwarsa/ditolak • buka SantetHP untuk otorisasi ulang"
-                                } else {
-                                    "Upload gagal: $name • file tetap di antrean • total gagal $failedCount"
+                                    getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                                        .putBoolean("parent_drive_backup_reauth_required", true).apply()
                                 }
-                            )
-                            complete(false)
-                            if (!authorizationFailure && childQueue.size > 1) {
-                                reconnectHandler.postDelayed({
-                                    advanceToNextChild("Upload gagal • file akan dicoba lagi pada putaran berikutnya")
-                                }, 3000L)
-                            } else if (!authorizationFailure &&
-                                (error is java.io.IOException || error.message.orEmpty().contains("(5"))
-                            ) {
-                                reconnectHandler.postDelayed({ protocol?.requestNextBackup() }, 30000L)
+                                val stats = getSharedPreferences("parent_audio", MODE_PRIVATE)
+                                val failedCount = stats.getInt("parent_drive_backup_failed_count", 0) + 1
+                                stats.edit()
+                                    .putInt("parent_drive_backup_failed_count", failedCount)
+                                    .putString("parent_drive_backup_last_result", "Gagal: $name")
+                                    .putLong("parent_drive_backup_last_result_at", System.currentTimeMillis())
+                                    .apply()
+                                updateStatus(
+                                    if (authorizationFailure) {
+                                        "Izin Google Drive kedaluwarsa/ditolak • buka SantetHP untuk otorisasi ulang"
+                                    } else {
+                                        "Upload gagal: $name • file tetap di antrean • total gagal $failedCount"
+                                    }
+                                )
+                                complete(false)
+                                if (!authorizationFailure && childQueue.size > 1) {
+                                    reconnectHandler.postDelayed({
+                                        advanceToNextChild("Upload gagal • file akan dicoba lagi pada putaran berikutnya")
+                                    }, 3000L)
+                                } else if (!authorizationFailure &&
+                                    (error is java.io.IOException || error.message.orEmpty().contains("(5"))
+                                ) {
+                                    reconnectHandler.postDelayed({ protocol?.requestNextBackup() }, 30000L)
+                                }
                             }
                         }
                     }.start()
@@ -484,7 +575,7 @@ class ParentDriveBackupService : Service() {
 
     @Synchronized
     private fun advanceToNextChild(reason: String) {
-        if (stopping || galleryPinned || childQueue.size <= 1) return
+        if (stopping || isMediaPaused() || galleryPinned || childQueue.size <= 1) return
         reconnectHandler.removeCallbacks(childRotationRunnable)
         reconnectHandler.removeCallbacks(reconnectRunnable)
         val nextIndex = childQueueIndex + 1
@@ -500,7 +591,7 @@ class ParentDriveBackupService : Service() {
     }
 
     private fun activateQueuedChild() {
-        if (stopping || galleryPinned || childQueue.isEmpty() || childQueueIndex !in childQueue.indices) return
+        if (stopping || isMediaPaused() || galleryPinned || childQueue.isEmpty() || childQueueIndex !in childQueue.indices) return
         val (nextCode, nextName) = childQueue[childQueueIndex]
         if (pairingCode == nextCode && manager != null) {
             scheduleChildRotationTimeout()
@@ -566,6 +657,7 @@ class ParentDriveBackupService : Service() {
     override fun onDestroy() {
         // Preserve the user's requested backup state on an OS/process stop so
         // MainActivity can obtain a fresh short-lived token when reopened.
+        reconnectHandler.removeCallbacks(childAudioPauseTimeoutRunnable)
         stopTransport(clearSavedState = false)
         super.onDestroy()
     }

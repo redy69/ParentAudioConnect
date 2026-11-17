@@ -21,7 +21,8 @@ class Mp3TransferManager(
     private val room: Room,
     private val scope: CoroutineScope,
     private val onStatus: (String) -> Unit,
-    private val onReceived: (File) -> Unit
+    private val onReceived: (File) -> Unit,
+    private val onTransferState: (Boolean) -> Unit = {}
 ) {
 
     companion object {
@@ -87,6 +88,7 @@ class Mp3TransferManager(
     fun send(uri: Uri) {
         scope.launch {
             var temporaryFile: File? = null
+            notifyTransferState(true)
 
             try {
                 onStatus("Menyiapkan file MP3...")
@@ -138,7 +140,16 @@ class Mp3TransferManager(
                 )
             } finally {
                 temporaryFile?.delete()
+                notifyTransferState(false)
             }
+        }
+    }
+
+    private fun notifyTransferState(active: Boolean) {
+        try {
+            onTransferState(active)
+        } catch (_: Exception) {
+            // Backup coordination must never interrupt MP3 transfer cleanup.
         }
     }
 }
