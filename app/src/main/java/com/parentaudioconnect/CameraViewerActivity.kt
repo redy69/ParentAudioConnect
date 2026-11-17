@@ -22,6 +22,7 @@ import io.livekit.android.events.collect
 import io.livekit.android.renderer.SurfaceViewRenderer
 import io.livekit.android.room.Room
 import io.livekit.android.room.track.VideoTrack
+import io.livekit.android.room.track.RemoteAudioTrack
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -56,6 +57,12 @@ class CameraViewerActivity : Activity() {
     private var code: String = ""
     private var facing = "back"
     private var stopping = false
+    private var audioMuted = false
+    private lateinit var audioToggle: Button
+    private val remoteAudioTracks = linkedSetOf<RemoteAudioTrack>()
+    private companion object AudioSettings {
+        const val CAMERA_AUDIO_RECEIVE_GAIN = 1.5
+    }
     private val backupPauseHandler = Handler(Looper.getMainLooper())
     private val backupPauseHeartbeat = object : Runnable {
         override fun run() {
@@ -113,7 +120,7 @@ class CameraViewerActivity : Activity() {
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 letterSpacing = 0.06f
                 includeFontPadding = false
-                setPadding(dp(10), dp(8), dp(10), dp(8))
+                setPadding(dp(4), dp(8), dp(4), dp(8))
                 background = GradientDrawable().apply {
                     setColor(Color.argb(235, 247, 250, 255))
                     cornerRadius = dp(10).toFloat()
@@ -159,23 +166,33 @@ class CameraViewerActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
-        val switch = createCameraControl("BELAKANG AKTIF ✓", Color.rgb(20, 116, 91))
+        val switch = createCameraControl("BELAKANG", Color.rgb(20, 116, 91))
         switch.setOnClickListener {
             facing = if (facing == "back") "front" else "back"
             cameraFacingLabel.text = if (facing == "front") "KAMERA DEPAN" else "KAMERA BELAKANG"
-            switch.text = if (facing == "front") "DEPAN AKTIF ✓" else "BELAKANG AKTIF ✓"
+            switch.text = if (facing == "front") "DEPAN" else "BELAKANG"
             switch.background = cameraControlBackground(
                 if (facing == "front") Color.rgb(31, 139, 103) else Color.rgb(20, 116, 91)
             )
             sendCameraCommand("switch", facing, closeAfter = false)
         }
+        audioToggle = createCameraControl("🔊 SUARA ON", Color.rgb(20, 122, 78))
+        audioToggle.setOnClickListener {
+            audioMuted = !audioMuted
+            updateRemoteAudioOutput()
+        }
         val stop = createCameraControl("HENTIKAN", Color.rgb(190, 42, 52))
         stop.setOnClickListener { confirmStopCamera() }
-        controls.addView(switch, LinearLayout.LayoutParams(0, dp(50), 1f).apply {
-            marginEnd = dp(6)
+        val controlParams = LinearLayout.LayoutParams(0, dp(50), 1f)
+        controls.addView(switch, LinearLayout.LayoutParams(controlParams).apply {
+            marginEnd = dp(4)
         })
-        controls.addView(stop, LinearLayout.LayoutParams(0, dp(50), 1f).apply {
-            marginStart = dp(6)
+        controls.addView(audioToggle, LinearLayout.LayoutParams(controlParams).apply {
+            marginStart = dp(2)
+            marginEnd = dp(2)
+        })
+        controls.addView(stop, LinearLayout.LayoutParams(controlParams).apply {
+            marginStart = dp(4)
         })
         root.addView(status, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
@@ -230,17 +247,21 @@ class CameraViewerActivity : Activity() {
                             candidateRoom.events.collect { event ->
                                 when (event) {
                                     is RoomEvent.TrackSubscribed -> {
-                                        val video = event.track as? VideoTrack
-                                        if (video != null) {
-                                            runOnUiThread {
-                                                video.addRenderer(renderer)
+                                        when (val subscribedTrack = event.track) {
+                                            is VideoTrack -> runOnUiThread {
+                                                subscribedTrack.addRenderer(renderer)
                                                 status.text = "KAMERA ANAK TERHUBUNG"
+                                            }
+                                            is RemoteAudioTrack -> runOnUiThread {
+                                                remoteAudioTracks.add(subscribedTrack)
+                                                updateRemoteAudioOutput()
                                             }
                                         }
                                     }
                                     is RoomEvent.Disconnected -> {
                                         if (room === candidateRoom) {
                                             room = null
+                                            remoteAudioTracks.clear()
                                             runOnUiThread {
                                                 status.text = "Koneksi kamera terputus • menyambungkan kembali…"
                                             }
@@ -381,11 +402,22 @@ class CameraViewerActivity : Activity() {
         }
     }
 
+    private fun updateRemoteAudioOutput() {
+        val gain = if (audioMuted) 0.0 else CAMERA_AUDIO_RECEIVE_GAIN
+        remoteAudioTracks.toList().forEach { track ->
+            try { track.setVolume(gain) } catch (_: Exception) { }
+        }
+        audioToggle.text = if (audioMuted) "🔇 MUTE" else "🔊 SUARA ON"
+        audioToggle.background = cameraControlBackground(
+            if (audioMuted) Color.rgb(190, 42, 52) else Color.rgb(20, 122, 78)
+        )
+    }
+
     private fun createCameraControl(label: String, color: Int): Button = Button(this).apply {
         text = label
         isAllCaps = false
-        textSize = 12f
-        letterSpacing = 0.045f
+        textSize = 10.5f
+        letterSpacing = 0.025f
         setTypeface(null, android.graphics.Typeface.BOLD)
         setTextColor(Color.WHITE)
         gravity = Gravity.CENTER
