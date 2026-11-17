@@ -35,6 +35,8 @@ object LiveKitFailover {
         }
         val preferred = response.optString("preferredServerId")
         var lastError: Exception? = null
+        val attempted = mutableListOf<String>()
+        val skipped = mutableListOf<String>()
 
         for (index in 0 until candidates.length()) {
             val candidate = candidates.optJSONObject(index) ?: continue
@@ -42,8 +44,12 @@ object LiveKitFailover {
             if (preferred.isNotBlank() && id != preferred) continue
             val token = candidate.optString("token")
             val serverUrl = candidate.optString("serverUrl")
-            if (token.isBlank() || serverUrl.isBlank()) continue
+            if (token.isBlank() || serverUrl.isBlank()) {
+                skipped += "$id (token/url kosong)"
+                continue
+            }
 
+            attempted += id
             val candidateRoom = createRoom()
             try {
                 prepareRoom(candidateRoom)
@@ -68,8 +74,8 @@ object LiveKitFailover {
         }
 
         throw IllegalStateException(
-            if (preferred.isNotBlank()) "Server pasangan $preferred tidak tersedia."
-            else "Semua server LiveKit gagal dihubungi (${candidates.length()} server)",
+            if (preferred.isNotBlank()) "Server pasangan $preferred tidak tersedia. Detail: ${lastError?.javaClass?.simpleName}: ${lastError?.localizedMessage ?: "tidak ada respons"}"
+            else "Semua server LiveKit gagal dihubungi. Dicoba: ${attempted.joinToString()}. Dilewati: ${skipped.joinToString().ifBlank { "-" }}. Penyebab terakhir: ${lastError?.javaClass?.simpleName}: ${lastError?.localizedMessage ?: "tidak ada respons"}",
             if (preferred.isNotBlank()) null else lastError
         )
     }
