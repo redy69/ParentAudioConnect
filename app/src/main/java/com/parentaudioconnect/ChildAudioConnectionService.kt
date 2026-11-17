@@ -493,6 +493,10 @@ class ChildAudioConnectionService : Service() {
             return
         }
         try {
+            if (childTalkMicActive == enabled) {
+                pendingTalkMicEnabled = null
+                return
+            }
             val changed = activeRoom.localParticipant.setMicrophoneEnabled(enabled)
             if (!changed) {
                 updateNotification("Gagal mengubah mikrofon percakapan")
