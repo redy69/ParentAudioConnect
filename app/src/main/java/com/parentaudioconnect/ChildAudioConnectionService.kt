@@ -125,14 +125,23 @@ class ChildAudioConnectionService : Service() {
         } else {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                NOTIFICATION_ID,
-                notification(if (prepareMicrophone) "Menyiapkan percakapan • mikrofon belum aktif" else "Mengaktifkan koneksi audio…"),
-                foregroundTypes
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, notification("Mengaktifkan koneksi audio…"))
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification(if (prepareMicrophone) "Menyiapkan percakapan • mikrofon belum aktif" else "Mengaktifkan koneksi audio…"),
+                    foregroundTypes
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification("Mengaktifkan koneksi audio…"))
+            }
+        } catch (error: Exception) {
+            // Android 14+ may reject microphone foreground promotion if the
+            // activity has already left the foreground or permission was revoked.
+            // Fail closed: do not capture audio and do not crash the app process.
+            Log.e("SantetHP-Audio", "Foreground audio service was not allowed to start", error)
+            stopSelf(startId)
+            return START_NOT_STICKY
         }
         if (prepareMicrophone) micForegroundPrepared = true
 
