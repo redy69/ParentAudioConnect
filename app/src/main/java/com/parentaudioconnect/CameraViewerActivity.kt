@@ -41,6 +41,7 @@ class CameraViewerActivity : Activity() {
     companion object {
         const val EXTRA_CODE = "camera_pairing_code"
         private const val WORKER_BASE = "https://parent-audio-token.yudhis-r15.workers.dev"
+        private const val CAMERA_AUDIO_RECEIVE_GAIN = 1.5
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -60,9 +61,6 @@ class CameraViewerActivity : Activity() {
     private var audioMuted = false
     private lateinit var audioToggle: Button
     private val remoteAudioTracks = linkedSetOf<RemoteAudioTrack>()
-    private companion object AudioSettings {
-        const val CAMERA_AUDIO_RECEIVE_GAIN = 1.5
-    }
     private val backupPauseHandler = Handler(Looper.getMainLooper())
     private val backupPauseHeartbeat = object : Runnable {
         override fun run() {
