@@ -60,11 +60,11 @@ object CrashDiagnostics {
                         === FATAL APP ERROR ===
                         Waktu: $time
                         Versi SantetHP: $version
-                        Perangkat: \${Build.MANUFACTURER} \${Build.MODEL}
-                        Android API: \${Build.VERSION.SDK_INT}
+                        Perangkat: ${Build.MANUFACTURER} ${Build.MODEL}
+                        Android API: ${Build.VERSION.SDK_INT}
                         Peran perangkat: $role
                         Layar terakhir: $activity
-                        Thread: \${thread.name}
+                        Thread: ${thread.name}
                         Penyebab:
                         $stack
                         """.trimIndent()
@@ -141,13 +141,13 @@ object CrashDiagnostics {
                         """
                         === ANDROID PROCESS EXIT ===
                         Waktu: $time
-                        Perangkat: \${Build.MANUFACTURER} \${Build.MODEL}
-                        Android API: \${Build.VERSION.SDK_INT}
-                        Alasan: \${reasonLabel(info.reason)}
-                        Keterangan: \${info.description ?: "tidak tersedia"}
-                        Proses: \${info.processName}
-                        Status: \${info.status}
-                        Kepentingan proses: \${info.importance}
+                        Perangkat: ${Build.MANUFACTURER} ${Build.MODEL}
+                        Android API: ${Build.VERSION.SDK_INT}
+                        Alasan: ${reasonLabel(info.reason)}
+                        Keterangan: ${info.description ?: "tidak tersedia"}
+                        Proses: ${info.processName}
+                        Status: ${info.status}
+                        Kepentingan proses: ${info.importance}
                         Jejak sistem:
                         $trace
                         """.trimIndent()
