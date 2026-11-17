@@ -47,6 +47,7 @@ class RemoteCameraService : Service() {
         const val ACTION_START_CAMERA = "com.santethp.camera.START"
         const val ACTION_STOP_CAMERA = "com.santethp.camera.STOP"
         const val ACTION_SWITCH_CAMERA = "com.santethp.camera.SWITCH"
+        const val ACTION_REVOKE_AUDIO = "com.santethp.camera.REVOKE_AUDIO"
         const val ACTION_DISARM = "com.santethp.camera.DISARM"
         const val EXTRA_REQUEST_ID = "request_id"
         const val EXTRA_SERVER_ID = "livekit_server_id"
@@ -110,6 +111,7 @@ class RemoteCameraService : Service() {
             }
             ACTION_STOP_CAMERA -> stopCamera("Kamera dihentikan")
             ACTION_SWITCH_CAMERA -> switchCamera(intent.getStringExtra("facing") ?: "back")
+            ACTION_REVOKE_AUDIO -> revokeCameraAudioConsent()
             ACTION_DISARM -> disarm()
             else -> {
                 if (!isArmed()) stopSelf()
@@ -159,10 +161,39 @@ class RemoteCameraService : Service() {
 
     private fun startCameraForeground() {
         val notification = notification("Siaga kamera aktif • kamera belum menyala")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val cameraType = ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
+            val audioConsent = getSharedPreferences("parent_audio", MODE_PRIVATE)
+                .getBoolean("remote_camera_audio_consent", false)
+            val micGranted = checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+            val serviceTypes = if (audioConsent && micGranted) {
+                cameraType or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+            } else cameraType
+            startForeground(NOTIFICATION_ID, notification, serviceTypes)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA)
         } else {
             startForeground(NOTIFICATION_ID, notification)
+        }
+    }
+
+    private fun hasCameraAudioConsent(): Boolean =
+        getSharedPreferences("parent_audio", MODE_PRIVATE)
+            .getBoolean("remote_camera_audio_consent", false) &&
+            checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+
+    private fun revokeCameraAudioConsent() {
+        getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+            .putBoolean("remote_camera_audio_consent", false).apply()
+        scope.launch {
+            try { room?.localParticipant?.setMicrophoneEnabled(false) } catch (_: Exception) { }
+            val cameraActive = cameraTrack != null
+            updateNotification(
+                if (cameraActive) "KAMERA AKTIF • suara lingkungan dimatikan dari HP anak"
+                else "Izin suara kamera dimatikan • kamera tetap siaga"
+            )
         }
     }
 
@@ -262,7 +293,16 @@ class RemoteCameraService : Service() {
                 if (!enabled) throw IllegalStateException("Android tidak dapat mengaktifkan kamera")
                 cameraTrack = activeRoom.localParticipant.getTrackPublication(Track.Source.CAMERA)?.track as? LocalVideoTrack
                 cameraTrack?.switchCamera(position = if (facing == "front") CameraPosition.FRONT else CameraPosition.BACK)
-                updateNotification("KAMERA AKTIF • tayangan dibagikan ke orang tua")
+                val audioEnabled = if (hasCameraAudioConsent()) {
+                    try { activeRoom.localParticipant.setMicrophoneEnabled(true) } catch (_: Exception) { false }
+                } else {
+                    try { activeRoom.localParticipant.setMicrophoneEnabled(false) } catch (_: Exception) { }
+                    false
+                }
+                updateNotification(
+                    if (audioEnabled) "KAMERA + SUARA AKTIF • suara lingkungan dikirim ke orang tua"
+                    else "KAMERA AKTIF • suara lingkungan tidak diizinkan"
+                )
                 delay(MAX_CAMERA_SESSION_MS)
                 stopCamera("Sesi kamera berakhir otomatis setelah 10 menit")
             } catch (error: CancellationException) {
@@ -294,9 +334,10 @@ class RemoteCameraService : Service() {
         cameraStopJob?.cancel()
         cameraStopJob = null
         scope.launch {
+            try { room?.localParticipant?.setMicrophoneEnabled(false) } catch (_: Exception) { }
             try { room?.localParticipant?.setCameraEnabled(false) } catch (_: Exception) { }
             cameraTrack = null
-            updateNotification(message + " • layanan tetap siaga")
+            updateNotification(message + " • suara dan kamera berhenti, layanan tetap siaga")
         }
     }
 
@@ -311,6 +352,7 @@ class RemoteCameraService : Service() {
         getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
             .putBoolean("remote_camera_armed", false).apply()
         scope.launch {
+            try { room?.localParticipant?.setMicrophoneEnabled(false) } catch (_: Exception) { }
             try { room?.localParticipant?.setCameraEnabled(false) } catch (_: Exception) { }
             try { room?.disconnect() } catch (_: Exception) { }
             try { room?.release() } catch (_: Exception) { }
@@ -358,11 +400,17 @@ class RemoteCameraService : Service() {
                 action = ACTION_DISARM
             }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val revokeAudioIntent = PendingIntent.getService(
+            this, 45, Intent(this, RemoteCameraService::class.java).apply {
+                action = ACTION_REVOKE_AUDIO
+            }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_camera)
             .setContentTitle("SantetHP • Kamera Jarak Jauh")
             .setContentText(message)
             .setContentIntent(openApp)
+            .addAction(android.R.drawable.ic_lock_silent_mode, "Matikan suara", revokeAudioIntent)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Matikan siaga", disarmIntent)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setOngoing(true)
@@ -395,6 +443,7 @@ class RemoteCameraService : Service() {
         cameraTrack = null
         if (activeRoom != null) {
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+                try { activeRoom.localParticipant.setMicrophoneEnabled(false) } catch (_: Exception) { }
                 try { activeRoom.localParticipant.setCameraEnabled(false) } catch (_: Exception) { }
                 try { activeRoom.disconnect() } finally { activeRoom.release() }
             }
