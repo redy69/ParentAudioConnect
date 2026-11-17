@@ -57,6 +57,10 @@ import io.livekit.android.AudioType
 import io.livekit.android.LiveKit
 import io.livekit.android.LiveKitOverrides
 import io.livekit.android.room.Room
+import io.livekit.android.events.collect
+import io.livekit.android.events.RoomEvent
+import io.livekit.android.room.track.RemoteAudioTrack
+import io.livekit.android.room.track.Track
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -204,6 +208,14 @@ private lateinit var playMp3Button: Button
     private val activeSantetDialogs = linkedSetOf<AlertDialog>()
     private var mapsPageOverlay: View? = null
     private var mapsPageOriginalIndex: Int = -1
+    private var liveConversationPage: LiveConversationPage? = null
+    private var isConversationActive = false
+    private var parentConversationMuted = false
+    private var pendingConversationMicPermission = false
+    private var conversationChildAudioTrackActive = false
+    private var activeConversationCode: String? = null
+    private var conversationRoomEventsJob: kotlinx.coroutines.Job? = null
+    private var childTalkPermissionRequestInFlight = false
     private var parentGalleryPage: LinearLayout? = null
     private var parentGalleryGridScroll: ScrollView? = null
     private var parentGalleryPreviewContent: LinearLayout? = null
@@ -295,6 +307,7 @@ private var receivedMp3File: File? = null
     private const val PARENT_MEDIA_PICKER = 1011
     private const val BACKUP_MEDIA_PERMISSION = 1012
     private const val CAMERA_AUDIO_PERMISSION = 1013
+    private const val CHILD_TALK_MIC_PERMISSION = 1014
 }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -643,8 +656,8 @@ private var receivedMp3File: File? = null
 
         parentButton.setOnClickListener { createPairingCode() }
         childButton.setOnClickListener { showCodeDialog() }
-        startButton.setOnClickListener { startMicrophone() }
-        stopButton.setOnClickListener { stopMicrophone() }
+        startButton.setOnClickListener { showLiveConversationPage() }
+        stopButton.setOnClickListener { showLiveConversationPage() }
         sendMp3Button.setOnClickListener { openMp3Picker() }
         playMp3Button.setOnClickListener { playReceivedMp3() }
         adminWhatsAppButton.setOnClickListener { openAdminWhatsApp() }
@@ -1264,6 +1277,7 @@ private var receivedMp3File: File? = null
             publishChildDeviceStatusNow()
             refreshFcmToken()
             restoreCameraStandbyIfNeeded()
+            ensureChildConversationServiceReady()
         }
     }
 
@@ -1873,6 +1887,10 @@ private var receivedMp3File: File? = null
             }
             return
         }
+        if (liveConversationPage?.parent != null) {
+            closeLiveConversationPage()
+            return
+        }
         if (mapsPageOverlay?.parent != null) {
             restoreMapsPageToDashboard()
             showParentDashboard()
@@ -2014,8 +2032,8 @@ private var receivedMp3File: File? = null
         pairingInstructionText.visibility = View.GONE
         codeText.visibility = View.GONE
         childAudioActivityText.visibility = View.VISIBLE
-        startButton.visibility = if (isMicrophoneActive) View.GONE else View.VISIBLE
-        stopButton.visibility = if (isMicrophoneActive) View.VISIBLE else View.GONE
+        startButton.visibility = if (isConversationActive) View.GONE else View.VISIBLE
+        stopButton.visibility = if (isConversationActive) View.VISIBLE else View.GONE
         sendMp3Button.visibility = View.VISIBLE
         playMp3Button.visibility = View.GONE
         adminWhatsAppButton.visibility = View.VISIBLE
@@ -2081,6 +2099,9 @@ private var receivedMp3File: File? = null
             pairingPrefs.getString("pair_code", null).isNullOrBlank()
         ) {
             return
+        }
+        childModePanel.setOnClickListener {
+            ensureChildConversationServiceReady(forcePrompt = true)
         }
 
         roleIntroText.visibility = View.GONE
@@ -6755,6 +6776,7 @@ private var receivedMp3File: File? = null
                         statusText.text = "Berhasil dipasangkan • menunggu perintah audio dari orang tua"
 
                         refreshFcmToken()
+                        ensureChildConversationServiceReady()
                     }
                     .addOnFailureListener { error ->
 
@@ -7253,6 +7275,236 @@ private var receivedMp3File: File? = null
         }
     }
 
+    private fun showLiveConversationPage() {
+        if (currentRole != "parent") return
+        dismissSantetDialogsForFullPage()
+        if (mapsPageOverlay?.parent != null) restoreMapsPageToDashboard()
+        val page = liveConversationPage ?: LiveConversationPage(
+            context = this,
+            onBack = { closeLiveConversationPage() },
+            onStart = { startLiveConversation() },
+            onToggleParentMute = { toggleParentConversationMute() },
+            onEnd = { endLiveConversation() }
+        ).also { liveConversationPage = it }
+        renderLiveConversationPage(
+            if (isConversationActive) "Percakapan berlangsung" else "Siap memulai percakapan"
+        )
+        val host = findViewById<ViewGroup>(android.R.id.content)
+        if (page.parent == null) {
+            page.elevation = dp(28).toFloat()
+            host.addView(page, ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+            ))
+        }
+    }
+
+    private fun closeLiveConversationPage() {
+        val page = liveConversationPage ?: return
+        (page.parent as? ViewGroup)?.removeView(page)
+        showParentDashboard()
+    }
+
+    private fun renderLiveConversationPage(statusOverride: String? = null) {
+        val page = liveConversationPage ?: return
+        val status = statusOverride ?: when {
+            !isConversationActive -> "Siap memulai percakapan"
+            !conversationChildAudioTrackActive -> "Menghubungkan suara HP anak…"
+            parentConversationMuted -> "Mikrofon ortu mute • suara anak tetap diterima"
+            else -> "Percakapan dua arah aktif"
+        }
+        page.render(
+            sessionActive = isConversationActive,
+            audioActive = isConversationActive && conversationChildAudioTrackActive,
+            parentMuted = parentConversationMuted,
+            status = status
+        )
+    }
+
+    private fun startLiveConversation() {
+        if (currentRole != "parent") return
+        val code = selectedChildCode
+        if (code.isNullOrBlank() || childConnected[code] != true) {
+            renderLiveConversationPage("Pilih HP anak yang sudah terhubung terlebih dahulu")
+            statusText.text = "Pilih HP anak yang sudah terhubung terlebih dahulu"
+            return
+        }
+        if (isConversationActive) {
+            renderLiveConversationPage()
+            return
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            pendingConversationMicPermission = true
+            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), MIC_PERMISSION)
+            renderLiveConversationPage("Menunggu izin mikrofon HP orang tua…")
+            return
+        }
+
+        activeConversationCode = code
+        renderLiveConversationPage("Menghubungkan ruang percakapan…")
+        val continueOnRoom = {
+            val serverId = activeLiveKitServerId
+            if (serverId.isNullOrBlank()) {
+                renderLiveConversationPage("Server audio belum siap • coba lagi")
+            } else {
+                selectLiveKitServer(code, "audio", serverId) { saved, saveError ->
+                    if (!saved) {
+                        renderLiveConversationPage("Gagal menyamakan server: ${saveError ?: "coba lagi"}")
+                    } else {
+                        renderLiveConversationPage("Memanggil HP anak…")
+                        requestRemoteAudio(code, "talk_start") { sent, error ->
+                            if (!sent) {
+                                renderLiveConversationPage("Gagal memanggil HP anak: ${error ?: "periksa koneksi"}")
+                                return@requestRemoteAudio
+                            }
+                            activityScope.launch {
+                                try {
+                                    val enabled = room?.localParticipant?.setMicrophoneEnabled(true) ?: false
+                                    if (!enabled) {
+                                        requestRemoteAudio(code, "talk_stop") { _, _ -> }
+                                        renderLiveConversationPage("Mikrofon ortu gagal diaktifkan")
+                                        return@launch
+                                    }
+                                    isConversationActive = true
+                                    isMicrophoneActive = true
+                                    parentConversationMuted = false
+                                    conversationChildAudioTrackActive = false
+                                    if (!parentDriveBackupPausedForAudioLive) {
+                                        parentDriveBackupPausedForAudioLive = ParentDriveBackupMediaGate.pause(
+                                            this@MainActivity,
+                                            ParentDriveBackupMediaGate.REASON_AUDIO_LIVE
+                                        )
+                                    }
+                                    startButton.visibility = View.GONE
+                                    stopButton.visibility = View.VISIBLE
+                                    statusText.text = "Percakapan langsung sedang disiapkan"
+                                    renderLiveConversationPage("Perintah terkirim • menunggu suara HP anak…")
+                                } catch (error: Exception) {
+                                    requestRemoteAudio(code, "talk_stop") { _, _ -> }
+                                    renderLiveConversationPage("Gagal mengaktifkan mikrofon ortu")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (room != null && activeRoomCode == code) {
+            continueOnRoom()
+        } else {
+            connectToLiveKit(
+                code,
+                onConnected = { continueOnRoom() },
+                onFailure = { error ->
+                    renderLiveConversationPage("Koneksi audio gagal: $error")
+                }
+            )
+        }
+    }
+
+    private fun toggleParentConversationMute() {
+        if (!isConversationActive) return
+        val shouldMute = !parentConversationMuted
+        activityScope.launch {
+            try {
+                val changed = room?.localParticipant?.setMicrophoneEnabled(!shouldMute) ?: false
+                if (changed) {
+                    parentConversationMuted = shouldMute
+                    renderLiveConversationPage()
+                    statusText.text = if (shouldMute) {
+                        "Mikrofon ortu dimute • suara anak tetap diterima"
+                    } else {
+                        "Mikrofon ortu aktif • percakapan berlangsung"
+                    }
+                } else {
+                    renderLiveConversationPage("Gagal mengubah mikrofon ortu")
+                }
+            } catch (_: Exception) {
+                renderLiveConversationPage("Gagal mengubah mikrofon ortu")
+            }
+        }
+    }
+
+    private fun endLiveConversation() {
+        val code = activeConversationCode ?: selectedChildCode
+        activityScope.launch {
+            try {
+                room?.localParticipant?.setMicrophoneEnabled(false)
+            } catch (_: Exception) { }
+            isConversationActive = false
+            isMicrophoneActive = false
+            parentConversationMuted = false
+            conversationChildAudioTrackActive = false
+            ParentDriveBackupMediaGate.resume(
+                this@MainActivity,
+                ParentDriveBackupMediaGate.REASON_AUDIO_LIVE
+            )
+            parentDriveBackupPausedForAudioLive = false
+            startButton.visibility = View.VISIBLE
+            stopButton.visibility = View.GONE
+            if (!code.isNullOrBlank()) {
+                requestRemoteAudio(code, "talk_stop") { sent, error ->
+                    statusText.text = if (sent) {
+                        "Percakapan berakhir • koneksi MP3 tetap tersedia"
+                    } else {
+                        "Mikrofon ortu mati • perintah mematikan mikrofon anak belum terkirim: ${error ?: "koneksi"}"
+                    }
+                }
+            } else {
+                statusText.text = "Percakapan berakhir"
+            }
+            activeConversationCode = null
+            renderLiveConversationPage("Percakapan berakhir • mikrofon anak dimatikan")
+        }
+    }
+
+    private fun ensureChildConversationServiceReady(forcePrompt: Boolean = false) {
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        if (prefs.getString("pair_role", null) != "child" ||
+            prefs.getString("pair_code", null).isNullOrBlank()
+        ) return
+
+        val granted = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            if (forcePrompt || !prefs.getBoolean("child_talk_mic_prompted", false)) {
+                prefs.edit().putBoolean("child_talk_mic_prompted", true).apply()
+                if (childTalkPermissionRequestInFlight) return
+                SantetHpDialogBuilder()
+                    .setTitle("Siapkan Percakapan Langsung")
+                    .setMessage(
+                        "SantetHP memerlukan izin mikrofon satu kali agar anak dapat membalas percakapan dari HP orang tua. Mikrofon hanya aktif saat orang tua memulai percakapan dan akan dimatikan saat percakapan diakhiri. Layanan akan menampilkan notifikasi selama siap menerima panggilan."
+                    )
+                    .setNegativeButton("NANTI", null)
+                    .setPositiveButton("IZINKAN") { _, _ ->
+                        childTalkPermissionRequestInFlight = true
+                        requestPermissions(
+                            arrayOf(Manifest.permission.RECORD_AUDIO),
+                            CHILD_TALK_MIC_PERMISSION
+                        )
+                    }
+                    .show()
+            } else {
+                statusText.text = "Percakapan langsung belum siap • ketuk kartu HP ANAK SIAP untuk mengatur izin mikrofon"
+            }
+            return
+        }
+
+        try {
+            val intent = Intent(this, ChildAudioConnectionService::class.java).apply {
+                action = ChildAudioConnectionService.ACTION_PREPARE
+            }
+            ContextCompat.startForegroundService(this, intent)
+            statusText.text = "Layanan percakapan siap • mikrofon anak masih mati"
+        } catch (error: Exception) {
+            android.util.Log.w("SantetHP-Audio", "Could not prepare child conversation service", error)
+            statusText.text = "Layanan percakapan belum siap • buka SantetHP kembali"
+        }
+    }
+
     private fun startMicrophone() {
         if (currentRole != "parent") return
         val code = selectedChildCode
@@ -7544,9 +7796,34 @@ private fun playReceivedMp3() {
             if (grantResults.isNotEmpty() &&
                 grantResults[0] == PackageManager.PERMISSION_GRANTED
             ) {
-                startMicrophone()
+                if (pendingConversationMicPermission) {
+                    pendingConversationMicPermission = false
+                    startLiveConversation()
+                } else {
+                    startMicrophone()
+                }
             } else {
+                pendingConversationMicPermission = false
                 statusText.text = "Izin mikrofon tidak diberikan"
+            }
+        }
+
+        if (requestCode == CHILD_TALK_MIC_PERMISSION) {
+            childTalkPermissionRequestInFlight = false
+            val granted = grantResults.isNotEmpty() &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED
+            if (granted) {
+                getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+                    .putBoolean("child_talk_mic_consent", true)
+                    .apply()
+                ensureChildConversationServiceReady()
+            } else {
+                statusText.text = "Percakapan langsung belum siap • izin mikrofon belum diberikan"
+                Toast.makeText(
+                    this,
+                    "Izin mikrofon diperlukan satu kali agar anak dapat membalas percakapan.",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
 
