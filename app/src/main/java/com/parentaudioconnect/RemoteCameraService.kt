@@ -18,6 +18,7 @@ import io.livekit.android.events.collect
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.track.CameraPosition
 import io.livekit.android.room.track.LocalVideoTrack
+import io.livekit.android.room.track.LocalAudioTrackOptions
 import io.livekit.android.room.track.Track
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -293,6 +294,16 @@ class RemoteCameraService : Service() {
                 if (!enabled) throw IllegalStateException("Android tidak dapat mengaktifkan kamera")
                 cameraTrack = activeRoom.localParticipant.getTrackPublication(Track.Source.CAMERA)?.track as? LocalVideoTrack
                 cameraTrack?.switchCamera(position = if (facing == "front") CameraPosition.FRONT else CameraPosition.BACK)
+                // Ambient camera audio should preserve quiet environmental sounds.
+                // Disable voice-call noise/echo filtering while keeping automatic gain control.
+                // This avoids suppressing room ambience and audio coming from the child's speaker.
+                activeRoom.audioTrackCaptureDefaults = LocalAudioTrackOptions(
+                    noiseSuppression = false,
+                    echoCancellation = false,
+                    autoGainControl = true,
+                    highPassFilter = false,
+                    typingNoiseDetection = false
+                )
                 val audioEnabled = if (hasCameraAudioConsent()) {
                     try { activeRoom.localParticipant.setMicrophoneEnabled(true) } catch (_: Exception) { false }
                 } else {
