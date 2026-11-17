@@ -312,7 +312,12 @@ export default {
         const childFcmToken = fields.childFcmToken?.stringValue;
         if (!childFcmToken) return jsonResponse({ error: "Child device has not registered for notifications" }, 409);
         const action = body.action || "start";
-        const commands = { start: "AUDIO_START", stop: "AUDIO_STOP" };
+        const commands = {
+          start: "AUDIO_START",
+          stop: "AUDIO_STOP",
+          talk_start: "TALK_START",
+          talk_stop: "TALK_STOP"
+        };
         const command = commands[action];
         if (!command) return jsonResponse({ error: "Invalid audio action" }, 400);
         const credentials = await getFcmAccessToken(env);
@@ -328,7 +333,10 @@ export default {
               message: {
                 token: childFcmToken,
                 data: { command, code, serverId: fields.audioLiveKitServerId?.stringValue || "main" },
-                android: { priority: "HIGH", ttl: "30s" }
+                android: {
+                  priority: action.startsWith("talk_") ? "HIGH" : "NORMAL",
+                  ttl: "30s"
+                }
               }
             })
           }
@@ -406,8 +414,12 @@ export default {
         });
       }
 
+      // A paired child receives publish permission only for the explicit
+      // conversation transport. The service keeps its microphone disabled until
+      // an authenticated parent sends TALK_START.
+      const canPublishAudio = isParent || (!isParent && body.mode === "conversation");
       const servers = await createLiveKitCandidates(
-        liveKitProjects, callerUid, roomBase, isParent
+        liveKitProjects, callerUid, roomBase, canPublishAudio
       );
       const primary = servers[0];
       return jsonResponse({
