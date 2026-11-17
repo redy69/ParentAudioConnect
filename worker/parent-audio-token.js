@@ -29,6 +29,40 @@ async function createLiveKitToken(env, uid, room, canPublish) {
   return unsigned + "." + base64url(new Uint8Array(signature));
 }
 
+
+function getLiveKitProjects(env) {
+  const projects = [];
+  const add = (id, key, secret, url) => {
+    if (typeof key === "string" && key && typeof secret === "string" && secret &&
+        typeof url === "string" && /^wss:\/\/[a-z0-9.-]+$/i.test(url)) {
+      projects.push({ id, apiKey: key, apiSecret: secret, url });
+    }
+  };
+  add("main", env.LIVEKIT_API_KEY, env.LIVEKIT_API_SECRET, env.LIVEKIT_URL);
+  for (let i = 2; i <= 5; i++) {
+    add("backup-" + i, env["LIVEKIT_BACKUP_" + i + "_API_KEY"],
+      env["LIVEKIT_BACKUP_" + i + "_API_SECRET"], env["LIVEKIT_BACKUP_" + i + "_URL"]);
+  }
+  return projects;
+}
+
+async function createLiveKitCandidates(projects, uid, room, canPublish) {
+  const candidates = [];
+  for (const project of projects) {
+    try {
+      const token = await createLiveKitToken(
+        { LIVEKIT_API_KEY: project.apiKey, LIVEKIT_API_SECRET: project.apiSecret },
+        uid, room, canPublish
+      );
+      candidates.push({ id: project.id, token, serverUrl: project.url });
+    } catch (_) {
+      // A misconfigured backup must not prevent other configured projects from working.
+    }
+  }
+  if (candidates.length === 0) throw new Error("No usable LiveKit project credentials");
+  return candidates;
+}
+
 async function authenticate(idToken, env) {
   if (typeof idToken !== "string" || idToken.length < 100 || !env.FIREBASE_WEB_API_KEY) return null;
   const response = await fetch(
@@ -90,13 +124,39 @@ async function getFcmAccessToken(env) {
   return { accessToken: result.access_token, projectId: account.project_id };
 }
 
+
+async function sendCameraRequest(env, fcmToken, code, requestId, command, facing, serverId) {
+  const credentials = await getFcmAccessToken(env);
+  const response = await fetch(
+    "https://fcm.googleapis.com/v1/projects/" + encodeURIComponent(credentials.projectId) + "/messages:send",
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + credentials.accessToken,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: {
+          token: fcmToken,
+          data: { command, code, requestId, facing, serverId: serverId || "main" },
+          android: { priority: "HIGH", ttl: "30s" }
+        }
+      })
+    }
+  );
+  if (!response.ok) throw new Error("FCM rejected camera request");
+  return await response.json();
+}
+
 export default {
   async fetch(request, env) {
     try {
       if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
       const url = new URL(request.url);
       if (url.pathname !== "/token" && url.pathname !== "/register-device" &&
-          url.pathname !== "/camera-lab/token" && url.pathname !== "/request-audio") {
+          url.pathname !== "/camera-lab/token" && url.pathname !== "/request-audio" &&
+          url.pathname !== "/camera-token" && url.pathname !== "/request-camera" &&
+          url.pathname !== "/select-server") {
         return jsonResponse({ error: "Not found" }, 404);
       }
 
@@ -144,6 +204,25 @@ export default {
         return jsonResponse({ registered: true, role: callerUid === parentUid ? "parent" : "child" });
       }
 
+
+      if (url.pathname === "/select-server") {
+        if (callerUid !== parentUid) return jsonResponse({ error: "Only the parent can select a LiveKit server" }, 403);
+        const kind = body.kind === "camera" ? "camera" : body.kind === "audio" ? "audio" : null;
+        const serverId = String(body.serverId || "");
+        const projects = getLiveKitProjects(env);
+        if (!kind || !projects.some(project => project.id === serverId)) {
+          return jsonResponse({ error: "Invalid LiveKit server selection" }, 400);
+        }
+        const field = kind === "camera" ? "cameraLiveKitServerId" : "audioLiveKitServerId";
+        const saved = await fetch(pairingUrl(code, "pairings") + "?updateMask.fieldPaths=" + field, {
+          method: "PATCH",
+          headers: { Authorization: "Bearer " + body.idToken, "Content-Type": "application/json" },
+          body: JSON.stringify({ fields: { [field]: { stringValue: serverId } } })
+        });
+        if (!saved.ok) return jsonResponse({ error: "Could not save LiveKit server selection" }, 403);
+        return jsonResponse({ saved: true, kind, serverId });
+      }
+
       if (url.pathname === "/request-audio") {
         if (callerUid !== parentUid) return jsonResponse({ error: "Only the parent can control remote audio" }, 403);
         const childFcmToken = fields.childFcmToken?.stringValue;
@@ -174,15 +253,73 @@ export default {
         return jsonResponse({ sent: true, action });
       }
 
+
+      if (url.pathname === "/request-camera") {
+        if (callerUid !== parentUid) return jsonResponse({ error: "Only the parent can request the camera" }, 403);
+        const childFcmToken = fields.childFcmToken?.stringValue;
+        if (!childFcmToken) return jsonResponse({ error: "Child device has not registered for notifications" }, 409);
+        if (typeof body.requestId !== "string" || !/^[A-Za-z0-9_-]{8,80}$/.test(body.requestId)) {
+          return jsonResponse({ error: "Invalid request ID" }, 400);
+        }
+        const action = body.action || "start";
+        const commands = { start: "CAMERA_START", switch: "CAMERA_SWITCH", stop: "CAMERA_STOP" };
+        const command = commands[action];
+        if (!command) return jsonResponse({ error: "Invalid camera action" }, 400);
+        const facing = body.facing === "front" ? "front" : "back";
+        await sendCameraRequest(env, childFcmToken, code, body.requestId, command, facing,
+          fields.cameraLiveKitServerId?.stringValue || "main");
+        return jsonResponse({ sent: true, requestId: body.requestId, action });
+      }
+
       if (!env.LIVEKIT_API_KEY || !env.LIVEKIT_API_SECRET || !env.LIVEKIT_URL) {
         return jsonResponse({ error: "Server configuration error" }, 500);
       }
       const digest = await crypto.subtle.digest("SHA-256", encoder.encode(code));
-      const room = "pair_" + Array.from(new Uint8Array(digest))
+      const roomBase = "pair_" + Array.from(new Uint8Array(digest))
         .map(byte => byte.toString(16).padStart(2, "0")).join("");
       const isParent = callerUid === parentUid;
-      const token = await createLiveKitToken(env, callerUid, room, isParent);
-      return jsonResponse({ token, serverUrl: env.LIVEKIT_URL, role: isParent ? "parent" : "child", expiresIn: 600 });
+
+      // Camera Lab remains isolated on its own collection and its existing room behavior.
+      if (url.pathname === "/camera-lab/token") {
+        const token = await createLiveKitToken(env, callerUid, roomBase, isParent);
+        return jsonResponse({ token, serverUrl: env.LIVEKIT_URL,
+          role: isParent ? "parent" : "child", expiresIn: 600 });
+      }
+
+      const projects = getLiveKitProjects(env);
+      if (projects.length === 0) return jsonResponse({ error: "No LiveKit server is configured" }, 500);
+      const kind = url.pathname === "/camera-token" ? "camera" : "audio";
+      const storedServerId = kind === "camera"
+        ? fields.cameraLiveKitServerId?.stringValue
+        : fields.audioLiveKitServerId?.stringValue;
+      const requestedServerId = String(body.preferredServerId || "");
+      const allowedServerIds = ["main", "backup-2", "backup-3", "backup-4", "backup-5"];
+      if (storedServerId && !allowedServerIds.includes(storedServerId)) {
+        return jsonResponse({ error: "Stored LiveKit server selection is invalid; parent must select a server again" }, 409);
+      }
+      if (requestedServerId && !allowedServerIds.includes(requestedServerId)) {
+        return jsonResponse({ error: "Requested LiveKit server selection is invalid" }, 400);
+      }
+      if (storedServerId && requestedServerId && storedServerId !== requestedServerId) {
+        return jsonResponse({ error: "Requested server does not match the paired device selection" }, 409);
+      }
+      const preferredServerId = requestedServerId || storedServerId || "";
+      if (preferredServerId) {
+        const exact = projects.filter(project => project.id === preferredServerId);
+        if (exact.length === 0) {
+          return jsonResponse({ error: "Selected LiveKit server is not configured; parent must choose an available server" }, 409);
+        }
+        projects.splice(0, projects.length, ...exact);
+      }
+
+      const room = kind === "camera" ? roomBase + "_camera" : roomBase;
+      const canPublish = kind === "camera" ? !isParent : isParent;
+      const servers = await createLiveKitCandidates(projects, callerUid, room, canPublish);
+      const primary = servers[0];
+      return jsonResponse({
+        token: primary.token, serverUrl: primary.serverUrl, serverId: primary.id,
+        preferredServerId, servers, role: isParent ? "parent" : "child", expiresIn: 600
+      });
     } catch (error) {
       return jsonResponse({ error: "Internal server error" }, 500);
     }
