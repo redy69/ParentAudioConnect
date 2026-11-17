@@ -100,7 +100,7 @@
         <service
             android:name=".ChildAudioConnectionService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+            android:foregroundServiceType="connectedDevice|microphone" />
 
         <receiver
             android:name=".BootReceiver"
