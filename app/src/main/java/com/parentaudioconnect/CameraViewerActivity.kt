@@ -81,12 +81,12 @@ class CameraViewerActivity : Activity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.rgb(240, 244, 255))
+            setBackgroundColor(Color.rgb(239, 247, 241))
             setPadding(dp(12), dp(12), dp(12), dp(12))
         }
         status = TextView(this).apply {
             text = "Menghubungkan kamera anak…"
-            setTextColor(Color.rgb(32, 54, 83))
+            setTextColor(Color.rgb(39, 77, 57))
             textSize = 13.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.025f
@@ -96,10 +96,10 @@ class CameraViewerActivity : Activity() {
             setPadding(dp(12), dp(10), dp(12), dp(10))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.rgb(255, 255, 255), Color.rgb(241, 246, 255))
+                intArrayOf(Color.rgb(255, 255, 255), Color.rgb(244, 250, 245))
             ).apply {
                 cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.rgb(201, 216, 240))
+                setStroke(dp(1), Color.rgb(198, 220, 203))
             }
         }
         renderer = SurfaceViewRenderer(this)
@@ -113,16 +113,16 @@ class CameraViewerActivity : Activity() {
 
             cameraFacingLabel = TextView(this@CameraViewerActivity).apply {
                 text = "KAMERA BELAKANG"
-                setTextColor(Color.rgb(32, 54, 83))
+                setTextColor(Color.rgb(39, 77, 57))
                 textSize = 10.5f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 letterSpacing = 0.06f
                 includeFontPadding = false
                 setPadding(dp(4), dp(8), dp(4), dp(8))
                 background = GradientDrawable().apply {
-                    setColor(Color.argb(235, 247, 250, 255))
+                    setColor(Color.argb(238, 249, 241, 248))
                     cornerRadius = dp(10).toFloat()
-                    setStroke(dp(1), Color.rgb(190, 210, 238))
+                    setStroke(dp(1), Color.rgb(190, 216, 197))
                 }
             }
             addView(cameraFacingLabel, FrameLayout.LayoutParams(
@@ -136,19 +136,19 @@ class CameraViewerActivity : Activity() {
                 gravity = Gravity.END
                 setPadding(dp(10), dp(8), dp(10), dp(8))
                 background = GradientDrawable().apply {
-                    setColor(Color.argb(235, 247, 250, 255))
+                    setColor(Color.argb(238, 249, 241, 248))
                     cornerRadius = dp(10).toFloat()
-                    setStroke(dp(1), Color.rgb(190, 210, 238))
+                    setStroke(dp(1), Color.rgb(190, 216, 197))
                 }
                 addView(TextView(this@CameraViewerActivity).apply {
                     text = "Camera by:"
-                    setTextColor(Color.rgb(96, 115, 140))
+                    setTextColor(Color.rgb(104, 132, 111))
                     textSize = 9f
                     includeFontPadding = false
                 })
                 addView(TextView(this@CameraViewerActivity).apply {
                     text = "lim45ekawan"
-                    setTextColor(Color.rgb(53, 91, 190))
+                    setTextColor(Color.rgb(48, 111, 77))
                     textSize = 11f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                     includeFontPadding = false
@@ -164,22 +164,22 @@ class CameraViewerActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
-        val switch = createCameraControl("BELAKANG", Color.rgb(20, 116, 91))
+        val switch = createCameraControl("BELAKANG", Color.rgb(74, 137, 99))
         switch.setOnClickListener {
             facing = if (facing == "back") "front" else "back"
             cameraFacingLabel.text = if (facing == "front") "KAMERA DEPAN" else "KAMERA BELAKANG"
             switch.text = if (facing == "front") "DEPAN" else "BELAKANG"
             switch.background = cameraControlBackground(
-                if (facing == "front") Color.rgb(31, 139, 103) else Color.rgb(20, 116, 91)
+                if (facing == "front") Color.rgb(91, 157, 116) else Color.rgb(74, 137, 99)
             )
             sendCameraCommand("switch", facing, closeAfter = false)
         }
-        audioToggle = createCameraControl("🔊 SUARA ON", Color.rgb(20, 122, 78))
+        audioToggle = createCameraControl("🔊 SUARA ON", Color.rgb(78, 145, 101))
         audioToggle.setOnClickListener {
             audioMuted = !audioMuted
             updateRemoteAudioOutput()
         }
-        val stop = createCameraControl("HENTIKAN", Color.rgb(190, 42, 52))
+        val stop = createCameraControl("HENTIKAN", Color.rgb(177, 100, 103))
         stop.setOnClickListener { confirmStopCamera() }
         val controlParams = LinearLayout.LayoutParams(0, dp(50), 1f)
         controls.addView(switch, LinearLayout.LayoutParams(controlParams).apply {
@@ -341,9 +341,9 @@ class CameraViewerActivity : Activity() {
             .create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
-                .setTextColor(Color.rgb(30, 105, 76))
+                .setTextColor(Color.rgb(55, 119, 78))
             dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-                .setTextColor(Color.rgb(176, 47, 60))
+                .setTextColor(Color.rgb(166, 91, 94))
         }
         dialog.show()
     }
@@ -408,7 +408,7 @@ class CameraViewerActivity : Activity() {
         }
         audioToggle.text = if (audioMuted) "🔇 MUTE" else "🔊 SUARA ON"
         audioToggle.background = cameraControlBackground(
-            if (audioMuted) Color.rgb(190, 42, 52) else Color.rgb(20, 122, 78)
+            if (audioMuted) Color.rgb(177, 100, 103) else Color.rgb(78, 145, 101)
         )
     }
 
