@@ -7235,9 +7235,9 @@ private var receivedMp3File: File? = null
         ParentDriveBackupMediaGate.resume(this, ParentDriveBackupMediaGate.REASON_AUDIO_LIVE)
         parentDriveBackupPausedForAudioLive = false
         statusText.text = message
-        requestRemoteAudio(code, "stop") { sent, error ->
+        requestRemoteAudio(code, "talk_stop") { sent, error ->
             if (!sent) {
-                statusText.text = "$message • perintah berhenti ke HP anak belum terkirim: ${error ?: "koneksi"}"
+                statusText.text = "$message • perintah mematikan mikrofon anak belum terkirim: ${error ?: "koneksi"}"
             }
         }
     }
