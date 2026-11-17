@@ -213,6 +213,8 @@ private lateinit var playMp3Button: Button
     private var parentConversationMuted = false
     private var pendingConversationMicPermission = false
     private var conversationChildAudioTrackActive = false
+    private var conversationStartInFlight = false
+    private var conversationStartGeneration = 0L
     private var activeConversationCode: String? = null
     private var conversationRoomEventsJob: kotlinx.coroutines.Job? = null
     private var childTalkPermissionRequestInFlight = false
@@ -7381,14 +7383,11 @@ private var receivedMp3File: File? = null
 
     private fun startLiveConversation() {
         if (currentRole != "parent") return
+        if (isConversationActive || conversationStartInFlight) return
         val code = selectedChildCode
         if (code.isNullOrBlank() || childConnected[code] != true) {
             renderLiveConversationPage("Pilih HP anak yang sudah terhubung terlebih dahulu")
             statusText.text = "Pilih HP anak yang sudah terhubung terlebih dahulu"
-            return
-        }
-        if (isConversationActive) {
-            renderLiveConversationPage()
             return
         }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) !=
@@ -7400,32 +7399,47 @@ private var receivedMp3File: File? = null
             return
         }
 
+        conversationStartInFlight = true
+        val generation = ++conversationStartGeneration
         activeConversationCode = code
         conversationChildAudioTrackActive = false
         renderLiveConversationPage("Menghubungkan ruang percakapan…")
-        val continueOnRoom = {
+
+        val continueOnRoom: () -> Unit = continueOnRoom@{
+            if (generation != conversationStartGeneration) return@continueOnRoom
             val serverId = activeLiveKitServerId
             if (serverId.isNullOrBlank()) {
+                conversationStartInFlight = false
                 renderLiveConversationPage("Server audio belum siap • coba lagi")
             } else {
                 selectLiveKitServer(code, "audio", serverId) { saved, saveError ->
+                    if (generation != conversationStartGeneration) return@selectLiveKitServer
                     if (!saved) {
+                        conversationStartInFlight = false
                         renderLiveConversationPage("Gagal menyamakan server: ${saveError ?: "coba lagi"}")
                     } else {
                         renderLiveConversationPage("Memanggil HP anak…")
                         requestRemoteAudio(code, "talk_start") { sent, error ->
+                            if (generation != conversationStartGeneration) {
+                                if (sent) requestRemoteAudio(code, "talk_stop") { _, _ -> }
+                                return@requestRemoteAudio
+                            }
                             if (!sent) {
+                                conversationStartInFlight = false
                                 renderLiveConversationPage("Gagal memanggil HP anak: ${error ?: "periksa koneksi"}")
                                 return@requestRemoteAudio
                             }
                             activityScope.launch {
+                                if (generation != conversationStartGeneration) return@launch
                                 try {
                                     val enabled = room?.localParticipant?.setMicrophoneEnabled(true) ?: false
                                     if (!enabled) {
+                                        conversationStartInFlight = false
                                         requestRemoteAudio(code, "talk_stop") { _, _ -> }
                                         renderLiveConversationPage("Mikrofon ortu gagal diaktifkan")
                                         return@launch
                                     }
+                                    conversationStartInFlight = false
                                     isConversationActive = true
                                     isMicrophoneActive = true
                                     parentConversationMuted = false
@@ -7440,6 +7454,7 @@ private var receivedMp3File: File? = null
                                     statusText.text = "Percakapan langsung sedang disiapkan"
                                     renderLiveConversationPage("Perintah terkirim • menunggu suara HP anak…")
                                 } catch (error: Exception) {
+                                    conversationStartInFlight = false
                                     requestRemoteAudio(code, "talk_stop") { _, _ -> }
                                     renderLiveConversationPage("Gagal mengaktifkan mikrofon ortu")
                                 }
@@ -7457,7 +7472,10 @@ private var receivedMp3File: File? = null
                 code,
                 onConnected = { continueOnRoom() },
                 onFailure = { error ->
-                    renderLiveConversationPage("Koneksi audio gagal: $error")
+                    if (generation == conversationStartGeneration) {
+                        conversationStartInFlight = false
+                        renderLiveConversationPage("Koneksi audio gagal: $error")
+                    }
                 }
             )
         }
@@ -7487,6 +7505,8 @@ private var receivedMp3File: File? = null
     }
 
     private fun endLiveConversation() {
+        conversationStartGeneration++
+        conversationStartInFlight = false
         val code = activeConversationCode ?: selectedChildCode
         activityScope.launch {
             try {
