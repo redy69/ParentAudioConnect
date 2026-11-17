@@ -8,6 +8,9 @@ import android.app.Service
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.content.pm.ServiceInfo
+import android.content.pm.PackageManager
+import android.Manifest
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.firebase.auth.FirebaseAuth
@@ -49,8 +52,16 @@ class ChildAudioConnectionService : Service() {
 
     companion object {
         const val ACTION_CONNECT = "com.parentaudioconnect.action.CONNECT_CHILD_AUDIO"
+        const val ACTION_PREPARE = "com.parentaudioconnect.action.PREPARE_CHILD_CONVERSATION"
         const val ACTION_DISCONNECT = "com.parentaudioconnect.action.DISCONNECT_CHILD_AUDIO"
         const val EXTRA_SERVER_ID = "livekit_server_id"
+
+        @Volatile private var runningInstance: ChildAudioConnectionService? = null
+
+        fun deliverTalkCommand(enabled: Boolean, serverId: String?): Boolean {
+            val service = runningInstance ?: return false
+            return service.requestTalkMicrophone(enabled, serverId)
+        }
         private const val CHANNEL_ID = "child_audio_connection"
         private const val NOTIFICATION_ID = 4201
         private const val WORKER_URL = "https://parent-audio-token.yudhis-r15.workers.dev/token"
@@ -66,29 +77,72 @@ class ChildAudioConnectionService : Service() {
     private var pairingRemovalListener: ListenerRegistration? = null
     @Volatile private var connecting = false
     @Volatile private var preferredServerId: String? = null
+    @Volatile private var micForegroundPrepared = false
+    @Volatile private var pendingTalkMicEnabled: Boolean? = null
+    @Volatile private var childTalkMicActive = false
+    @Volatile private var connectedServerId: String? = null
+    private var serverSwitchJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
+        runningInstance = this
         createNotificationChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_DISCONNECT) {
-            updateNotification("Menghentikan koneksi audio…")
+            serviceScope.launch {
+                try { room?.localParticipant?.setMicrophoneEnabled(false) } catch (_: Exception) { }
+                childTalkMicActive = false
+                updateNotification("Menghentikan koneksi audio…")
+                stopSelf(startId)
+            }
+            return START_NOT_STICKY
+        }
+        val action = intent?.action
+        if (action != null && action !in setOf(ACTION_CONNECT, ACTION_PREPARE)) {
+            return START_NOT_STICKY
+        }
+
+        val prepareMicrophone = action == ACTION_PREPARE
+        if (prepareMicrophone &&
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                this, Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.w("SantetHP-Audio", "Conversation preparation skipped: RECORD_AUDIO not granted")
             stopSelf(startId)
             return START_NOT_STICKY
         }
-        if (intent?.action != null && intent.action != ACTION_CONNECT) {
-            return START_NOT_STICKY
-        }
+
         preferredServerId = intent?.getStringExtra(EXTRA_SERVER_ID)?.takeIf { it.isNotBlank() }
-        startForeground(NOTIFICATION_ID, notification("Mengaktifkan koneksi audio…"))
+            ?: preferredServerId
+
+        val foregroundTypes = if (prepareMicrophone || micForegroundPrepared) {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+        } else {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification(if (prepareMicrophone) "Menyiapkan percakapan • mikrofon belum aktif" else "Mengaktifkan koneksi audio…"),
+                foregroundTypes
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, notification("Mengaktifkan koneksi audio…"))
+        }
+        if (prepareMicrophone) micForegroundPrepared = true
+
         watchForPairingRemoval()
         if (!connecting && room == null) {
             connecting = true
             serviceScope.launch { connectWithRetry() }
         }
-        return START_STICKY
+        // Do not ask Android to recreate a microphone foreground service from the
+        // background after process death. Opening SantetHP prepares it again visibly.
+        return START_NOT_STICKY
     }
 
     private fun watchForPairingRemoval() {
@@ -154,7 +208,7 @@ class ChildAudioConnectionService : Service() {
                     }
 
                     connectionStage = "Menghubungkan LiveKit"
-                    val newRoom = LiveKitFailover.connect(
+                    val liveKitConnection = LiveKitFailover.connectWithServer(
                         response = response,
                         createRoom = {
                             LiveKit.create(
@@ -254,6 +308,8 @@ class ChildAudioConnectionService : Service() {
     
                         }
                     )
+                    val newRoom = liveKitConnection.room
+                    connectedServerId = liveKitConnection.serverId
                     if (room !== newRoom) {
                         // A disconnect may arrive immediately after connect() succeeds.
                         try { newRoom.disconnect() } catch (_: Exception) { }
@@ -288,7 +344,13 @@ class ChildAudioConnectionService : Service() {
                             }
                         }
                     )
-                    updateNotification("Terhubung • audio live dan MP3 aktif • mikrofon mati")
+                    updateNotification(
+                        if (micForegroundPrepared) "Siap menerima percakapan • mikrofon anak mati • MP3 aktif"
+                        else "Terhubung • audio live dan MP3 aktif • mikrofon mati"
+                    )
+                    if (pendingTalkMicEnabled == true) {
+                        serviceScope.launch { applyTalkMicrophoneState(true) }
+                    }
                     return
                 } catch (error: CancellationException) {
                     throw error
@@ -358,6 +420,81 @@ class ChildAudioConnectionService : Service() {
         }
     }
 
+    private fun requestTalkMicrophone(enabled: Boolean, serverId: String?): Boolean {
+        if (!micForegroundPrepared ||
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                this, Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) return false
+
+        pendingTalkMicEnabled = enabled
+        if (enabled && !serverId.isNullOrBlank() && connectedServerId != serverId) {
+            preferredServerId = serverId
+            reconnectForConversationServer(serverId)
+        } else {
+            serviceScope.launch { applyTalkMicrophoneState(enabled) }
+        }
+        return true
+    }
+
+    private fun reconnectForConversationServer(serverId: String) {
+        if (serverSwitchJob?.isActive == true) return
+        serverSwitchJob = serviceScope.launch {
+            while (connecting && isActive) delay(250)
+            if (!isActive) return@launch
+            val activeRoom = room
+            if (activeRoom != null && connectedServerId != serverId) {
+                try { activeRoom.localParticipant.setMicrophoneEnabled(false) } catch (_: Exception) { }
+                childTalkMicActive = false
+                roomEventsJob?.cancel()
+                roomEventsJob = null
+                mp3TransferManager = null
+                room = null
+                try { activeRoom.disconnect() } catch (_: Exception) { }
+                try { activeRoom.release() } catch (_: Exception) { }
+                connectedServerId = null
+            }
+            if (room == null && !connecting && isActive) {
+                connecting = true
+                connectWithRetry()
+            } else if (room != null && isActive) {
+                applyTalkMicrophoneState(true)
+            }
+        }
+    }
+
+    private suspend fun applyTalkMicrophoneState(enabled: Boolean) {
+        val activeRoom = room
+        if (activeRoom == null) {
+            pendingTalkMicEnabled = enabled
+            updateNotification(
+                if (enabled) "Menyiapkan ruang percakapan • mikrofon belum aktif"
+                else "Mikrofon anak mati • menunggu orang tua"
+            )
+            return
+        }
+        try {
+            val changed = activeRoom.localParticipant.setMicrophoneEnabled(enabled)
+            if (!changed) {
+                updateNotification("Gagal mengubah mikrofon percakapan")
+                return
+            }
+            childTalkMicActive = enabled
+            pendingTalkMicEnabled = null
+            val audioActive = enabled || activeRemoteAudioTrackIds.isNotEmpty()
+            ChildAudioActivityReporter.setLiveAudioActive(applicationContext, audioActive)
+            if (audioActive) startLiveAudioHeartbeat() else stopLiveAudioHeartbeat()
+            updateNotification(
+                if (enabled) "Percakapan aktif • mikrofon anak menyala"
+                else if (activeRemoteAudioTrackIds.isNotEmpty()) "Suara orang tua aktif • mikrofon anak mati"
+                else "Siap • mikrofon anak mati • MP3 tetap terhubung"
+            )
+        } catch (error: Exception) {
+            Log.w("SantetHP-Audio", "Could not change child conversation microphone", error)
+            updateNotification("Gagal mengaktifkan mikrofon percakapan")
+        }
+    }
+
     /** Keep LiveKit listener output at maximum on the Android media stream. */
     private fun maximizeMediaVolume() {
         val audioManager = getSystemService(android.media.AudioManager::class.java)
@@ -397,6 +534,7 @@ class ChildAudioConnectionService : Service() {
             val body = JSONObject().apply {
                 put("idToken", idToken)
                 put("code", code)
+                put("mode", "conversation")
                 if (!preferredServerId.isNullOrBlank()) put("preferredServerId", preferredServerId)
             }
             connection.outputStream.use {
@@ -459,6 +597,12 @@ class ChildAudioConnectionService : Service() {
         pairingRemovalListener = null
         reconnectJob?.cancel()
         reconnectJob = null
+        serverSwitchJob?.cancel()
+        serverSwitchJob = null
+        micForegroundPrepared = false
+        childTalkMicActive = false
+        pendingTalkMicEnabled = null
+        if (runningInstance === this) runningInstance = null
         roomEventsJob?.cancel()
         roomEventsJob = null
         activeRemoteAudioTrackIds.clear()
