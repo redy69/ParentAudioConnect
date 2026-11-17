@@ -128,6 +128,20 @@ class ParentAudioMessagingService : FirebaseMessagingService() {
         val isChild = prefs.getString("pair_role", null) == "child"
         val isArmed = prefs.getBoolean("remote_camera_armed", false)
 
+        if (command in setOf("TALK_START", "TALK_STOP") &&
+            isChild && !code.isNullOrBlank() && code == savedCode
+        ) {
+            val enableMicrophone = command == "TALK_START"
+            val delivered = ChildAudioConnectionService.deliverTalkCommand(
+                enableMicrophone, message.data["serverId"]
+            )
+            if (!delivered && enableMicrophone) {
+                showTalkPreparationNotification()
+            }
+            Log.i(TAG, "Remote conversation command: $command, prepared=$delivered")
+            return
+        }
+
         if (command in setOf("AUDIO_START", "AUDIO_STOP") &&
             isChild && !code.isNullOrBlank() && code == savedCode
         ) {
@@ -181,6 +195,40 @@ class ParentAudioMessagingService : FirebaseMessagingService() {
         }
     }
 
+    private fun showTalkPreparationNotification() {
+        val manager = getSystemService(NotificationManager::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    TALK_CHANNEL,
+                    "Persiapan percakapan langsung",
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply {
+                    description = "Petunjuk untuk menyiapkan mikrofon percakapan di perangkat anak"
+                }
+            )
+        }
+        val openApp = PendingIntent.getActivity(
+            this, 4202, android.content.Intent(this, MainActivity::class.java)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = NotificationCompat.Builder(this, TALK_CHANNEL)
+            .setSmallIcon(android.R.drawable.ic_lock_silent_mode_off)
+            .setContentTitle("SantetHP • Percakapan belum siap")
+            .setContentText("Buka SantetHP untuk menyiapkan layanan percakapan dan izin mikrofon.")
+            .setStyle(
+                NotificationCompat.BigTextStyle().bigText(
+                    "Buka SantetHP di perangkat anak untuk menyiapkan percakapan. Mikrofon hanya aktif ketika orang tua memulai percakapan dan akan mati saat percakapan diakhiri."
+                )
+            )
+            .setContentIntent(openApp)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+        manager.notify(TALK_NOTIFICATION_ID, notification)
+    }
+
     private fun showSafeZoneNotification(eventId: String, zoneName: String, transition: String) {
         val manager = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -215,6 +263,8 @@ class ParentAudioMessagingService : FirebaseMessagingService() {
     companion object {
         private const val TAG = "ParentAudioFCM"
         private const val SAFE_ZONE_CHANNEL = "santethp_safe_zone_events"
+        private const val TALK_CHANNEL = "santethp_talk_setup"
+        private const val TALK_NOTIFICATION_ID = 4202
         private const val REGISTER_URL =
             "https://parent-audio-token.yudhis-r15.workers.dev/register-device"
         private val networkExecutor = Executors.newSingleThreadExecutor()
