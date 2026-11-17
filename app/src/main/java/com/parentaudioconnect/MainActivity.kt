@@ -7275,7 +7275,7 @@ private var receivedMp3File: File? = null
             return
         }
         statusText.text = "Menyiapkan $serverLabel..."
-        requestRemoteAudio(code, "stop") { stopped, stopError ->
+        requestRemoteAudio(code, "talk_stop") { stopped, stopError ->
             if (!stopped) {
                 statusText.text = "Belum bisa menghentikan koneksi HP anak: ${stopError ?: "coba lagi"}"
                 return@requestRemoteAudio
