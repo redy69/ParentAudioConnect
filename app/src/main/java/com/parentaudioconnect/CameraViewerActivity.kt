@@ -3,6 +3,8 @@ package com.santethp
 import android.app.Activity
 import android.app.AlertDialog
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -54,7 +56,13 @@ class CameraViewerActivity : Activity() {
     private var code: String = ""
     private var facing = "back"
     private var stopping = false
-    private var backupPauseAcquired = false
+    private val backupPauseHandler = Handler(Looper.getMainLooper())
+    private val backupPauseHeartbeat = object : Runnable {
+        override fun run() {
+            ParentDriveBackupMediaGate.pause(this@CameraViewerActivity, ParentDriveBackupMediaGate.REASON_CAMERA_LIVE)
+            backupPauseHandler.postDelayed(this, 30_000L)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,9 +71,8 @@ class CameraViewerActivity : Activity() {
             finish()
             return
         }
-        backupPauseAcquired = ParentDriveBackupMediaGate.pause(
-            this, ParentDriveBackupMediaGate.REASON_CAMERA_LIVE
-        )
+        ParentDriveBackupMediaGate.pause(this, ParentDriveBackupMediaGate.REASON_CAMERA_LIVE)
+        backupPauseHandler.postDelayed(backupPauseHeartbeat, 30_000L)
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -428,10 +435,8 @@ class CameraViewerActivity : Activity() {
                 try { activeRoom.disconnect() } finally { activeRoom.release() }
             }
         }
-        if (backupPauseAcquired) {
-            ParentDriveBackupMediaGate.resume(this, ParentDriveBackupMediaGate.REASON_CAMERA_LIVE)
-            backupPauseAcquired = false
-        }
+        backupPauseHandler.removeCallbacks(backupPauseHeartbeat)
+        ParentDriveBackupMediaGate.resume(this, ParentDriveBackupMediaGate.REASON_CAMERA_LIVE)
         super.onDestroy()
     }
 }

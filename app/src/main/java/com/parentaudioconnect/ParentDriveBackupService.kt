@@ -82,11 +82,11 @@ class ParentDriveBackupService : Service() {
             synchronized(mediaPauseReasons) {
                 mediaPauseReasons.remove(ParentDriveBackupMediaGate.REASON_CHILD_AUDIO)
             }
-            val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
-            val reasons = prefs.getStringSet("crash_diag_active_media", emptySet())
-                ?.toMutableSet() ?: mutableSetOf()
-            reasons.remove(ParentDriveBackupMediaGate.REASON_CHILD_AUDIO)
-            prefs.edit().putStringSet("crash_diag_active_media", reasons).apply()
+            ParentDriveBackupMediaGate.recordPauseReason(
+                this@ParentDriveBackupService,
+                ParentDriveBackupMediaGate.REASON_CHILD_AUDIO,
+                false
+            )
             updateStatus("Aktivitas audio anak tidak lagi terdeteksi • memeriksa backup")
             if (!isMediaPaused()) resumeBackupAfterMedia()
         }
@@ -112,10 +112,25 @@ class ParentDriveBackupService : Service() {
     private fun isMediaPaused(): Boolean =
         synchronized(mediaPauseReasons) { mediaPauseReasons.isNotEmpty() }
 
+    private fun reloadMediaPauseReasons() {
+        val loaded = ParentDriveBackupMediaGate.activePauseReasons(this)
+        synchronized(mediaPauseReasons) {
+            mediaPauseReasons.clear()
+            mediaPauseReasons.putAll(loaded)
+        }
+        reconnectHandler.removeCallbacks(childAudioPauseTimeoutRunnable)
+        loaded[ParentDriveBackupMediaGate.REASON_CHILD_AUDIO]?.let { lastActiveAt ->
+            val remaining = (CHILD_AUDIO_PAUSE_TIMEOUT_MS - (System.currentTimeMillis() - lastActiveAt))
+                .coerceAtLeast(0L)
+            reconnectHandler.postDelayed(childAudioPauseTimeoutRunnable, remaining)
+        }
+    }
+
     private fun pauseForMedia(reasonValue: String) {
         val reason = reasonValue.trim().take(64).ifBlank {
             ParentDriveBackupMediaGate.REASON_PARENT_MEDIA_SEND
         }
+        ParentDriveBackupMediaGate.recordPauseReason(this, reason, true)
         val wasPaused = synchronized(mediaPauseReasons) {
             val alreadyPaused = mediaPauseReasons.isNotEmpty()
             mediaPauseReasons[reason] = System.currentTimeMillis()
@@ -136,6 +151,7 @@ class ParentDriveBackupService : Service() {
         val reason = reasonValue.trim().take(64).ifBlank {
             ParentDriveBackupMediaGate.REASON_PARENT_MEDIA_SEND
         }
+        ParentDriveBackupMediaGate.recordPauseReason(this, reason, false)
         val removed = synchronized(mediaPauseReasons) {
             mediaPauseReasons.remove(reason) != null
         }
@@ -318,6 +334,7 @@ class ParentDriveBackupService : Service() {
             .apply()
         startAsForeground("Menunggu koneksi HP anak untuk backup media baru")
         pairingCode = code
+        reloadMediaPauseReasons()
         listenForConsent(code)
         if (isMediaPaused()) {
             stopping = true

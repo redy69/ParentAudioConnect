@@ -4393,7 +4393,7 @@ private var receivedMp3File: File? = null
                 this, ParentDriveBackupMediaGate.REASON_CHILD_AUDIO
             )
             if (paused) parentDriveBackupPausedForChildAudio = true
-        } else if (parentDriveBackupPausedForChildAudio) {
+        } else {
             ParentDriveBackupMediaGate.resume(
                 this, ParentDriveBackupMediaGate.REASON_CHILD_AUDIO
             )
@@ -6899,7 +6899,7 @@ private var receivedMp3File: File? = null
                                                     ParentDriveBackupMediaGate.REASON_MP3_TRANSFER
                                                 )
                                         }
-                                    } else if (parentDriveBackupPausedForMp3Transfer) {
+                                    } else {
                                         ParentDriveBackupMediaGate.resume(
                                             this@MainActivity,
                                             ParentDriveBackupMediaGate.REASON_MP3_TRANSFER
@@ -7131,10 +7131,8 @@ private var receivedMp3File: File? = null
     }
 
     private fun stopRemoteAudioAfterSetupFailure(code: String, message: String) {
-        if (parentDriveBackupPausedForAudioLive) {
-            ParentDriveBackupMediaGate.resume(this, ParentDriveBackupMediaGate.REASON_AUDIO_LIVE)
-            parentDriveBackupPausedForAudioLive = false
-        }
+        ParentDriveBackupMediaGate.resume(this, ParentDriveBackupMediaGate.REASON_AUDIO_LIVE)
+        parentDriveBackupPausedForAudioLive = false
         statusText.text = message
         requestRemoteAudio(code, "stop") { sent, error ->
             if (!sent) {
@@ -7317,13 +7315,11 @@ private var receivedMp3File: File? = null
                 mp3TransferManager = null
                 isConnecting = false
                 isMicrophoneActive = false
-                if (parentDriveBackupPausedForAudioLive) {
-                    ParentDriveBackupMediaGate.resume(
-                        this@MainActivity,
-                        ParentDriveBackupMediaGate.REASON_AUDIO_LIVE
-                    )
-                    parentDriveBackupPausedForAudioLive = false
-                }
+                ParentDriveBackupMediaGate.resume(
+                    this@MainActivity,
+                    ParentDriveBackupMediaGate.REASON_AUDIO_LIVE
+                )
+                parentDriveBackupPausedForAudioLive = false
                 startButton.visibility = View.VISIBLE
                 stopButton.visibility = View.GONE
                 statusText.text = "Menghentikan Audio Live..."
@@ -7339,13 +7335,11 @@ private var receivedMp3File: File? = null
                     statusText.text = "Audio Live berhenti"
                 }
             } catch (_: Exception) {
-                if (parentDriveBackupPausedForAudioLive) {
-                    ParentDriveBackupMediaGate.resume(
-                        this@MainActivity,
-                        ParentDriveBackupMediaGate.REASON_AUDIO_LIVE
-                    )
-                    parentDriveBackupPausedForAudioLive = false
-                }
+                ParentDriveBackupMediaGate.resume(
+                    this@MainActivity,
+                    ParentDriveBackupMediaGate.REASON_AUDIO_LIVE
+                )
+                parentDriveBackupPausedForAudioLive = false
                 statusText.text = "Gagal menghentikan audio"
             }
         }
@@ -7581,14 +7575,10 @@ private fun playReceivedMp3() {
     override fun onDestroy() {
         stopChildPresenceRefresh()
         stopParentMediaTransfer()
-        if (parentDriveBackupPausedForAudioLive) {
-            ParentDriveBackupMediaGate.resume(this, ParentDriveBackupMediaGate.REASON_AUDIO_LIVE)
-            parentDriveBackupPausedForAudioLive = false
-        }
-        if (parentDriveBackupPausedForMp3Transfer) {
-            ParentDriveBackupMediaGate.resume(this, ParentDriveBackupMediaGate.REASON_MP3_TRANSFER)
-            parentDriveBackupPausedForMp3Transfer = false
-        }
+        ParentDriveBackupMediaGate.resume(this, ParentDriveBackupMediaGate.REASON_AUDIO_LIVE)
+        parentDriveBackupPausedForAudioLive = false
+        ParentDriveBackupMediaGate.resume(this, ParentDriveBackupMediaGate.REASON_MP3_TRANSFER)
+        parentDriveBackupPausedForMp3Transfer = false
         pairingListener?.remove()
         childListeners.values.forEach { it.remove() }
         childListeners.clear()
