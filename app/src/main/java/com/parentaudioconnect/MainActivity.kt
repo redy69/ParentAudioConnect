@@ -7297,10 +7297,16 @@ private var receivedMp3File: File? = null
                             statusText.text = "Gagal menyimpan server: ${saveError ?: "coba lagi"}"
                             return@selectLiveKitServer
                         }
-                        statusText.text = "$serverLabel tersimpan • menghubungkan HP orang tua..."
-                        connectToLiveKit(
-                            code,
-                            onConnected = {
+                        statusText.text = "$serverLabel tersimpan • menyamakan server HP anak..."
+                        requestRemoteAudio(code, "talk_stop") { childUpdated, childError ->
+                            if (!childUpdated) {
+                                statusText.text = "Server tersimpan, tetapi HP anak belum menerima pilihan server: ${childError ?: "koneksi"}"
+                                return@requestRemoteAudio
+                            }
+                            statusText.text = "$serverLabel tersimpan • menghubungkan HP orang tua..."
+                            connectToLiveKit(
+                                code,
+                                onConnected = {
                                 statusText.text = "$serverLabel siap • tekan BICARA LIVE untuk menguji"
                                 Toast.makeText(
                                     this@MainActivity,
@@ -7308,10 +7314,11 @@ private var receivedMp3File: File? = null
                                     Toast.LENGTH_LONG
                                 ).show()
                             },
-                            onFailure = { error ->
-                                statusText.text = "Gagal terhubung ke $serverLabel: $error"
-                            }
-                        )
+                                onFailure = { error ->
+                                    statusText.text = "Gagal terhubung ke $serverLabel: $error"
+                                }
+                            )
+                        }
                     }
                 } catch (error: Exception) {
                     statusText.text = "Gagal menyiapkan server: ${error.localizedMessage ?: "kesalahan koneksi"}"
