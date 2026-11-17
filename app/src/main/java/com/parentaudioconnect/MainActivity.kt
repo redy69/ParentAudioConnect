@@ -6961,7 +6961,52 @@ private var receivedMp3File: File? = null
                             throw kotlinx.coroutines.CancellationException("Pilihan perangkat berubah")
                         }
                         room = newRoom
-                        if (role == "parent") activeRoomCode = code
+                        if (role == "parent") {
+                            activeRoomCode = code
+                            conversationRoomEventsJob?.cancel()
+                            conversationRoomEventsJob = activityScope.launch {
+                                newRoom.events.collect { event ->
+                                    when (event) {
+                                        is RoomEvent.TrackSubscribed -> {
+                                            if (event.track is RemoteAudioTrack) {
+                                                conversationChildAudioTrackActive = true
+                                                renderLiveConversationPage()
+                                            }
+                                        }
+                                        is RoomEvent.TrackUnsubscribed -> {
+                                            if (event.track is RemoteAudioTrack) {
+                                                conversationChildAudioTrackActive = false
+                                                renderLiveConversationPage()
+                                            }
+                                        }
+                                        is RoomEvent.TrackMuted -> {
+                                            if (event.publication.kind == Track.Kind.AUDIO &&
+                                                event.publication.track is RemoteAudioTrack
+                                            ) {
+                                                conversationChildAudioTrackActive = false
+                                                renderLiveConversationPage()
+                                            }
+                                        }
+                                        is RoomEvent.TrackUnmuted -> {
+                                            if (event.publication.kind == Track.Kind.AUDIO &&
+                                                event.publication.track is RemoteAudioTrack
+                                            ) {
+                                                conversationChildAudioTrackActive = true
+                                                renderLiveConversationPage()
+                                            }
+                                        }
+                                        is RoomEvent.Disconnected -> {
+                                            conversationChildAudioTrackActive = false
+                                            renderLiveConversationPage(
+                                                if (isConversationActive) "Koneksi terputus • mencoba menyambungkan kembali"
+                                                else "Koneksi audio terputus"
+                                            )
+                                        }
+                                        else -> Unit
+                                    }
+                                }
+                            }
+                        }
                         mp3TransferManager = newTransferManager
 
                         if (role == "parent") {
@@ -7906,7 +7951,10 @@ private fun playReceivedMp3() {
         notificationUnreadListener = null
         notificationUnreadChildCode = null
 
+        conversationRoomEventsJob?.cancel()
+        conversationRoomEventsJob = null
         activityScope.launch {
+            room?.localParticipant?.setMicrophoneEnabled(false)
             room?.disconnect()
             room?.release()
             room = null
