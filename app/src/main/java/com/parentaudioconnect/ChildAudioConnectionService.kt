@@ -300,6 +300,18 @@ class ChildAudioConnectionService : Service() {
                                             // Keep the requested maximum volume after each audio session.
                                         }
                                     }
+                                    is RoomEvent.ParticipantDisconnected -> {
+                                        // In this one-parent/one-child room, losing the parent
+                                        // ends the authorized conversation. Never leave the
+                                        // child's microphone publishing after the parent leaves.
+                                        if (childTalkMicActive) {
+                                            pendingTalkMicEnabled = false
+                                            serviceScope.launch {
+                                                applyTalkMicrophoneState(false)
+                                                updateNotification("Orang tua terputus • mikrofon anak dimatikan")
+                                            }
+                                        }
+                                    }
                                     is RoomEvent.Disconnected -> {
                                         if (room === candidateRoom) {
                                             room = null
