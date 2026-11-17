@@ -7511,29 +7511,51 @@ private var receivedMp3File: File? = null
             prefs.getString("pair_code", null).isNullOrBlank()
         ) return
 
-        val granted = ContextCompat.checkSelfPermission(
+        val permissionGranted = ContextCompat.checkSelfPermission(
             this, Manifest.permission.RECORD_AUDIO
         ) == PackageManager.PERMISSION_GRANTED
-        if (!granted) {
+        val explicitConsent = prefs.getBoolean("child_talk_mic_consent", false)
+
+        // A previously granted microphone permission (for example, Live Camera)
+        // is not treated as consent to prepare the separate conversation feature.
+        if (!explicitConsent) {
             if (forcePrompt || !prefs.getBoolean("child_talk_mic_prompted", false)) {
                 prefs.edit().putBoolean("child_talk_mic_prompted", true).apply()
                 if (childTalkPermissionRequestInFlight) return
                 SantetHpDialogBuilder()
                     .setTitle("Siapkan Percakapan Langsung")
                     .setMessage(
-                        "SantetHP memerlukan izin mikrofon satu kali agar anak dapat membalas percakapan dari HP orang tua. Mikrofon hanya aktif saat orang tua memulai percakapan dan akan dimatikan saat percakapan diakhiri. Layanan akan menampilkan notifikasi selama siap menerima panggilan."
+                        "SantetHP memerlukan persetujuan untuk menyiapkan mikrofon agar anak dapat membalas percakapan dari HP orang tua. Mikrofon hanya aktif saat orang tua memulai percakapan dan akan dimatikan saat percakapan diakhiri. Notifikasi akan terlihat selama layanan siap menerima panggilan."
                     )
                     .setNegativeButton("NANTI", null)
-                    .setPositiveButton("IZINKAN") { _, _ ->
-                        childTalkPermissionRequestInFlight = true
-                        requestPermissions(
-                            arrayOf(Manifest.permission.RECORD_AUDIO),
-                            CHILD_TALK_MIC_PERMISSION
-                        )
+                    .setPositiveButton("SETUJU & LANJUTKAN") { _, _ ->
+                        if (permissionGranted) {
+                            prefs.edit().putBoolean("child_talk_mic_consent", true).apply()
+                            ensureChildConversationServiceReady()
+                        } else {
+                            childTalkPermissionRequestInFlight = true
+                            requestPermissions(
+                                arrayOf(Manifest.permission.RECORD_AUDIO),
+                                CHILD_TALK_MIC_PERMISSION
+                            )
+                        }
                     }
                     .show()
             } else {
-                statusText.text = "Percakapan langsung belum siap • ketuk kartu HP ANAK SIAP untuk mengatur izin mikrofon"
+                statusText.text = "Percakapan belum disiapkan • ketuk kartu HP ANAK SIAP untuk memberi persetujuan"
+            }
+            return
+        }
+
+        if (!permissionGranted) {
+            if (forcePrompt && !childTalkPermissionRequestInFlight) {
+                childTalkPermissionRequestInFlight = true
+                requestPermissions(
+                    arrayOf(Manifest.permission.RECORD_AUDIO),
+                    CHILD_TALK_MIC_PERMISSION
+                )
+            } else {
+                statusText.text = "Percakapan belum siap • izin mikrofon perlu diaktifkan kembali"
             }
             return
         }
