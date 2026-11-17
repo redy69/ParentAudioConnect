@@ -86,57 +86,26 @@ class MainActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            setPadding(dp(20), dp(24), dp(20), dp(20))
+            setPadding(dp(14), dp(18), dp(14), dp(12))
             setBackgroundColor(Color.rgb(7, 30, 24))
         }
+
         root.addView(TextView(this).apply {
             text = "SantetHP Camera Lab"
-            textSize = 25f
+            textSize = 23f
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
         }, matchWrap())
+
         root.addView(TextView(this).apply {
-            text = "Uji jalur media antar dua HP secara terpisah dari SantetHP utama."
-            textSize = 13f
+            text = "Uji video dan audio antar dua HP"
+            textSize = 12f
             setTextColor(Color.rgb(173, 205, 193))
             gravity = Gravity.CENTER
-            setPadding(0, dp(8), 0, dp(20))
+            setPadding(0, dp(4), 0, dp(10))
         }, matchWrap())
 
-        root.addView(sectionTitle("MODE PENGUJIAN"), matchWrap())
-        val cameraMode = actionButton("Live Camera + Audio")
-        val audioMode = actionButton("Audio Live saja")
-        root.addView(cameraMode, matchWrap(dp(8)))
-        root.addView(audioMode, matchWrap(dp(8)))
-        cameraMode.setOnClickListener { mode = Mode.CAMERA_AUDIO; showStatus("Mode kamera + mikrofon dipilih.") }
-        audioMode.setOnClickListener { mode = Mode.AUDIO_ONLY; showStatus("Mode audio saja dipilih.") }
-
-        root.addView(sectionTitle("PERAN HP INI"), matchWrap(dp(22)))
-        val sender = actionButton("KIRIM dari HP ini")
-        val viewer = actionButton("TERIMA di HP ini")
-        root.addView(sender, matchWrap(dp(8)))
-        root.addView(viewer, matchWrap(dp(8)))
-        sender.setOnClickListener { chooseRole(Role.SENDER) }
-        viewer.setOnClickListener { chooseRole(Role.VIEWER) }
-
-        codeInput = EditText(this).apply {
-            hint = "Masukkan kode 8 karakter dari HP pengirim"
-            textSize = 15f
-            setSingleLine(true)
-            setTextColor(Color.WHITE)
-            setHintTextColor(Color.LTGRAY)
-            setPadding(dp(12), dp(10), dp(12), dp(10))
-            setBackgroundColor(Color.rgb(24, 54, 44))
-        }
-        root.addView(codeInput, matchWrap(dp(12)))
-        val join = actionButton("GABUNG dengan kode")
-        root.addView(join, matchWrap(dp(8)))
-        join.setOnClickListener { claimAndConnect(codeInput.text.toString().trim().uppercase()) }
-
-        val stop = actionButton("HENTIKAN SESI")
-        root.addView(stop, matchWrap(dp(18)))
-        stop.setOnClickListener { stopSession() }
-
+        // Area video mengambil ruang utama layar; koneksi dan track LiveKit tetap sama.
         videoRenderer = SurfaceViewRenderer(this)
         val videoFrame = FrameLayout(this).apply {
             setBackgroundColor(Color.BLACK)
@@ -146,16 +115,66 @@ class MainActivity : Activity() {
         }
         root.addView(videoFrame, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
-        ).apply { topMargin = dp(16); bottomMargin = dp(12) })
+        ).apply {
+            topMargin = dp(4)
+            bottomMargin = dp(10)
+        })
+
+        val modeRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        val cameraMode = actionButton("Live Camera + Audio")
+        val audioMode = actionButton("Audio saja")
+        modeRow.addView(cameraMode, LinearLayout.LayoutParams(0, dp(46), 1f).apply { marginEnd = dp(5) })
+        modeRow.addView(audioMode, LinearLayout.LayoutParams(0, dp(46), 1f).apply { marginStart = dp(5) })
+        root.addView(modeRow, matchWrap())
+        cameraMode.setOnClickListener { mode = Mode.CAMERA_AUDIO; showStatus("Mode kamera + mikrofon dipilih.") }
+        audioMode.setOnClickListener { mode = Mode.AUDIO_ONLY; showStatus("Mode audio saja dipilih.") }
+
+        val roleRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        val sender = actionButton("KIRIM dari HP ini")
+        val viewer = actionButton("TERIMA di HP ini")
+        roleRow.addView(sender, LinearLayout.LayoutParams(0, dp(46), 1f).apply { marginEnd = dp(5); topMargin = dp(6) })
+        roleRow.addView(viewer, LinearLayout.LayoutParams(0, dp(46), 1f).apply { marginStart = dp(5); topMargin = dp(6) })
+        root.addView(roleRow, matchWrap())
+        sender.setOnClickListener { chooseRole(Role.SENDER) }
+        viewer.setOnClickListener { chooseRole(Role.VIEWER) }
+
+        codeInput = EditText(this).apply {
+            hint = "Kode 8 karakter dari HP pengirim"
+            textSize = 14f
+            setSingleLine(true)
+            setTextColor(Color.WHITE)
+            setHintTextColor(Color.LTGRAY)
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+            setBackgroundColor(Color.rgb(24, 54, 44))
+        }
+        root.addView(codeInput, matchWrap(dp(6)))
+
+        val actionRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        val join = actionButton("GABUNG")
+        val stop = actionButton("HENTIKAN SESI")
+        actionRow.addView(join, LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginEnd = dp(5) })
+        actionRow.addView(stop, LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginStart = dp(5) })
+        root.addView(actionRow, matchWrap(dp(5)))
+        join.setOnClickListener { claimAndConnect(codeInput.text.toString().trim().uppercase()) }
+        stop.setOnClickListener { stopSession() }
 
         status = TextView(this).apply {
             text = "Menyiapkan autentikasi…"
-            textSize = 13f
+            textSize = 12f
             setTextColor(Color.rgb(210, 229, 221))
             gravity = Gravity.CENTER
-            setPadding(dp(8), dp(10), dp(8), dp(8))
+            setPadding(dp(6), dp(6), dp(6), dp(2))
         }
-        root.addView(status, matchWrap())
+        root.addView(status, matchWrap(dp(4)))
         setContentView(root)
     }
 
