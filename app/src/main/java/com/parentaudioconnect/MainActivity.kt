@@ -6979,6 +6979,13 @@ private var receivedMp3File: File? = null
                                                 renderLiveConversationPage()
                                             }
                                         }
+                                        is RoomEvent.ParticipantDisconnected -> {
+                                            conversationChildAudioTrackActive = false
+                                            renderLiveConversationPage(
+                                                if (isConversationActive) "HP anak terputus • menunggu tersambung kembali"
+                                                else "HP anak terputus"
+                                            )
+                                        }
                                         is RoomEvent.TrackMuted -> {
                                             if (event.publication.kind == Track.Kind.AUDIO &&
                                                 event.publication.track is RemoteAudioTrack
