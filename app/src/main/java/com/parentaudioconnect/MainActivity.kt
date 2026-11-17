@@ -5231,8 +5231,8 @@ private var receivedMp3File: File? = null
                 setTextColor(Color.rgb(38, 119, 73))
                 contentDescription = "Muat ulang galeri"
                 setOnClickListener {
+                    clearParentGalleryThumbnailViews()
                     list.removeAllViews()
-                    parentGalleryRows.clear()
                     parentGalleryMediaItems.clear()
                     parentGalleryThumbQueue.clear()
                     parentGalleryThumbInFlight = null
@@ -5310,7 +5310,7 @@ private var receivedMp3File: File? = null
                             } catch (_: Exception) {
                                 // Keep the in-memory preview even if the local cache is full.
                             }
-                            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                            val bitmap = decodeGalleryThumbnail(bytes)
                             val image = parentGalleryRows[key]
                             if (bitmap != null) image?.setImageBitmap(bitmap)
                         }
@@ -5398,7 +5398,7 @@ private var receivedMp3File: File? = null
                             } catch (_: Exception) {
                                 // Keep the in-memory preview even if the local cache is full.
                             }
-                            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                            val bitmap = decodeGalleryThumbnail(bytes)
                             val image = parentGalleryRows[key]
                             if (bitmap != null) image?.setImageBitmap(bitmap)
                         }
@@ -5511,7 +5511,9 @@ private var receivedMp3File: File? = null
         parentGalleryPage?.parent === parentGalleryHost && parentGalleryPage?.visibility == View.VISIBLE
 
     private fun closeParentGalleryPage() {
+        clearParentGalleryThumbnailViews()
         parentGalleryPage?.let { page ->
+            page.removeAllViews()
             (page.parent as? ViewGroup)?.removeView(page)
         }
         parentGalleryHost = null
@@ -5552,7 +5554,7 @@ private var receivedMp3File: File? = null
             setBackgroundColor(Color.rgb(231, 241, 233))
             val cached = galleryThumbnailCacheFile(item.key)
             if (item.kind == "VIDEO") setImageResource(android.R.drawable.ic_media_play)
-            else if (cached.isFile) BitmapFactory.decodeFile(cached.absolutePath)?.let { setImageBitmap(it) }
+            else if (cached.isFile) decodeGalleryThumbnail(cached)?.let { setImageBitmap(it) }
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
         })
         preview.addView(TextView(this).apply {
@@ -5629,10 +5631,55 @@ private var receivedMp3File: File? = null
         }
     }
 
+    private fun galleryThumbnailDecodeOptions(width: Int, height: Int): BitmapFactory.Options {
+        var sampleSize = 1
+        val largestEdge = maxOf(width, height)
+        while (largestEdge / sampleSize > 144) sampleSize *= 2
+        return BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+            inPreferredConfig = Bitmap.Config.RGB_565
+            inDither = true
+        }
+    }
+
+    // Gallery tiles are small; decode a reduced RGB_565 bitmap instead of
+    // retaining full-size thumbnails for every item in the ScrollView.
+    private fun decodeGalleryThumbnail(bytes: ByteArray): Bitmap? {
+        if (bytes.isEmpty()) return null
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        return BitmapFactory.decodeByteArray(
+            bytes, 0, bytes.size,
+            galleryThumbnailDecodeOptions(bounds.outWidth, bounds.outHeight)
+        )
+    }
+
+    private fun decodeGalleryThumbnail(file: File): Bitmap? {
+        if (!file.isFile || file.length() <= 0L) return null
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.absolutePath, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        return BitmapFactory.decodeFile(
+            file.absolutePath,
+            galleryThumbnailDecodeOptions(bounds.outWidth, bounds.outHeight)
+        )
+    }
+
+    private fun clearParentGalleryThumbnailViews() {
+        parentGalleryRows.values.forEach { image -> image.setImageDrawable(null) }
+        parentGalleryRows.clear()
+        parentGalleryPreviewContent?.let { preview ->
+            for (index in 0 until preview.childCount) {
+                (preview.getChildAt(index) as? ImageView)?.setImageDrawable(null)
+            }
+        }
+    }
+
     private fun renderParentGalleryGrid() {
         val list = parentGalleryList ?: return
+        clearParentGalleryThumbnailViews()
         list.removeAllViews()
-        parentGalleryRows.clear()
         val items = parentGalleryMediaItems.values.filter {
             parentGalleryFilter == "Semua" ||
                 (parentGalleryFilter == "Foto" && it.kind != "VIDEO") ||
@@ -5690,7 +5737,7 @@ private var receivedMp3File: File? = null
             parentGalleryRows[item.key] = image
             val cached = galleryThumbnailCacheFile(item.key)
             if (cached.isFile && cached.length() > 0) {
-                val bitmap = BitmapFactory.decodeFile(cached.absolutePath)
+                val bitmap = decodeGalleryThumbnail(cached)
                 if (bitmap != null) image.setImageBitmap(bitmap) else parentGalleryThumbQueue.addLast(item.key)
             } else parentGalleryThumbQueue.addLast(item.key)
         }
