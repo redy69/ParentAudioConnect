@@ -141,9 +141,10 @@ class ChildAudioConnectionService : Service() {
             connecting = true
             serviceScope.launch { connectWithRetry() }
         }
-        // Do not ask Android to recreate a microphone foreground service from the
-        // background after process death. Opening SantetHP prepares it again visibly.
-        return START_NOT_STICKY
+        // Receive-only MP3/audio transport may recover after process death. Once
+        // the microphone type is prepared, do not recreate that microphone service
+        // from the background; the child opens SantetHP to prepare it again.
+        return if (micForegroundPrepared) START_NOT_STICKY else START_STICKY
     }
 
     private fun watchForPairingRemoval() {
