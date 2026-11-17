@@ -304,12 +304,25 @@ export default {
         return jsonResponse({ error: "Requested server does not match the paired device selection" }, 409);
       }
       const preferredServerId = requestedServerId || storedServerId || "";
+      let responsePreferredServerId = preferredServerId;
       if (preferredServerId) {
         const exact = projects.filter(project => project.id === preferredServerId);
         if (exact.length === 0) {
           return jsonResponse({ error: "Selected LiveKit server is not configured; parent must choose an available server" }, 409);
         }
-        projects.splice(0, projects.length, ...exact);
+
+        // The parent must be able to fail over the camera session if its paired
+        // server is unreachable. Put the currently paired server first, then
+        // return the remaining candidates. After a successful connection the
+        // parent saves the winning server and notifies the child with that ID.
+        // Child requests and audio requests remain pinned to their paired server.
+        if (kind === "camera" && isParent && !requestedServerId) {
+          const remaining = projects.filter(project => project.id !== preferredServerId);
+          projects.splice(0, projects.length, ...exact, ...remaining);
+          responsePreferredServerId = "";
+        } else {
+          projects.splice(0, projects.length, ...exact);
+        }
       }
 
       const room = kind === "camera" ? roomBase + "_camera" : roomBase;
@@ -318,7 +331,7 @@ export default {
       const primary = servers[0];
       return jsonResponse({
         token: primary.token, serverUrl: primary.serverUrl, serverId: primary.id,
-        preferredServerId, servers, role: isParent ? "parent" : "child", expiresIn: 600
+        preferredServerId: responsePreferredServerId, servers, role: isParent ? "parent" : "child", expiresIn: 600
       });
     } catch (error) {
       return jsonResponse({ error: "Internal server error" }, 500);
