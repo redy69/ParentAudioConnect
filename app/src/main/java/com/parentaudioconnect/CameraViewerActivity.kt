@@ -296,6 +296,7 @@ class CameraViewerActivity : Activity() {
                 // activity reference too so the retry guard does not mistake a
                 // failed candidate for an active connection.
                 room = null
+                remoteAudioTracks.clear()
                 roomEventsJob?.cancel()
                 roomEventsJob = null
                 status.text = "Gagal menghubungkan kamera: ${error.localizedMessage ?: "periksa koneksi"}"
@@ -420,8 +421,9 @@ class CameraViewerActivity : Activity() {
         setTextColor(Color.WHITE)
         gravity = Gravity.CENTER
         includeFontPadding = false
+        maxLines = 1
         minHeight = dp(50)
-        setPadding(dp(10), dp(8), dp(10), dp(8))
+        setPadding(dp(4), dp(8), dp(4), dp(8))
         background = cameraControlBackground(color)
         elevation = dp(2).toFloat()
         stateListAnimator = null
