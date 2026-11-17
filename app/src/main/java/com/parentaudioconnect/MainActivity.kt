@@ -253,6 +253,7 @@ private var receivedMp3File: File? = null
     private var pairingListener: ListenerRegistration? = null
     private var latestPairingSnapshot: DocumentSnapshot? = null
     private val childSnapshots = linkedMapOf<String, DocumentSnapshot>()
+    private var lastRenderedChildrenSignature: String? = null
     private val staleStatusRunnable = Runnable {
         selectedChildCode?.let { code ->
             childSnapshots[code]?.let { snapshot ->
@@ -293,6 +294,8 @@ private var receivedMp3File: File? = null
 }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CrashDiagnostics.install(applicationContext)
+        CrashDiagnostics.collectHistoricalExits(applicationContext)
 
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
         lifecycleRegistry.currentState = Lifecycle.State.STARTED
@@ -1203,6 +1206,7 @@ private var receivedMp3File: File? = null
         ViewCompat.requestApplyInsets(stickyHeader)
 
         connectFirebase()
+        rootLayout.postDelayed({ showPendingCrashReportPrompt() }, 1800L)
     }
 
     override fun onResume() {
@@ -2145,6 +2149,31 @@ private var receivedMp3File: File? = null
                 android.util.Log.e("ChildDeviceStatus", "Foreground status report failed", error)
             }
         }
+    }
+
+    private fun showPendingCrashReportPrompt() {
+        val report = CrashDiagnostics.readReport(this) ?: return
+        val reportUpdatedAt = CrashDiagnostics.reportLastModified(this)
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        if (reportUpdatedAt <= prefs.getLong("crash_diag_prompted_at", 0L)) return
+        prefs.edit().putLong("crash_diag_prompted_at", reportUpdatedAt).apply()
+
+        AlertDialog.Builder(this)
+            .setTitle("Catatan error SantetHP tersedia")
+            .setMessage(
+                "SantetHP pernah berhenti secara tiba-tiba. Catatan teknis sudah disimpan di HP ini. " +
+                    "Bagikan catatan tersebut agar penyebabnya bisa diperiksa."
+            )
+            .setPositiveButton("Bagikan catatan") { _, _ ->
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, "Catatan error SantetHP")
+                    putExtra(Intent.EXTRA_TEXT, report)
+                }
+                startActivity(Intent.createChooser(shareIntent, "Bagikan catatan error"))
+            }
+            .setNegativeButton("Nanti", null)
+            .show()
     }
 
     private fun connectFirebase() {
@@ -3096,6 +3125,18 @@ private var receivedMp3File: File? = null
 
     private fun renderChildrenList() {
         if (!::childrenContainer.isInitialized) return
+        // Avoid clearing and rebuilding identical rows on every periodic refresh.
+        // This is especially important while offline, when cached Firestore data
+        // can remain unchanged for long periods.
+        val renderSignature = buildString {
+            append(selectedChildCode.orEmpty()).append('|')
+            childNames.forEach { (code, name) ->
+                append(code).append('=').append(name).append('|')
+                append(childPresence(code).first).append('|')
+                append(childLastSeen(code)).append(';')
+            }
+        }
+        if (renderSignature == lastRenderedChildrenSignature) return
         childrenContainer.removeAllViews()
         childrenContainer.orientation = LinearLayout.VERTICAL
         childrenContainer.setPadding(dp(6), dp(6), dp(6), dp(6))
@@ -3281,6 +3322,7 @@ private var receivedMp3File: File? = null
         addRow.setOnClickListener { createPairingCode() }
         childrenContainer.addView(addRow)
         updateSelectedChildButton()
+        lastRenderedChildrenSignature = renderSignature
     }
 
     private fun promptRenameChild(code: String) {
