@@ -235,7 +235,10 @@ class ChildAudioConnectionService : Service() {
                                             ChildAudioActivityReporter.setLiveAudioActive(
                                                 applicationContext, true
                                             )
-                                            updateNotification("Audio live sedang diputar • mikrofon anak mati")
+                                            updateNotification(
+                                                if (childTalkMicActive) "Percakapan aktif • suara orang tua diterima"
+                                                else "Audio live sedang diputar • mikrofon anak mati"
+                                            )
                                             startLiveAudioHeartbeat()
                                         }
                                     }
@@ -248,14 +251,17 @@ class ChildAudioConnectionService : Service() {
                                             } else {
                                                 activeRemoteAudioTrackIds.clear()
                                             }
-                                            val stillActive = activeRemoteAudioTrackIds.isNotEmpty()
+                                            val stillActive = childTalkMicActive || activeRemoteAudioTrackIds.isNotEmpty()
                                             if (!stillActive) stopLiveAudioHeartbeat()
                                             ChildAudioActivityReporter.setLiveAudioActive(
                                                 applicationContext, stillActive
                                             )
                                             updateNotification(
-                                                if (stillActive) "Audio live masih diputar"
-                                                else "Audio live berhenti • menunggu orang tua"
+                                                when {
+                                                    childTalkMicActive -> "Percakapan aktif • mikrofon anak menyala"
+                                                    stillActive -> "Audio live masih diputar"
+                                                    else -> "Audio live berhenti • menunggu orang tua"
+                                                }
                                             )
                                         }
                                     }
@@ -269,20 +275,28 @@ class ChildAudioConnectionService : Service() {
                                             ChildAudioActivityReporter.setLiveAudioActive(
                                                 applicationContext, true
                                             )
-                                            updateNotification("Audio live sedang diputar • mikrofon anak mati")
+                                            updateNotification(
+                                                if (childTalkMicActive) "Percakapan aktif • suara orang tua diterima"
+                                                else "Audio live sedang diputar • mikrofon anak mati"
+                                            )
                                             startLiveAudioHeartbeat()
                                         }
                                     }
                                     is RoomEvent.TrackUnsubscribed -> {
                                         if (event.track is RemoteAudioTrack) {
                                             activeRemoteAudioTrackIds.remove(event.track.hashCode())
-                                            if (activeRemoteAudioTrackIds.isEmpty()) {
-                                                stopLiveAudioHeartbeat()
-                                                ChildAudioActivityReporter.setLiveAudioActive(
-                                                    applicationContext, false
-                                                )
-                                                updateNotification("Audio live berhenti • koneksi tetap aktif")
-                                            }
+                                            val audioActive = childTalkMicActive || activeRemoteAudioTrackIds.isNotEmpty()
+                                            if (!audioActive) stopLiveAudioHeartbeat()
+                                            ChildAudioActivityReporter.setLiveAudioActive(
+                                                applicationContext, audioActive
+                                            )
+                                            updateNotification(
+                                                when {
+                                                    childTalkMicActive -> "Percakapan aktif • mikrofon anak menyala"
+                                                    audioActive -> "Audio live masih diputar"
+                                                    else -> "Audio live berhenti • koneksi tetap aktif"
+                                                }
+                                            )
                                             // Keep the requested maximum volume after each audio session.
                                         }
                                     }
@@ -290,6 +304,8 @@ class ChildAudioConnectionService : Service() {
                                         if (room === candidateRoom) {
                                             room = null
                                             activeRemoteAudioTrackIds.clear()
+                                            if (childTalkMicActive) pendingTalkMicEnabled = true
+                                            childTalkMicActive = false
                                             stopLiveAudioHeartbeat()
                                             ChildAudioActivityReporter.setLiveAudioActive(
                                                 applicationContext, false
@@ -358,6 +374,9 @@ class ChildAudioConnectionService : Service() {
                     roomEventsJob?.cancel()
                     roomEventsJob = null
                     room = null
+                    connectedServerId = null
+                    if (childTalkMicActive) pendingTalkMicEnabled = true
+                    childTalkMicActive = false
                     mp3TransferManager = null
                     activeRemoteAudioTrackIds.clear()
                     stopLiveAudioHeartbeat()
@@ -602,6 +621,7 @@ class ChildAudioConnectionService : Service() {
         micForegroundPrepared = false
         childTalkMicActive = false
         pendingTalkMicEnabled = null
+        connectedServerId = null
         if (runningInstance === this) runningInstance = null
         roomEventsJob?.cancel()
         roomEventsJob = null
