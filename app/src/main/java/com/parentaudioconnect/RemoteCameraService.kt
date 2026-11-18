@@ -592,49 +592,15 @@ private class AdaptiveBrightnessVideoProcessor : NoDropVideoProcessor() {
                 }
             }
 
-            // Apply tone correction into a reusable tightly-packed luma buffer.
-            // A very mild unsharp mask then restores edge definition without
-            // touching chroma or allocating a new buffer for every frame.
-            val requiredSize = width * height
-            if (sharpenBuffer.size != requiredSize) {
-                sharpenBuffer = ByteArray(requiredSize)
-            }
-            val corrected = sharpenBuffer
+            // Apply only the adaptive brightness tone curve to luma.
+            // Avoid edge sharpening here: it can amplify sensor noise into visible speckles.
             for (row in 0 until height) {
-                val sourceRowOffset = row * strideY
-                val targetRowOffset = row * width
+                val rowOffset = row * strideY
                 for (column in 0 until width) {
-                    val value = sourceY.get(sourceRowOffset + column).toInt() and 0xff
-                    corrected[targetRowOffset + column] = lookup[value].toByte()
-                }
-            }
-
-            // Subtle luma-only edge enhancement. Keep border pixels unchanged;
-            // the low strength avoids halos and preserves the smooth live feed.
-            for (row in 1 until height - 1) {
-                val rowOffset = row * width
-                for (column in 1 until width - 1) {
                     val index = rowOffset + column
-                    val center = corrected[index].toInt() and 0xff
-                    val neighbors = (
-                        (corrected[index - 1].toInt() and 0xff) +
-                        (corrected[index + 1].toInt() and 0xff) +
-                        (corrected[index - width].toInt() and 0xff) +
-                        (corrected[index + width].toInt() and 0xff)
-                    ) * 0.25f
-                    val sharpened = (center + (center - neighbors) * sharpenAmount)
-                        .roundToInt().coerceIn(16, 235)
-                    sourceY.put(row * strideY + column, sharpened.toByte())
+                    val value = sourceY.get(index).toInt() and 0xff
+                    sourceY.put(index, lookup[value].toByte())
                 }
-            }
-            // Copy the unchanged first/last rows and columns from corrected data.
-            for (column in 0 until width) {
-                sourceY.put(column, corrected[column])
-                sourceY.put((height - 1) * strideY + column, corrected[(height - 1) * width + column])
-            }
-            for (row in 1 until height - 1) {
-                sourceY.put(row * strideY, corrected[row * width])
-                sourceY.put(row * strideY + width - 1, corrected[row * width + width - 1])
             }
 
             val processedFrame = VideoFrame(source, frame.rotation, frame.timestampNs)

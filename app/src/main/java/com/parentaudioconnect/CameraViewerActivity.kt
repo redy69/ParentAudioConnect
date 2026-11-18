@@ -114,28 +114,13 @@ class CameraViewerActivity : Activity() {
                 FrameLayout.LayoutParams.MATCH_PARENT
             ))
 
-            val cameraCredit = LinearLayout(this@CameraViewerActivity).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.END
-                setPadding(dp(10), dp(8), dp(10), dp(8))
-                background = GradientDrawable().apply {
-                    setColor(Color.argb(235, 247, 250, 255))
-                    cornerRadius = dp(10).toFloat()
-                    setStroke(dp(1), Color.rgb(190, 210, 238))
-                }
-                addView(TextView(this@CameraViewerActivity).apply {
-                    text = "Camera by:"
-                    setTextColor(Color.rgb(96, 115, 140))
-                    textSize = 9f
-                    includeFontPadding = false
-                })
-                addView(TextView(this@CameraViewerActivity).apply {
-                    text = "lim45ekawan"
-                    setTextColor(Color.rgb(53, 91, 190))
-                    textSize = 11f
-                    setTypeface(null, android.graphics.Typeface.BOLD)
-                    includeFontPadding = false
-                })
+            val cameraCredit = TextView(this@CameraViewerActivity).apply {
+                text = "Camera by lim45ekawan"
+                setTextColor(Color.WHITE)
+                textSize = 10f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                includeFontPadding = false
+                setShadowLayer(dp(3).toFloat(), 0f, dp(1).toFloat(), Color.BLACK)
             }
             addView(cameraCredit, FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
