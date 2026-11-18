@@ -81,12 +81,12 @@ class CameraViewerActivity : Activity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.rgb(240, 244, 255))
+            setBackgroundColor(Color.BLACK)
             setPadding(dp(12), dp(12), dp(12), dp(12))
         }
         status = TextView(this).apply {
             text = "Menghubungkan kamera anak…"
-            setTextColor(Color.rgb(32, 54, 83))
+            setTextColor(Color.rgb(220, 245, 235))
             textSize = 13.5f
             setTypeface(null, android.graphics.Typeface.BOLD)
             letterSpacing = 0.025f
@@ -96,10 +96,10 @@ class CameraViewerActivity : Activity() {
             setPadding(dp(12), dp(10), dp(12), dp(10))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.rgb(255, 255, 255), Color.rgb(241, 246, 255))
+                intArrayOf(Color.rgb(18, 31, 27), Color.rgb(8, 17, 14))
             ).apply {
                 cornerRadius = dp(15).toFloat()
-                setStroke(dp(1), Color.rgb(201, 216, 240))
+                setStroke(dp(1), Color.rgb(35, 105, 78))
             }
         }
         renderer = SurfaceViewRenderer(this).apply {
@@ -107,7 +107,7 @@ class CameraViewerActivity : Activity() {
             setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FILL)
         }
         val videoFrame = FrameLayout(this).apply {
-            setBackgroundColor(Color.rgb(3, 8, 18))
+            setBackgroundColor(Color.BLACK)
             elevation = dp(2).toFloat()
             addView(renderer, FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -116,7 +116,7 @@ class CameraViewerActivity : Activity() {
 
             val cameraCredit = TextView(this@CameraViewerActivity).apply {
                 text = "Camera by lim45ekawan"
-                setTextColor(Color.WHITE)
+                setTextColor(Color.rgb(57, 201, 138))
                 textSize = 10f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 includeFontPadding = false
