@@ -240,10 +240,11 @@ class ChildAudioConnectionService : Service() {
                             candidateRoom.events.collect { event ->
                                 when (event) {
                                     is RoomEvent.TrackSubscribed -> {
-                                        if (event.track is RemoteAudioTrack) {
-                                            activeRemoteAudioTrackIds.add(event.track.hashCode())
+                                        val remoteTrack = event.track as? RemoteAudioTrack
+                                        if (remoteTrack != null) {
+                                            activeRemoteAudioTrackIds.add(remoteTrack.hashCode())
                                             maximizeMediaVolume()
-                                            try { event.track.setVolume(2.0) } catch (_: Exception) { }
+                                            try { remoteTrack.setVolume(2.0) } catch (_: Exception) { }
                                             ChildAudioActivityReporter.setLiveAudioActive(
                                                 applicationContext, true
                                             )
