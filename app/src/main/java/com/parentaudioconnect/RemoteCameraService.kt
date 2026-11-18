@@ -394,7 +394,7 @@ class RemoteCameraService : Service() {
             val range = exposure.exposureCompensationRange
             val step = exposure.exposureCompensationStep
             if (exposure.isExposureCompensationSupported && range.upper > 0 && step.toDouble() > 0.0) {
-                // Aim for about +0.3 EV, rounded to the device's actual compensation step.
+                // Aim for about +0.5 EV, rounded to the device's actual compensation step.
                 // Keep the adjustment deliberately small to limit extra sensor gain/noise.
                 val requestedIndex = kotlin.math.round(0.5 / step.toDouble()).toInt()
                     .coerceIn(range.lower, range.upper)
