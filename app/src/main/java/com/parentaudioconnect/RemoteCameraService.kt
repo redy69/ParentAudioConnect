@@ -383,9 +383,9 @@ class RemoteCameraService : Service() {
     }
 
     /**
-     * Applies gentle, capability-aware camera tuning while keeping auto exposure enabled.
-     * A moderate positive exposure step addresses the reported underexposure.
-     * It is clamped to the camera's advertised range and never enables the torch.
+     * Applies capability-aware camera tuning while keeping sensor auto exposure enabled.
+     * The observed comparison is substantially underexposed, so request up to +2 EV,
+     * clamped to the camera's advertised compensation range. The torch is never enabled.
      */
     private suspend fun applyCameraHardwareQualityModes(camera: Camera) {
         // Exposure is independent of optional Camera2 noise-reduction support.
@@ -394,17 +394,20 @@ class RemoteCameraService : Service() {
             val range = exposure.exposureCompensationRange
             val step = exposure.exposureCompensationStep
             if (exposure.isExposureCompensationSupported && range.upper > 0 && step.toDouble() > 0.0) {
-                // Aim for +1.0 EV, rounded to the sensor's actual compensation step.
-                // Auto exposure remains enabled so the ISP can balance shutter and ISO.
-                val requestedIndex = kotlin.math.round(1.0 / step.toDouble()).toInt()
+                // Request up to +2.0 EV (subject to the physical camera's range and step).
+                // AE stays ON: the sensor/ISP still chooses shutter and ISO automatically.
+                val requestedIndex = kotlin.math.round(2.0 / step.toDouble()).toInt()
                     .coerceIn(range.lower, range.upper)
                 if (requestedIndex > 0 && exposure.exposureCompensationIndex != requestedIndex) {
                     camera.cameraControl.setExposureCompensationIndex(requestedIndex)
                         .get(5, java.util.concurrent.TimeUnit.SECONDS)
-                    Log.i("SantetHPCamera", "Applied mild exposure compensation: index=" + requestedIndex + " stepEV=" + step.toDouble() + " range=" + range)
-                } else {
-                    Log.i("SantetHPCamera", "Exposure compensation already at target or no positive step is available: range=" + range + " step=" + step)
                 }
+                Log.i(
+                    "SantetHPCamera",
+                    "Exposure request: targetEV=+2.0, requestedIndex=$requestedIndex, " +
+                        "reportedIndex=" + exposure.exposureCompensationIndex +
+                        ", stepEV=" + step.toDouble() + ", range=" + range
+                )
             } else {
                 Log.i("SantetHPCamera", "Exposure compensation is not supported; keeping device auto exposure")
             }
@@ -427,6 +430,7 @@ class RemoteCameraService : Service() {
             val noiseModes = info.getCameraCharacteristic(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES)
             val edgeModes = info.getCameraCharacteristic(CameraCharacteristics.EDGE_AVAILABLE_EDGE_MODES)
             val fpsRanges = info.getCameraCharacteristic(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
+            val aeLockAvailable = info.getCameraCharacteristic(CameraCharacteristics.CONTROL_AE_LOCK_AVAILABLE) == true
 
             // Prefer a 30 fps ceiling, while allowing the camera to drop toward 15 fps
             // in dim scenes when that range is advertised by the sensor.
@@ -469,6 +473,10 @@ class RemoteCameraService : Service() {
                 }
                 if (aeModes?.contains(CaptureRequest.CONTROL_AE_MODE_ON) == true) {
                     setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                }
+                // Explicitly leave auto exposure unlocked so it can react to scene changes.
+                if (aeLockAvailable) {
+                    setCaptureRequestOption(CaptureRequest.CONTROL_AE_LOCK, false)
                 }
                 if (awbModes?.contains(CaptureRequest.CONTROL_AWB_MODE_AUTO) == true) {
                     setCaptureRequestOption(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
