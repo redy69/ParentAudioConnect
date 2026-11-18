@@ -7,8 +7,14 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CaptureRequest
+import android.util.Log
 import android.os.Build
 import android.os.IBinder
+import androidx.camera.camera2.interop.Camera2CameraControl
+import androidx.camera.camera2.interop.Camera2CameraInfo
+import androidx.camera.camera2.interop.CaptureRequestOptions
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
@@ -25,6 +31,7 @@ import io.livekit.android.room.track.Track
 import io.livekit.android.room.track.video.NoDropVideoProcessor
 import livekit.org.webrtc.VideoFrame
 import livekit.org.webrtc.VideoSink
+import livekit.org.webrtc.getCameraX
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,9 +39,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -314,6 +324,11 @@ class RemoteCameraService : Service() {
                 cameraTrack = track
                 try {
                     track.startCapture()
+                    // Ask the device camera pipeline for its highest-quality
+                    // supported noise reduction and edge enhancement modes.
+                    // This configures the existing LiveKit CameraX session;
+                    // it does not create a second camera session.
+                    applyCameraHardwareQualityModes(track)
                     val published = participant.publishVideoTrack(track)
                     if (!published) {
                         throw IllegalStateException("LiveKit gagal menerbitkan kamera")
@@ -341,6 +356,67 @@ class RemoteCameraService : Service() {
             } catch (error: Exception) {
                 updateNotification("Kamera gagal aktif: ${error.localizedMessage ?: "kesalahan"}")
             }
+        }
+    }
+
+    /**
+     * Enables device-native high-quality image processing when the camera
+     * advertises support. Camera2 modes are checked per camera, so this works
+     * across different manufacturers without assuming identical capabilities.
+     *
+     * The options are added (not replaced) to preserve LiveKit's existing
+     * exposure, frame-rate, and stabilization configuration.
+     */
+    private suspend fun applyCameraHardwareQualityModes(track: LocalVideoTrack) {
+        try {
+            val cameraFlow = track.capturer.getCameraX() ?: return
+            val camera = withTimeout(12_000L) {
+                cameraFlow.filterNotNull().first()
+            }
+            val cameraInfo = Camera2CameraInfo.from(camera.cameraInfo)
+
+            val availableNoiseModes = cameraInfo.getCameraCharacteristic(
+                CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES
+            )?.toSet().orEmpty()
+            val availableEdgeModes = cameraInfo.getCameraCharacteristic(
+                CameraCharacteristics.EDGE_AVAILABLE_EDGE_MODES
+            )?.toSet().orEmpty()
+
+            val options = CaptureRequestOptions.Builder()
+            var optionCount = 0
+
+            if (availableNoiseModes.contains(CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY)) {
+                options.setCaptureRequestOption(
+                    CaptureRequest.NOISE_REDUCTION_MODE,
+                    CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
+                )
+                optionCount++
+            }
+
+            if (availableEdgeModes.contains(CaptureRequest.EDGE_MODE_HIGH_QUALITY)) {
+                options.setCaptureRequestOption(
+                    CaptureRequest.EDGE_MODE,
+                    CaptureRequest.EDGE_MODE_HIGH_QUALITY
+                )
+                optionCount++
+            }
+
+            if (optionCount > 0) {
+                // addCaptureRequestOptions merges with the current CameraX
+                // request instead of clearing LiveKit's existing camera options.
+                Camera2CameraControl.from(camera.cameraControl)
+                    .addCaptureRequestOptions(options.build())
+                    .get(5, java.util.concurrent.TimeUnit.SECONDS)
+                Log.i("SantetHPCamera", "Enabled $optionCount device-native high-quality camera modes")
+            } else {
+                Log.i("SantetHPCamera", "Camera has no advertised high-quality noise/edge modes")
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            // Hardware processing is an enhancement, not a requirement for
+            // publishing. Keep the existing adaptive-brightness video path.
+            Log.w("SantetHPCamera", "Could not enable hardware quality modes", error)
         }
     }
 
