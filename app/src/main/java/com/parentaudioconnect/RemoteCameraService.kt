@@ -382,29 +382,60 @@ class RemoteCameraService : Service() {
         cameraSettingsJob = null
     }
 
-    /** Merges supported hardware quality modes into the active CameraX request. */
+    /**
+     * Applies gentle, capability-aware camera tuning while keeping auto exposure enabled.
+     * A small positive exposure step helps the darker native image from #689.
+     * It is never forced when the device does not advertise exposure compensation.
+     */
     private suspend fun applyCameraHardwareQualityModes(camera: Camera) {
+        // Exposure is independent of optional Camera2 noise-reduction support.
         try {
-            val info = Camera2CameraInfo.from(camera.cameraInfo)
-            val noise = info.getCameraCharacteristic(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES)?.toSet().orEmpty()
-            if (!noise.contains(CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY)) {
-                Log.i("SantetHPCamera", "High-quality sensor noise reduction is not advertised by this camera")
-                return
+            val exposure = camera.cameraInfo.exposureState
+            val range = exposure.exposureCompensationRange
+            val step = exposure.exposureCompensationStep
+            if (exposure.isExposureCompensationSupported && range.upper > 0 && step.toDouble() > 0.0) {
+                // Aim for about +0.3 EV, rounded to the device's actual compensation step.
+                // Keep the adjustment deliberately small to limit extra sensor gain/noise.
+                val requestedIndex = kotlin.math.round(0.3 / step.toDouble()).toInt()
+                    .coerceIn(range.lower, range.upper)
+                if (requestedIndex > 0 && exposure.exposureCompensationIndex != requestedIndex) {
+                    camera.cameraControl.setExposureCompensationIndex(requestedIndex)
+                        .get(5, java.util.concurrent.TimeUnit.SECONDS)
+                    Log.i("SantetHPCamera", "Applied mild exposure compensation: index=" + requestedIndex + " stepEV=" + step.toDouble() + " range=" + range)
+                } else {
+                    Log.i("SantetHPCamera", "Exposure compensation already at target or no positive step is available: range=" + range + " step=" + step)
+                }
+            } else {
+                Log.i("SantetHPCamera", "Exposure compensation is not supported; keeping device auto exposure")
             }
-            val options = CaptureRequestOptions.Builder()
-                .setCaptureRequestOption(
-                    CaptureRequest.NOISE_REDUCTION_MODE,
-                    CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
-                )
-                .build()
-            Camera2CameraControl.from(camera.cameraControl)
-                .addCaptureRequestOptions(options)
-                .get(5, java.util.concurrent.TimeUnit.SECONDS)
-            Log.i("SantetHPCamera", "Applied supported high-quality sensor noise reduction")
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            Log.w("SantetHPCamera", "Could not enable hardware quality modes", error)
+            Log.w("SantetHPCamera", "Could not apply mild exposure compensation", error)
+        }
+
+        // Keep hardware noise reduction when the sensor explicitly advertises it.
+        try {
+            val info = Camera2CameraInfo.from(camera.cameraInfo)
+            val noise = info.getCameraCharacteristic(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES)?.toSet().orEmpty()
+            if (noise.contains(CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY)) {
+                val options = CaptureRequestOptions.Builder()
+                    .setCaptureRequestOption(
+                        CaptureRequest.NOISE_REDUCTION_MODE,
+                        CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
+                    )
+                    .build()
+                Camera2CameraControl.from(camera.cameraControl)
+                    .addCaptureRequestOptions(options)
+                    .get(5, java.util.concurrent.TimeUnit.SECONDS)
+                Log.i("SantetHPCamera", "Applied supported high-quality sensor noise reduction")
+            } else {
+                Log.i("SantetHPCamera", "High-quality sensor noise reduction is not advertised by this camera")
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Log.w("SantetHPCamera", "Could not enable hardware noise reduction", error)
         }
     }
     private fun switchCamera(facing: String) {
