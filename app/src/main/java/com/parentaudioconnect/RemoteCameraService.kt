@@ -9,13 +9,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
-import android.os.SystemClock
-import android.util.Size
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageProxy
-import androidx.lifecycle.LifecycleService
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
 import io.livekit.android.LiveKit
@@ -26,9 +20,6 @@ import io.livekit.android.room.track.CameraPosition
 import io.livekit.android.room.track.LocalVideoTrack
 import io.livekit.android.room.track.VideoPreset169
 import io.livekit.android.room.track.Track
-import io.livekit.android.room.track.video.CameraCapturerUtils
-import livekit.org.webrtc.CameraXHelper
-import livekit.org.webrtc.getCameraX
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,9 +33,6 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.concurrent.Executors
-import kotlin.math.ln
-import kotlin.math.roundToInt
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -53,7 +41,7 @@ import kotlin.coroutines.resumeWithException
  * FCM can activate the camera only while this already-running service is armed.
  * The camera automatically turns off after ten minutes.
  */
-class RemoteCameraService : LifecycleService() {
+class RemoteCameraService : Service() {
 
     companion object {
         const val ACTION_ARM = "com.santethp.camera.ARM"
@@ -73,12 +61,6 @@ class RemoteCameraService : LifecycleService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var room: Room? = null
     private var cameraTrack: LocalVideoTrack? = null
-    private var cameraProvider: CameraCapturerUtils.CameraProvider? = null
-    private var imageAnalysis: ImageAnalysis? = null
-    private val exposureExecutor = Executors.newSingleThreadExecutor()
-    @Volatile private var lastExposureUpdateMs = 0L
-    @Volatile private var appliedExposureIndex = 0
-    @Volatile private var analyzedFrameCount = 0
     private var cameraStopJob: Job? = null
     private var roomEventsJob: Job? = null
     private var reconnectJob: Job? = null
@@ -91,25 +73,6 @@ class RemoteCameraService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-
-        // CameraX gives LiveKit access to the active camera controls while this
-        // foreground service owns the camera lifecycle.
-        runCatching {
-            val analysis = ImageAnalysis.Builder()
-                .setTargetResolution(Size(640, 360))
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
-            analysis.setAnalyzer(exposureExecutor) { frame -> analyzeExposure(frame) }
-            CameraXHelper.createCameraProvider(this, arrayOf(analysis)).let { provider ->
-                if (provider.isSupported(applicationContext)) {
-                    CameraCapturerUtils.registerCameraProvider(provider)
-                    cameraProvider = provider
-                    imageAnalysis = analysis
-                } else {
-                    analysis.clearAnalyzer()
-                }
-            }
-        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -317,76 +280,6 @@ class RemoteCameraService : LifecycleService() {
         }
     }
 
-    /**
-     * Gently biases CameraX auto-exposure using measured preview luminance.
-     * AE remains enabled; compensation is adjusted slowly and within the
-     * camera's advertised range so bright scenes can recover downward too.
-     */
-    private fun analyzeExposure(frame: ImageProxy) {
-        try {
-            analyzedFrameCount++
-            if (analyzedFrameCount % 8 != 0) return
-            val now = SystemClock.elapsedRealtime()
-            if (now - lastExposureUpdateMs < 1500L) return
-            val plane = frame.planes.firstOrNull() ?: return
-            val buffer = plane.buffer
-            val width = frame.width
-            val height = frame.height
-            val rowStride = plane.rowStride
-            val pixelStride = plane.pixelStride
-            // Sample the central 70% of the image, avoiding edge-heavy scenes.
-            val left = width / 6
-            val right = width - left
-            val top = height / 6
-            val bottom = height - top
-            var sum = 0L
-            var samples = 0
-            var y = top
-            while (y < bottom) {
-                var x = left
-                while (x < right) {
-                    val index = y * rowStride + x * pixelStride
-                    if (index < buffer.limit()) {
-                        sum += buffer.get(index).toInt() and 0xff
-                        samples++
-                    }
-                    x += 8
-                }
-                y += 8
-            }
-            if (samples < 20) return
-            val meanLuma = sum.toFloat() / samples
-            if (meanLuma < 3f) return
-
-            val track = cameraTrack ?: return
-            val camera = track.capturer.getCameraX()?.value ?: return
-            val exposure = camera.cameraInfo.exposureState
-            if (!exposure.isExposureCompensationSupported) return
-            val range = exposure.exposureCompensationRange
-            val step = exposure.exposureCompensationStep.toFloat()
-            if (step <= 0f || range.lower == range.upper) return
-
-            // Target a natural midtone level. Limit correction to avoid excessive
-            // noise in very dark rooms and blown highlights in bright rooms.
-            val desiredEv = (ln(112f / meanLuma) / ln(2f)).coerceIn(-1.0f, 1.5f)
-            val targetIndex = (desiredEv / step).roundToInt().coerceIn(range.lower, range.upper)
-            if (kotlin.math.abs(targetIndex - appliedExposureIndex) < 1) return
-
-            lastExposureUpdateMs = now
-            val request = camera.cameraControl.setExposureCompensationIndex(targetIndex)
-            request.addListener({
-                runCatching {
-                    request.get()
-                    appliedExposureIndex = targetIndex
-                }
-            }, ContextCompat.getMainExecutor(this))
-        } catch (_: Exception) {
-            // Exposure adaptation is optional; never interrupt the camera stream.
-        } finally {
-            frame.close()
-        }
-    }
-
     private fun startCamera(requestId: String?, facing: String) {
         if (cameraStopJob?.isActive == true) return
         cameraStopJob = scope.launch {
@@ -435,8 +328,6 @@ class RemoteCameraService : LifecycleService() {
                     startCamera(null, facing)
                 } else {
                     track.switchCamera(position = if (facing == "front") CameraPosition.FRONT else CameraPosition.BACK)
-                    appliedExposureIndex = 0
-                    lastExposureUpdateMs = 0L
                     val side = if (facing == "front") "depan" else "belakang"
                     updateNotification("Kamera " + side + " aktif")
                 }
@@ -554,13 +445,6 @@ class RemoteCameraService : LifecycleService() {
         reconnectJob?.cancel()
         roomEventsJob?.cancel()
         scope.cancel()
-        imageAnalysis?.clearAnalyzer()
-        imageAnalysis = null
-        cameraProvider?.let { provider ->
-            runCatching { CameraCapturerUtils.unregisterCameraProvider(provider) }
-        }
-        cameraProvider = null
-        exposureExecutor.shutdown()
         val activeRoom = room
         room = null
         cameraTrack = null
@@ -573,6 +457,8 @@ class RemoteCameraService : LifecycleService() {
         }
         super.onDestroy()
     }
+
+    override fun onBind(intent: Intent?): IBinder? = null
 }
 
 private suspend fun <T> Task<T>.await(): T =
