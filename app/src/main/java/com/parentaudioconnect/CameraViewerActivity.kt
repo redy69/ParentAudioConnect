@@ -46,7 +46,7 @@ class CameraViewerActivity : Activity() {
     companion object {
         const val EXTRA_CODE = "camera_pairing_code"
         private const val WORKER_BASE = "https://parent-audio-token.yudhis-r15.workers.dev"
-        private const val CAMERA_AUDIO_RECEIVE_GAIN = 1.0
+        private const val CAMERA_AUDIO_RECEIVE_GAIN = 2.0
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -409,6 +409,7 @@ class CameraViewerActivity : Activity() {
 
     private fun updateRemoteAudioOutput() {
         val gain = if (audioMuted) 0.0 else CAMERA_AUDIO_RECEIVE_GAIN
+        if (!audioMuted) maximizeMediaVolume()
         remoteAudioTracks.toList().forEach { track ->
             try { track.setVolume(gain) } catch (_: Exception) { }
         }
