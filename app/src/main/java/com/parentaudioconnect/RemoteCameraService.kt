@@ -613,11 +613,14 @@ private class CameraExposureController(private val camera: Camera, context: Cont
         val range = state.exposureCompensationRange
         val step = state.exposureCompensationStep.toFloat()
         if (step <= 0f || range.lower == range.upper) return
+        // Give genuinely dark scenes a little more sensor exposure, while
+        // allowing a few bright lamps/windows without forcing the whole image dark.
         val desiredEv = when {
-            stats.median < 48 && stats.percentile90 < 150 -> 0.8f
-            stats.median < 66 && stats.percentile90 < 175 -> 0.6f
-            stats.median < 84 && stats.percentile90 < 195 -> 0.35f
-            stats.median > 150 || stats.percentile90 > 228 -> 0f
+            stats.median < 45 && stats.percentile90 < 175 -> 1.0f
+            stats.median < 62 && stats.percentile90 < 195 -> 0.8f
+            stats.median < 82 && stats.percentile90 < 215 -> 0.55f
+            stats.median < 100 && stats.percentile90 < 225 -> 0.3f
+            stats.median > 155 && stats.percentile90 > 232 -> 0f
             else -> 0.15f
         }
         val maxPositive = minOf(range.upper, (1.0f / step).toInt())
@@ -646,17 +649,20 @@ private class CameraExposureController(private val camera: Camera, context: Cont
     }
 }
 
-/** Reusable centre histogram, hardware exposure feedback, and conservative shadow lift. */
+/** Reusable centre histogram, restrained shadow lift, and natural colour recovery. */
 private class AdaptiveBrightnessVideoProcessor : NoDropVideoProcessor() {
     @Volatile private var outputSink: VideoSink? = null
     @Volatile private var exposureFeedback: ((Int, Int) -> Unit)? = null
     private var currentGamma = 1.0f
+    private var currentSaturation = 1.10f
     private val lookup = IntArray(256)
     private val histogram = IntArray(256)
+
     fun setExposureFeedback(listener: ((Int, Int) -> Unit)?) { exposureFeedback = listener }
     override fun onCapturerStarted(success: Boolean) = Unit
     override fun onCapturerStopped() = Unit
     override fun setSink(sink: VideoSink?) { outputSink = sink }
+
     override fun onFrameCaptured(frame: VideoFrame) {
         val sink = outputSink ?: return
         val source = try { frame.buffer.toI420() } catch (_: Exception) { null }
@@ -665,7 +671,12 @@ private class AdaptiveBrightnessVideoProcessor : NoDropVideoProcessor() {
         try {
             val width = source.width
             val height = source.height
-            if (width <= 0 || height <= 0) { source.release(); sink.onFrame(frame); return }
+            if (width <= 0 || height <= 0) {
+                source.release()
+                sink.onFrame(frame)
+                return
+            }
+
             val yPlane = source.dataY
             val stride = source.strideY
             java.util.Arrays.fill(histogram, 0)
@@ -685,28 +696,55 @@ private class AdaptiveBrightnessVideoProcessor : NoDropVideoProcessor() {
                 }
                 y += 12
             }
+
+            var median = 116
+            var p90 = 180
             if (samples > 0) {
                 val medianTarget = (samples * 50 + 99) / 100
                 val p90Target = (samples * 90 + 99) / 100
                 var cumulative = 0
-                var median = 116
-                var p90 = 180
                 var medianFound = false
                 for (value in 0..255) {
                     cumulative += histogram[value]
-                    if (!medianFound && cumulative >= medianTarget) { median = value; medianFound = true }
-                    if (cumulative >= p90Target) { p90 = value; break }
+                    if (!medianFound && cumulative >= medianTarget) {
+                        median = value
+                        medianFound = true
+                    }
+                    if (cumulative >= p90Target) {
+                        p90 = value
+                        break
+                    }
                 }
                 exposureFeedback?.invoke(median, p90)
+
+                // A slightly brighter mid-tone target helps avoid the dim,
+                // flat appearance of the previous global gamma correction.
                 val normalized = ((median - 16f) / 219f).coerceIn(0.025f, 0.97f)
-                val targetLuma = (116f - 16f) / 219f
-                val floor = when { p90 >= 220 -> 0.78f; p90 >= 195 -> 0.58f; else -> 0.42f }
-                val gamma = (ln(targetLuma.toDouble()) / ln(normalized.toDouble())).toFloat().coerceIn(floor, 1.8f)
-                currentGamma += (gamma - currentGamma) * 0.08f
+                val targetLuma = (120f - 16f) / 219f
+                val minimumGamma = when {
+                    p90 >= 220 -> 0.70f
+                    p90 >= 195 -> 0.60f
+                    else -> 0.45f
+                }
+                val gamma = (ln(targetLuma.toDouble()) / ln(normalized.toDouble()))
+                    .toFloat().coerceIn(minimumGamma, 1.35f)
+                currentGamma += (gamma - currentGamma) * 0.07f
+
+                // Recover a little colour after shadow lifting, but reduce the
+                // boost in very dark/noisy scenes and around clipped highlights.
+                val targetSaturation = when {
+                    median < 55 -> 1.06f
+                    p90 > 228 -> 1.08f
+                    else -> 1.13f
+                }
+                currentSaturation += (targetSaturation - currentSaturation) * 0.06f
             }
+
+            // Keep the existing smooth luma adjustment and preserve the video range.
             for (value in 0..255) {
                 val normalized = ((value - 16f) / 219f).coerceIn(0f, 1f)
-                lookup[value] = if (value <= 16) 16 else (16f + normalized.pow(currentGamma) * 219f).roundToInt().coerceIn(16, 235)
+                lookup[value] = if (value <= 16) 16 else
+                    (16f + normalized.pow(currentGamma) * 219f).roundToInt().coerceIn(16, 235)
             }
             for (row in 0 until height) {
                 val offset = row * stride
@@ -716,11 +754,40 @@ private class AdaptiveBrightnessVideoProcessor : NoDropVideoProcessor() {
                     yPlane.put(index, lookup[value].toByte())
                 }
             }
+
+            // Gently increase chroma around neutral grey. This restores colour
+            // richness without shifting hue or applying a blanket colour tint.
+            val chromaWidth = (width + 1) / 2
+            val chromaHeight = (height + 1) / 2
+            val uPlane = source.dataU
+            val vPlane = source.dataV
+            val uStride = source.strideU
+            val vStride = source.strideV
+            for (row in 0 until chromaHeight) {
+                val uOffset = row * uStride
+                val vOffset = row * vStride
+                for (column in 0 until chromaWidth) {
+                    val uIndex = uOffset + column
+                    val vIndex = vOffset + column
+                    val u = uPlane.get(uIndex).toInt() and 0xff
+                    val v = vPlane.get(vIndex).toInt() and 0xff
+                    val adjustedU = (128f + (u - 128f) * currentSaturation).roundToInt().coerceIn(0, 255)
+                    val adjustedV = (128f + (v - 128f) * currentSaturation).roundToInt().coerceIn(0, 255)
+                    uPlane.put(uIndex, adjustedU.toByte())
+                    vPlane.put(vIndex, adjustedV.toByte())
+                }
+            }
+
             val processed = VideoFrame(source, frame.rotation, frame.timestampNs)
             ownershipTransferred = true
-            try { sink.onFrame(processed) } finally { processed.release() }
-        } catch (_: Exception) {
+            try {
+                sink.onFrame(processed)
+            } finally {
+                processed.release()
+            }
+        } catch (error: Exception) {
             if (!ownershipTransferred) runCatching { source.release() }
+            Log.w("SantetHPCamera", "Adaptive image processing skipped for a frame", error)
             sink.onFrame(frame)
         }
     }
