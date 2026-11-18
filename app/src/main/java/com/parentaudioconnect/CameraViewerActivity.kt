@@ -162,9 +162,10 @@ class CameraViewerActivity : Activity() {
         root.addView(status, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
         ).apply { bottomMargin = dp(10) })
-        // Keep the camera preview window at 3:4 (width:height) on portrait phones.
+        // Match AirDroid's visible portrait video window at 2:3 (width:height).
+        // Keep the child's existing 4:3 1080p camera capture unchanged.
         val previewWidthPx = resources.displayMetrics.widthPixels - dp(24)
-        val previewHeightPx = (previewWidthPx * 4f / 3f).toInt()
+        val previewHeightPx = (previewWidthPx * 3f / 2f).toInt()
         // Keep the preview vertically centered in the available space between
         // the connection status and the controls on the parent's phone.
         root.addView(View(this), LinearLayout.LayoutParams(
