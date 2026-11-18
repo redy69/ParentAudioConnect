@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.graphics.Color
+import android.media.AudioManager
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
@@ -16,7 +17,10 @@ import android.widget.TextView
 import android.widget.Toast
 import com.google.firebase.auth.FirebaseAuth
 import com.google.android.gms.tasks.Task
+import io.livekit.android.AudioOptions
+import io.livekit.android.AudioType
 import io.livekit.android.LiveKit
+import io.livekit.android.LiveKitOverrides
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.events.collect
 import io.livekit.android.renderer.SurfaceViewRenderer
@@ -205,7 +209,16 @@ class CameraViewerActivity : Activity() {
                 }
                 val liveKitConnection = LiveKitFailover.connectWithServer(
                     response = response,
-                    createRoom = { LiveKit.create(applicationContext) },
+                    createRoom = {
+                        LiveKit.create(
+                            appContext = applicationContext,
+                            overrides = LiveKitOverrides(
+                                audioOptions = AudioOptions(
+                                    audioOutputType = AudioType.MediaAudioType()
+                                )
+                            )
+                        )
+                    },
                     prepareRoom = { candidateRoom ->
                         // Publish the candidate reference before connect so an immediate
                         // disconnect during the handshake is observable by the event collector.
@@ -377,6 +390,20 @@ class CameraViewerActivity : Activity() {
             return response
         } finally {
             connection.disconnect()
+        }
+    }
+
+    private fun maximizeMediaVolume() {
+        try {
+            val audioManager = getSystemService(AudioManager::class.java) ?: return
+            val maximum = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+            audioManager.setStreamVolume(
+                AudioManager.STREAM_MUSIC,
+                maximum,
+                0
+            )
+        } catch (_: Exception) {
+            // Keep the camera session alive if the device restricts volume changes.
         }
     }
 
