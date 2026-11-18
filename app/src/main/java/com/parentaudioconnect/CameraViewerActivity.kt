@@ -20,6 +20,7 @@ import io.livekit.android.LiveKit
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.events.collect
 import io.livekit.android.renderer.SurfaceViewRenderer
+import livekit.org.webrtc.RendererCommon
 import io.livekit.android.room.Room
 import io.livekit.android.room.track.VideoTrack
 import io.livekit.android.room.track.RemoteAudioTrack
@@ -102,7 +103,10 @@ class CameraViewerActivity : Activity() {
                 setStroke(dp(1), Color.rgb(201, 216, 240))
             }
         }
-        renderer = SurfaceViewRenderer(this)
+        renderer = SurfaceViewRenderer(this).apply {
+            // Show the complete camera frame without cropping; letterbox when aspect ratios differ.
+            setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT)
+        }
         val videoFrame = FrameLayout(this).apply {
             setBackgroundColor(Color.rgb(3, 8, 18))
             elevation = dp(2).toFloat()
