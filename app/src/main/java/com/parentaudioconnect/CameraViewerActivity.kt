@@ -55,7 +55,6 @@ class CameraViewerActivity : Activity() {
     // Release it before sharing the renderer with the next candidate's EGL context.
     private var rendererInitAttempted = false
     private lateinit var status: TextView
-    private lateinit var cameraFacingLabel: TextView
     private var code: String = ""
     private var facing = "back"
     private var stopping = false
@@ -104,8 +103,8 @@ class CameraViewerActivity : Activity() {
             }
         }
         renderer = SurfaceViewRenderer(this).apply {
-            // Show the complete camera frame without cropping; letterbox when aspect ratios differ.
-            setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT)
+            // Fill the portrait 3:4 viewing window, matching the AirDroid-style framing.
+            setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FILL)
         }
         val videoFrame = FrameLayout(this).apply {
             setBackgroundColor(Color.rgb(3, 8, 18))
@@ -114,26 +113,6 @@ class CameraViewerActivity : Activity() {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             ))
-
-            cameraFacingLabel = TextView(this@CameraViewerActivity).apply {
-                text = "KAMERA BELAKANG"
-                setTextColor(Color.rgb(32, 54, 83))
-                textSize = 10.5f
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                letterSpacing = 0.06f
-                includeFontPadding = false
-                setPadding(dp(4), dp(8), dp(4), dp(8))
-                background = GradientDrawable().apply {
-                    setColor(Color.argb(235, 247, 250, 255))
-                    cornerRadius = dp(10).toFloat()
-                    setStroke(dp(1), Color.rgb(190, 210, 238))
-                }
-            }
-            addView(cameraFacingLabel, FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP or Gravity.START
-            ).apply { setMargins(dp(10), dp(10), dp(10), dp(10)) })
 
             val cameraCredit = LinearLayout(this@CameraViewerActivity).apply {
                 orientation = LinearLayout.VERTICAL
@@ -171,7 +150,6 @@ class CameraViewerActivity : Activity() {
         val switch = createCameraControl("BELAKANG", Color.rgb(20, 116, 91))
         switch.setOnClickListener {
             facing = if (facing == "back") "front" else "back"
-            cameraFacingLabel.text = if (facing == "front") "KAMERA DEPAN" else "KAMERA BELAKANG"
             switch.text = if (facing == "front") "DEPAN" else "BELAKANG"
             switch.background = cameraControlBackground(
                 if (facing == "front") Color.rgb(31, 139, 103) else Color.rgb(20, 116, 91)
@@ -199,8 +177,11 @@ class CameraViewerActivity : Activity() {
         root.addView(status, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
         ).apply { bottomMargin = dp(10) })
+        // Keep the camera preview window at 3:4 (width:height) on portrait phones.
+        val previewWidthPx = resources.displayMetrics.widthPixels - dp(24)
+        val previewHeightPx = (previewWidthPx * 4f / 3f).toInt()
         root.addView(videoFrame, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+            LinearLayout.LayoutParams.MATCH_PARENT, previewHeightPx
         ).apply {
             bottomMargin = dp(12)
         })
