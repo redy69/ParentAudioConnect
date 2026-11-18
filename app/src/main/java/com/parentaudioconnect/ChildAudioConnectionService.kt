@@ -243,6 +243,7 @@ class ChildAudioConnectionService : Service() {
                                         if (event.track is RemoteAudioTrack) {
                                             activeRemoteAudioTrackIds.add(event.track.hashCode())
                                             maximizeMediaVolume()
+                                            try { event.track.setVolume(2.0) } catch (_: Exception) { }
                                             ChildAudioActivityReporter.setLiveAudioActive(
                                                 applicationContext, true
                                             )
@@ -283,6 +284,7 @@ class ChildAudioConnectionService : Service() {
                                         ) {
                                             activeRemoteAudioTrackIds.add(unmutedTrack.hashCode())
                                             maximizeMediaVolume()
+                                            try { unmutedTrack.setVolume(2.0) } catch (_: Exception) { }
                                             ChildAudioActivityReporter.setLiveAudioActive(
                                                 applicationContext, true
                                             )
