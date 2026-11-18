@@ -62,7 +62,7 @@ class CameraViewerActivity : Activity() {
     private var code: String = ""
     private var facing = "back"
     private var stopping = false
-    private var audioMuted = false
+    private var audioMuted = true
     private lateinit var audioToggle: Button
     private val remoteAudioTracks = linkedSetOf<RemoteAudioTrack>()
     private val backupPauseHandler = Handler(Looper.getMainLooper())
@@ -145,7 +145,7 @@ class CameraViewerActivity : Activity() {
             )
             sendCameraCommand("switch", facing, closeAfter = false)
         }
-        audioToggle = createCameraControl("🔊 SUARA ON", Color.rgb(20, 122, 78))
+        audioToggle = createCameraControl("🔇 MUTE", Color.rgb(190, 42, 52))
         audioToggle.setOnClickListener {
             audioMuted = !audioMuted
             updateRemoteAudioOutput()
