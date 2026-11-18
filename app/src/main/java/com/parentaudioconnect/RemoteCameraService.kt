@@ -286,16 +286,15 @@ class RemoteCameraService : Service() {
             try {
                 val activeRoom = room ?: throw IllegalStateException("Ruang kamera belum terhubung")
                 updateNotification("Permintaan diterima • kamera sedang diaktifkan")
-                // Capture and publish at 1080p when the device and network can sustain it.
-                // LiveKit can adapt the outgoing stream under constrained bandwidth.
+                // Use 720p for a lighter, more stable live preview on mobile networks.
                 activeRoom.localParticipant.videoTrackCaptureDefaults =
                     activeRoom.localParticipant.videoTrackCaptureDefaults.copy(
                         position = if (facing == "front") CameraPosition.FRONT else CameraPosition.BACK,
-                        captureParams = VideoPreset169.H1080.capture
+                        captureParams = VideoPreset169.H720.capture
                     )
                 activeRoom.localParticipant.videoTrackPublishDefaults =
                     activeRoom.localParticipant.videoTrackPublishDefaults.copy(
-                        videoEncoding = VideoPreset169.H1080.encoding
+                        videoEncoding = VideoPreset169.H720.encoding
                     )
                 val enabled = activeRoom.localParticipant.setCameraEnabled(true)
                 if (!enabled) throw IllegalStateException("Android tidak dapat mengaktifkan kamera")
