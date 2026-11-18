@@ -444,6 +444,25 @@ class RemoteCameraService : Service() {
                 else -> null
             }
 
+            // Compute selected modes outside the builder so diagnostics can report them.
+            val useOis = oisModes?.contains(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON) == true
+            val useEis = !useOis &&
+                eisModes?.contains(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON) == true
+            val noiseMode = when {
+                noiseModes?.contains(CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY) == true ->
+                    CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
+                noiseModes?.contains(CaptureRequest.NOISE_REDUCTION_MODE_FAST) == true ->
+                    CaptureRequest.NOISE_REDUCTION_MODE_FAST
+                else -> null
+            }
+            val edgeMode = when {
+                edgeModes?.contains(CaptureRequest.EDGE_MODE_HIGH_QUALITY) == true ->
+                    CaptureRequest.EDGE_MODE_HIGH_QUALITY
+                edgeModes?.contains(CaptureRequest.EDGE_MODE_FAST) == true ->
+                    CaptureRequest.EDGE_MODE_FAST
+                else -> null
+            }
+
             val options = CaptureRequestOptions.Builder().apply {
                 if (continuousAf != null) {
                     setCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE, continuousAf)
@@ -463,9 +482,6 @@ class RemoteCameraService : Service() {
 
                 // Match AirDroid's mutually-exclusive stabilization policy:
                 // optical stabilization takes priority; use EIS only when OIS is absent.
-                val useOis = oisModes?.contains(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON) == true
-                val useEis = !useOis &&
-                    eisModes?.contains(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON) == true
                 if (useOis) {
                     setCaptureRequestOption(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)
                     setCaptureRequestOption(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_OFF)
@@ -475,22 +491,8 @@ class RemoteCameraService : Service() {
                 }
 
                 // Prefer the camera's higher-quality ISP modes when supported.
-                val noiseMode = when {
-                    noiseModes?.contains(CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY) == true ->
-                        CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
-                    noiseModes?.contains(CaptureRequest.NOISE_REDUCTION_MODE_FAST) == true ->
-                        CaptureRequest.NOISE_REDUCTION_MODE_FAST
-                    else -> null
-                }
                 if (noiseMode != null) {
                     setCaptureRequestOption(CaptureRequest.NOISE_REDUCTION_MODE, noiseMode)
-                }
-                val edgeMode = when {
-                    edgeModes?.contains(CaptureRequest.EDGE_MODE_HIGH_QUALITY) == true ->
-                        CaptureRequest.EDGE_MODE_HIGH_QUALITY
-                    edgeModes?.contains(CaptureRequest.EDGE_MODE_FAST) == true ->
-                        CaptureRequest.EDGE_MODE_FAST
-                    else -> null
                 }
                 if (edgeMode != null) {
                     setCaptureRequestOption(CaptureRequest.EDGE_MODE, edgeMode)
@@ -504,7 +506,7 @@ class RemoteCameraService : Service() {
             Log.i(
                 "SantetHPCamera",
                 "Applied camera modes: AF=$continuousAf, AE=auto, AWB=auto, FPS=$selectedFpsRange, " +
-                    "OIS=$useOis, EIS=$useEis, NR=$noiseMode, EDGE=$edgeMode, resolution=${camera.cameraInfo.resolutionInfo?.resolution}"
+                    "OIS=$useOis, EIS=$useEis, NR=$noiseMode, EDGE=$edgeMode, captureFormat=LiveKit"
             )
         } catch (error: CancellationException) {
             throw error
