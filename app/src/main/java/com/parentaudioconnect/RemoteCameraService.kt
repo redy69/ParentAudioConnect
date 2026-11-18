@@ -571,13 +571,13 @@ private class AdaptiveBrightnessVideoProcessor : NoDropVideoProcessor() {
             if (samples > 0) {
                 val meanLuma = sum.toFloat() / samples
                 val normalizedMean = ((meanLuma - 16f) / 219f).coerceIn(0.025f, 0.97f)
-                val targetLuma = (104f - 16f) / 219f
+                val targetLuma = (116f - 16f) / 219f
                 val desiredGamma = (
                     ln(targetLuma.toDouble()) / ln(normalizedMean.toDouble())
                 ).toFloat().coerceIn(0.58f, 1.8f)
                 // Smooth changes so moving between dark and bright rooms does
                 // not cause visible frame-to-frame pumping.
-                currentGamma += (desiredGamma - currentGamma) * 0.06f
+                currentGamma += (desiredGamma - currentGamma) * 0.12f
             }
 
             // Refresh the reusable lookup table; do not allocate a new IntArray
