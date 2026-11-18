@@ -19,6 +19,7 @@ import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.track.CameraPosition
 import io.livekit.android.room.track.LocalVideoTrack
 import io.livekit.android.room.track.VideoPreset169
+import io.livekit.android.room.track.VideoEncoding
 import io.livekit.android.room.track.Track
 import io.livekit.android.room.track.video.NoDropVideoProcessor
 import livekit.org.webrtc.VideoFrame
@@ -302,7 +303,7 @@ class RemoteCameraService : Service() {
                 participant.videoTrackCaptureDefaults = captureOptions
                 participant.videoTrackPublishDefaults =
                     participant.videoTrackPublishDefaults.copy(
-                        videoEncoding = VideoPreset169.H720.encoding
+                        videoEncoding = VideoEncoding(maxBitrate = 2_200_000, maxFps = 30)
                     )
 
                 val track = participant.createVideoTrack(
