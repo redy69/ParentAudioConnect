@@ -118,6 +118,17 @@ jobs:
           files: app/build/outputs/apk/release/app-release.apk
           generate_release_notes: true
 
+      - name: Package source code ZIP
+        run: |
+          git archive --format=zip --prefix="SantetHP-build-${GITHUB_RUN_NUMBER}-source/" HEAD -o "$RUNNER_TEMP/SantetHP-build-${GITHUB_RUN_NUMBER}-source.zip"
+          test -s "$RUNNER_TEMP/SantetHP-build-${GITHUB_RUN_NUMBER}-source.zip"
+
+      - name: Upload source code ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SantetHP-source
+          path: ${{ runner.temp }}/SantetHP-build-${{ github.run_number }}-source.zip
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
