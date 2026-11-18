@@ -21,7 +21,6 @@ import io.livekit.android.room.track.LocalVideoTrack
 import io.livekit.android.room.track.VideoPreset169
 import io.livekit.android.room.track.Track
 import io.livekit.android.room.track.video.NoDropVideoProcessor
-import livekit.org.webrtc.JavaI420Buffer
 import livekit.org.webrtc.VideoFrame
 import livekit.org.webrtc.VideoSink
 import kotlinx.coroutines.CancellationException
@@ -37,7 +36,6 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
-import java.nio.ByteBuffer
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.math.ln
@@ -511,6 +509,8 @@ class RemoteCameraService : Service() {
 private class AdaptiveBrightnessVideoProcessor : NoDropVideoProcessor() {
     @Volatile private var outputSink: VideoSink? = null
     private var currentGamma = 1.0f
+    // Reuse the tiny lookup table instead of allocating one for every camera frame.
+    private val lookup = IntArray(256)
 
     override fun onCapturerStarted(success: Boolean) = Unit
 
@@ -523,6 +523,8 @@ private class AdaptiveBrightnessVideoProcessor : NoDropVideoProcessor() {
     override fun onFrameCaptured(frame: VideoFrame) {
         val sink = outputSink ?: return
         val source = try {
+            // CameraX supplies a texture frame; converting it gives us a writable
+            // I420 buffer for the existing brightness correction.
             frame.buffer.toI420()
         } catch (_: Exception) {
             null
@@ -574,7 +576,8 @@ private class AdaptiveBrightnessVideoProcessor : NoDropVideoProcessor() {
                 currentGamma += (desiredGamma - currentGamma) * 0.06f
             }
 
-            val lookup = IntArray(256)
+            // Refresh the reusable lookup table; do not allocate a new IntArray
+            // for every 720p frame.
             for (value in 0..255) {
                 val normalized = ((value - 16f) / 219f).coerceIn(0f, 1f)
                 lookup[value] = if (value <= 16) {
@@ -585,30 +588,19 @@ private class AdaptiveBrightnessVideoProcessor : NoDropVideoProcessor() {
                 }
             }
 
-            val outputY = ByteBuffer.allocateDirect(width * height)
+            // Correct the converted luma plane in place. This avoids allocating
+            // and copying a second ~900 KB Y plane for every 720p frame.
             for (row in 0 until height) {
-                val sourceRow = row * strideY
-                val outputRow = row * width
+                val rowOffset = row * strideY
                 for (column in 0 until width) {
-                    val value = sourceY.get(sourceRow + column).toInt() and 0xff
-                    outputY.put(outputRow + column, lookup[value].toByte())
+                    val index = rowOffset + column
+                    val value = sourceY.get(index).toInt() and 0xff
+                    sourceY.put(index, lookup[value].toByte())
                 }
             }
 
-            val outputBuffer = JavaI420Buffer.wrap(
-                width,
-                height,
-                outputY,
-                width,
-                source.dataU,
-                source.strideU,
-                source.dataV,
-                source.strideV
-            ) {
-                source.release()
-            }
+            val processedFrame = VideoFrame(source, frame.rotation, frame.timestampNs)
             sourceOwnershipTransferred = true
-            val processedFrame = VideoFrame(outputBuffer, frame.rotation, frame.timestampNs)
             try {
                 sink.onFrame(processedFrame)
             } finally {
@@ -618,6 +610,8 @@ private class AdaptiveBrightnessVideoProcessor : NoDropVideoProcessor() {
             if (!sourceOwnershipTransferred) {
                 runCatching { source.release() }
             }
+            // The original camera frame remains untouched if conversion or
+            // processing fails, so it is safe to fall back to it.
             sink.onFrame(frame)
         }
     }
