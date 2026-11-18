@@ -6,8 +6,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
-import android.content.Context
-import android.os.SystemClock
 import android.content.pm.ServiceInfo
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CaptureRequest
@@ -19,7 +17,6 @@ import androidx.camera.camera2.interop.Camera2CameraControl
 import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.camera2.interop.CaptureRequestOptions
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
 import io.livekit.android.LiveKit
@@ -42,7 +39,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -54,12 +50,8 @@ import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-import kotlin.math.ln
-import kotlin.math.pow
-import kotlin.math.roundToInt
 
 /**
  * Camera standby is explicitly enabled from the child's visible app.
@@ -88,7 +80,6 @@ class RemoteCameraService : Service() {
     private var cameraTrack: LocalVideoTrack? = null
     private var cameraStopJob: Job? = null
     private var cameraSettingsJob: Job? = null
-    @Volatile private var brightnessProcessor: AdaptiveBrightnessVideoProcessor? = null
     private var roomEventsJob: Job? = null
     private var reconnectJob: Job? = null
     private var pendingCameraRequestId: String? = null
@@ -328,18 +319,16 @@ class RemoteCameraService : Service() {
                         videoEncoding = VideoPreset43.H1080.encoding
                     )
 
-                val processor = AdaptiveBrightnessVideoProcessor()
-                brightnessProcessor = processor
                 val track = participant.createVideoTrack(
                     options = captureOptions,
-                    videoProcessor = processor
+                    videoProcessor = NaturalCameraVideoProcessor()
                 )
                 cameraTrack = track
                 try {
                     track.startCapture()
                     // Observe LiveKit's existing CameraX session and reapply supported
                     // hardware processing/exposure after every camera switch.
-                    observeCameraSessions(track, processor)
+                    observeCameraSessions(track)
                     val published = participant.publishVideoTrack(track)
                     if (!published) {
                         throw IllegalStateException("LiveKit gagal menerbitkan kamera")
@@ -371,22 +360,19 @@ class RemoteCameraService : Service() {
         }
     }
 
-    /** Follows LiveKit's CameraX session and replaces settings on every camera switch. */
-    private fun observeCameraSessions(track: LocalVideoTrack, processor: AdaptiveBrightnessVideoProcessor) {
+    /** Follows LiveKit's CameraX session and applies supported sensor noise reduction. */
+    private fun observeCameraSessions(track: LocalVideoTrack) {
         cameraSettingsJob?.cancel()
         val cameraFlow = track.capturer.getCameraX() ?: return
         cameraSettingsJob = scope.launch {
             cameraFlow.filterNotNull().distinctUntilChanged().collectLatest { camera ->
-                val controller = CameraExposureController(camera, applicationContext)
-                processor.setExposureFeedback(controller::submit)
                 try {
                     applyCameraHardwareQualityModes(camera)
-                    controller.run()
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: Exception) {
-                    Log.w("SantetHPCamera", "Camera session settings could not be maintained", error)
-                } finally { processor.setExposureFeedback(null) }
+                    Log.w("SantetHPCamera", "Camera quality settings could not be maintained", error)
+                }
             }
         }
     }
@@ -394,8 +380,6 @@ class RemoteCameraService : Service() {
     private fun stopCameraSettings() {
         cameraSettingsJob?.cancel()
         cameraSettingsJob = null
-        brightnessProcessor?.setExposureFeedback(null)
-        brightnessProcessor = null
     }
 
     /** Merges supported hardware quality modes into the active CameraX request. */
@@ -403,19 +387,20 @@ class RemoteCameraService : Service() {
         try {
             val info = Camera2CameraInfo.from(camera.cameraInfo)
             val noise = info.getCameraCharacteristic(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES)?.toSet().orEmpty()
-            val edge = info.getCameraCharacteristic(CameraCharacteristics.EDGE_AVAILABLE_EDGE_MODES)?.toSet().orEmpty()
+            if (!noise.contains(CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY)) {
+                Log.i("SantetHPCamera", "High-quality sensor noise reduction is not advertised by this camera")
+                return
+            }
             val options = CaptureRequestOptions.Builder()
-            var count = 0
-            if (noise.contains(CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY)) {
-                options.setCaptureRequestOption(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY)
-                count++
-            }
-            if (edge.contains(CaptureRequest.EDGE_MODE_HIGH_QUALITY)) {
-                options.setCaptureRequestOption(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_HIGH_QUALITY)
-                count++
-            }
-            if (count > 0) Camera2CameraControl.from(camera.cameraControl).addCaptureRequestOptions(options.build()).get(5, java.util.concurrent.TimeUnit.SECONDS)
-            Log.i("SantetHPCamera", "Applied $count supported hardware quality modes to active camera")
+                .setCaptureRequestOption(
+                    CaptureRequest.NOISE_REDUCTION_MODE,
+                    CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
+                )
+                .build()
+            Camera2CameraControl.from(camera.cameraControl)
+                .addCaptureRequestOptions(options)
+                .get(5, java.util.concurrent.TimeUnit.SECONDS)
+            Log.i("SantetHPCamera", "Applied supported high-quality sensor noise reduction")
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
@@ -582,214 +567,19 @@ class RemoteCameraService : Service() {
 }
 
 /**
- * Per-frame adaptive tone correction for the outgoing LiveKit camera track.
- *
- * Samples the centre of each frame and gently adjusts luma with a smoothed
- * gamma curve. This is intentionally a video-frame processor: it reuses the
- * camera session already owned by LiveKit and never opens a second CameraX
- * session. Chroma planes are shared read-only; only the luma plane is copied.
+ * Keeps the camera manufacturer's native ISP image untouched.
+ * The sensor pipeline handles exposure, white balance, denoising and colour;
+ * this processor only forwards frames into the existing LiveKit track.
  */
-private data class CameraLumaStats(val median: Int, val percentile90: Int)
-
-/** Serializes bounded exposure requests; CameraX cancels overlapping requests. */
-private class CameraExposureController(private val camera: Camera, context: Context) {
-    private val updates = Channel<CameraLumaStats>(Channel.CONFLATED)
-    private val inFlight = AtomicBoolean(false)
-    private val mainExecutor = ContextCompat.getMainExecutor(context)
-    private var lastRequestAtMs = 0L
-    private var lastRequestedIndex = Int.MIN_VALUE
-    fun submit(median: Int, percentile90: Int) { updates.trySend(CameraLumaStats(median, percentile90)) }
-    suspend fun run() {
-        for (firstStats in updates) {
-            delay(1800L)
-            var stats = firstStats
-            while (true) { val newest = updates.tryReceive().getOrNull() ?: break; stats = newest }
-            requestExposure(stats)
-        }
-    }
-    private fun requestExposure(stats: CameraLumaStats) {
-        val state = camera.cameraInfo.exposureState
-        if (!state.isExposureCompensationSupported) return
-        val range = state.exposureCompensationRange
-        val step = state.exposureCompensationStep.toFloat()
-        if (step <= 0f || range.lower == range.upper) return
-        // Give genuinely dark scenes a little more sensor exposure, while
-        // allowing a few bright lamps/windows without forcing the whole image dark.
-        val desiredEv = when {
-            stats.median < 45 && stats.percentile90 < 175 -> 1.0f
-            stats.median < 62 && stats.percentile90 < 195 -> 0.8f
-            stats.median < 82 && stats.percentile90 < 215 -> 0.55f
-            stats.median < 100 && stats.percentile90 < 225 -> 0.3f
-            stats.median > 155 && stats.percentile90 > 232 -> 0f
-            else -> 0.15f
-        }
-        val maxPositive = minOf(range.upper, (1.0f / step).toInt())
-        val target = (desiredEv / step).roundToInt().coerceIn(range.lower, maxPositive)
-        val current = state.exposureCompensationIndex
-        if (target == current || target == lastRequestedIndex) return
-        if (kotlin.math.abs((target - current) * step) < 0.25f) return
-        val now = SystemClock.elapsedRealtime()
-        if (now - lastRequestAtMs < 1800L || !inFlight.compareAndSet(false, true)) return
-        lastRequestAtMs = now
-        try {
-            val future = camera.cameraControl.setExposureCompensationIndex(target)
-            future.addListener({
-                try {
-                    future.get()
-                    lastRequestedIndex = target
-                    Log.d("SantetHPCamera", "Exposure compensation applied: " + (target * step) + " EV")
-                } catch (error: Exception) {
-                    Log.d("SantetHPCamera", "Exposure compensation unavailable for this camera session", error)
-                } finally { inFlight.set(false) }
-            }, mainExecutor)
-        } catch (error: Exception) {
-            inFlight.set(false)
-            Log.d("SantetHPCamera", "Exposure compensation request rejected", error)
-        }
-    }
-}
-
-/** Reusable centre histogram, restrained shadow lift, and natural colour recovery. */
-private class AdaptiveBrightnessVideoProcessor : NoDropVideoProcessor() {
+private class NaturalCameraVideoProcessor : NoDropVideoProcessor() {
     @Volatile private var outputSink: VideoSink? = null
-    @Volatile private var exposureFeedback: ((Int, Int) -> Unit)? = null
-    private var currentGamma = 1.0f
-    private var currentSaturation = 1.10f
-    private val lookup = IntArray(256)
-    private val histogram = IntArray(256)
 
-    fun setExposureFeedback(listener: ((Int, Int) -> Unit)?) { exposureFeedback = listener }
     override fun onCapturerStarted(success: Boolean) = Unit
     override fun onCapturerStopped() = Unit
     override fun setSink(sink: VideoSink?) { outputSink = sink }
 
     override fun onFrameCaptured(frame: VideoFrame) {
-        val sink = outputSink ?: return
-        val source = try { frame.buffer.toI420() } catch (_: Exception) { null }
-        if (source == null) { sink.onFrame(frame); return }
-        var ownershipTransferred = false
-        try {
-            val width = source.width
-            val height = source.height
-            if (width <= 0 || height <= 0) {
-                source.release()
-                sink.onFrame(frame)
-                return
-            }
-
-            val yPlane = source.dataY
-            val stride = source.strideY
-            java.util.Arrays.fill(histogram, 0)
-            val left = width / 6
-            val right = width - left
-            val top = height / 6
-            val bottom = height - top
-            var samples = 0
-            var y = top
-            while (y < bottom) {
-                var x = left
-                while (x < right) {
-                    val value = (yPlane.get(y * stride + x).toInt() and 0xff).coerceIn(0, 255)
-                    histogram[value]++
-                    samples++
-                    x += 12
-                }
-                y += 12
-            }
-
-            var median = 116
-            var p90 = 180
-            if (samples > 0) {
-                val medianTarget = (samples * 50 + 99) / 100
-                val p90Target = (samples * 90 + 99) / 100
-                var cumulative = 0
-                var medianFound = false
-                for (value in 0..255) {
-                    cumulative += histogram[value]
-                    if (!medianFound && cumulative >= medianTarget) {
-                        median = value
-                        medianFound = true
-                    }
-                    if (cumulative >= p90Target) {
-                        p90 = value
-                        break
-                    }
-                }
-                exposureFeedback?.invoke(median, p90)
-
-                // A slightly brighter mid-tone target helps avoid the dim,
-                // flat appearance of the previous global gamma correction.
-                val normalized = ((median - 16f) / 219f).coerceIn(0.025f, 0.97f)
-                val targetLuma = (120f - 16f) / 219f
-                val minimumGamma = when {
-                    p90 >= 220 -> 0.70f
-                    p90 >= 195 -> 0.60f
-                    else -> 0.45f
-                }
-                val gamma = (ln(targetLuma.toDouble()) / ln(normalized.toDouble()))
-                    .toFloat().coerceIn(minimumGamma, 1.35f)
-                currentGamma += (gamma - currentGamma) * 0.07f
-
-                // Recover a little colour after shadow lifting, but reduce the
-                // boost in very dark/noisy scenes and around clipped highlights.
-                val targetSaturation = when {
-                    median < 55 -> 1.06f
-                    p90 > 228 -> 1.08f
-                    else -> 1.13f
-                }
-                currentSaturation += (targetSaturation - currentSaturation) * 0.06f
-            }
-
-            // Keep the existing smooth luma adjustment and preserve the video range.
-            for (value in 0..255) {
-                val normalized = ((value - 16f) / 219f).coerceIn(0f, 1f)
-                lookup[value] = if (value <= 16) 16 else
-                    (16f + normalized.pow(currentGamma) * 219f).roundToInt().coerceIn(16, 235)
-            }
-            for (row in 0 until height) {
-                val offset = row * stride
-                for (column in 0 until width) {
-                    val index = offset + column
-                    val value = yPlane.get(index).toInt() and 0xff
-                    yPlane.put(index, lookup[value].toByte())
-                }
-            }
-
-            // Gently increase chroma around neutral grey. This restores colour
-            // richness without shifting hue or applying a blanket colour tint.
-            val chromaWidth = (width + 1) / 2
-            val chromaHeight = (height + 1) / 2
-            val uPlane = source.dataU
-            val vPlane = source.dataV
-            val uStride = source.strideU
-            val vStride = source.strideV
-            for (row in 0 until chromaHeight) {
-                val uOffset = row * uStride
-                val vOffset = row * vStride
-                for (column in 0 until chromaWidth) {
-                    val uIndex = uOffset + column
-                    val vIndex = vOffset + column
-                    val u = uPlane.get(uIndex).toInt() and 0xff
-                    val v = vPlane.get(vIndex).toInt() and 0xff
-                    val adjustedU = (128f + (u - 128f) * currentSaturation).roundToInt().coerceIn(0, 255)
-                    val adjustedV = (128f + (v - 128f) * currentSaturation).roundToInt().coerceIn(0, 255)
-                    uPlane.put(uIndex, adjustedU.toByte())
-                    vPlane.put(vIndex, adjustedV.toByte())
-                }
-            }
-
-            val processed = VideoFrame(source, frame.rotation, frame.timestampNs)
-            ownershipTransferred = true
-            try {
-                sink.onFrame(processed)
-            } finally {
-                processed.release()
-            }
-        } catch (error: Exception) {
-            if (!ownershipTransferred) runCatching { source.release() }
-            Log.w("SantetHPCamera", "Adaptive image processing skipped for a frame", error)
-            sink.onFrame(frame)
-        }
+        outputSink?.onFrame(frame)
     }
 }
 private suspend fun <T> Task<T>.await(): T =
