@@ -25,6 +25,7 @@ import io.livekit.android.events.collect
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.track.CameraPosition
 import io.livekit.android.room.track.LocalVideoTrack
+import io.livekit.android.room.track.LocalAudioTrackOptions
 import io.livekit.android.room.track.VideoPreset169
 import io.livekit.android.room.track.VideoPreset43
 import io.livekit.android.room.track.VideoEncoding
@@ -340,6 +341,16 @@ class RemoteCameraService : Service() {
                     runCatching { track.dispose() }
                     throw error
                 }
+                // Camera Live is a one-way ambient-audio stream: echo cancellation is unnecessary
+                // and can make nearby sound pump or become hollow. Keep noise suppression,
+                // automatic level control and the high-pass filter enabled.
+                activeRoom.audioTrackCaptureDefaults = LocalAudioTrackOptions(
+                    noiseSuppression = true,
+                    echoCancellation = false,
+                    autoGainControl = true,
+                    highPassFilter = true,
+                    typingNoiseDetection = false
+                )
                 val audioEnabled = if (hasCameraAudioConsent()) {
                     try { activeRoom.localParticipant.setMicrophoneEnabled(true) } catch (_: Exception) { false }
                 } else {
