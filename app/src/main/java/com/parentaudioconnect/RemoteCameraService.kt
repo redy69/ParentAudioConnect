@@ -573,8 +573,6 @@ class RemoteCameraService : LifecycleService() {
         }
         super.onDestroy()
     }
-
-    override fun onBind(intent: Intent?): IBinder? = null
 }
 
 private suspend fun <T> Task<T>.await(): T =
