@@ -6906,18 +6906,14 @@ private var receivedMp3File: File? = null
                         val liveKitConnection = LiveKitFailover.connectWithServer(
                             response = response,
                             createRoom = {
-                                if (role == "child") {
-                                    LiveKit.create(
-                                        appContext = applicationContext,
-                                        overrides = LiveKitOverrides(
-                                            audioOptions = AudioOptions(
-                                                audioOutputType = AudioType.MediaAudioType()
-                                            )
+                                LiveKit.create(
+                                    appContext = applicationContext,
+                                    overrides = LiveKitOverrides(
+                                        audioOptions = AudioOptions(
+                                            audioOutputType = AudioType.MediaAudioType()
                                         )
                                     )
-                                } else {
-                                    LiveKit.create(applicationContext)
-                                }
+                                )
                             }
                         )
                         val newRoom = liveKitConnection.room
@@ -6970,7 +6966,10 @@ private var receivedMp3File: File? = null
                                 newRoom.events.collect { event ->
                                     when (event) {
                                         is RoomEvent.TrackSubscribed -> {
-                                            if (event.track is RemoteAudioTrack) {
+                                            val remoteTrack = event.track as? RemoteAudioTrack
+                                            if (remoteTrack != null) {
+                                                maximizeLiveConversationMediaVolume()
+                                                try { remoteTrack.setVolume(2.0) } catch (_: Exception) { }
                                                 conversationChildAudioTrackActive = true
                                                 renderLiveConversationPage()
                                             }
@@ -7363,6 +7362,17 @@ private var receivedMp3File: File? = null
         val page = liveConversationPage ?: return
         (page.parent as? ViewGroup)?.removeView(page)
         showParentDashboard()
+    }
+
+    /** Apply the live conversation receive level to Android's media stream. */
+    private fun maximizeLiveConversationMediaVolume() {
+        try {
+            val audioManager = getSystemService(android.media.AudioManager::class.java) ?: return
+            val maximum = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+            audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, maximum, 0)
+        } catch (error: Exception) {
+            android.util.Log.w("SantetHP-Audio", "Could not maximize live conversation media volume", error)
+        }
     }
 
     private fun renderLiveConversationPage(statusOverride: String? = null) {
