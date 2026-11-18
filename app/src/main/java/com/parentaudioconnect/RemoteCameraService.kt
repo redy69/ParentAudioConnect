@@ -396,7 +396,7 @@ class RemoteCameraService : Service() {
             if (exposure.isExposureCompensationSupported && range.upper > 0 && step.toDouble() > 0.0) {
                 // Aim for about +0.3 EV, rounded to the device's actual compensation step.
                 // Keep the adjustment deliberately small to limit extra sensor gain/noise.
-                val requestedIndex = kotlin.math.round(0.3 / step.toDouble()).toInt()
+                val requestedIndex = kotlin.math.round(0.5 / step.toDouble()).toInt()
                     .coerceIn(range.lower, range.upper)
                 if (requestedIndex > 0 && exposure.exposureCompensationIndex != requestedIndex) {
                     camera.cameraControl.setExposureCompensationIndex(requestedIndex)
@@ -414,28 +414,79 @@ class RemoteCameraService : Service() {
             Log.w("SantetHPCamera", "Could not apply mild exposure compensation", error)
         }
 
-        // Keep hardware noise reduction when the sensor explicitly advertises it.
+        // Tune the existing LiveKit-owned CameraX session through Camera2 interop.
+        // Every value is checked against this physical camera's advertised capabilities.
         try {
             val info = Camera2CameraInfo.from(camera.cameraInfo)
-            val noise = info.getCameraCharacteristic(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES)?.toSet().orEmpty()
-            if (noise.contains(CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY)) {
-                val options = CaptureRequestOptions.Builder()
-                    .setCaptureRequestOption(
-                        CaptureRequest.NOISE_REDUCTION_MODE,
-                        CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
-                    )
-                    .build()
-                Camera2CameraControl.from(camera.cameraControl)
-                    .addCaptureRequestOptions(options)
-                    .get(5, java.util.concurrent.TimeUnit.SECONDS)
-                Log.i("SantetHPCamera", "Applied supported high-quality sensor noise reduction")
-            } else {
-                Log.i("SantetHPCamera", "High-quality sensor noise reduction is not advertised by this camera")
+            val afModes = info.getCameraCharacteristic(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES)
+            val aeModes = info.getCameraCharacteristic(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES)
+            val awbModes = info.getCameraCharacteristic(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES)
+            val antibandingModes = info.getCameraCharacteristic(CameraCharacteristics.CONTROL_AE_AVAILABLE_ANTIBANDING_MODES)
+            val oisModes = info.getCameraCharacteristic(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION)
+            val eisModes = info.getCameraCharacteristic(CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES)
+            val noiseModes = info.getCameraCharacteristic(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES)
+            val edgeModes = info.getCameraCharacteristic(CameraCharacteristics.EDGE_AVAILABLE_EDGE_MODES)
+
+            val continuousAf = when {
+                afModes?.contains(CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO) == true ->
+                    CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO
+                afModes?.contains(CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE) == true ->
+                    CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+                afModes?.contains(CaptureRequest.CONTROL_AF_MODE_AUTO) == true ->
+                    CaptureRequest.CONTROL_AF_MODE_AUTO
+                else -> null
             }
+
+            val options = CaptureRequestOptions.Builder().apply {
+                if (continuousAf != null) {
+                    setCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE, continuousAf)
+                }
+                if (aeModes?.contains(CaptureRequest.CONTROL_AE_MODE_ON) == true) {
+                    setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                }
+                if (awbModes?.contains(CaptureRequest.CONTROL_AWB_MODE_AUTO) == true) {
+                    setCaptureRequestOption(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
+                }
+                if (antibandingModes?.contains(CaptureRequest.CONTROL_AE_ANTIBANDING_MODE_AUTO) == true) {
+                    setCaptureRequestOption(CaptureRequest.CONTROL_AE_ANTIBANDING_MODE, CaptureRequest.CONTROL_AE_ANTIBANDING_MODE_AUTO)
+                }
+                if (oisModes?.contains(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON) == true) {
+                    setCaptureRequestOption(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)
+                }
+                if (eisModes?.contains(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON) == true) {
+                    setCaptureRequestOption(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON)
+                }
+
+                // Prefer FAST processing to reduce temporal smearing of moving details.
+                val noiseMode = when {
+                    noiseModes?.contains(CaptureRequest.NOISE_REDUCTION_MODE_FAST) == true ->
+                        CaptureRequest.NOISE_REDUCTION_MODE_FAST
+                    noiseModes?.contains(CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY) == true ->
+                        CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
+                    else -> null
+                }
+                if (noiseMode != null) {
+                    setCaptureRequestOption(CaptureRequest.NOISE_REDUCTION_MODE, noiseMode)
+                }
+                if (edgeModes?.contains(CaptureRequest.EDGE_MODE_FAST) == true) {
+                    setCaptureRequestOption(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_FAST)
+                }
+            }.build()
+
+            Camera2CameraControl.from(camera.cameraControl)
+                .addCaptureRequestOptions(options)
+                .get(5, java.util.concurrent.TimeUnit.SECONDS)
+
+            Log.i(
+                "SantetHPCamera",
+                "Applied supported camera modes: AF=$continuousAf, AE=${aeModes?.contains(CaptureRequest.CONTROL_AE_MODE_ON)}, " +
+                    "AWB=${awbModes?.contains(CaptureRequest.CONTROL_AWB_MODE_AUTO)}, OIS=${oisModes?.contains(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)}, " +
+                    "EIS=${eisModes?.contains(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON)}, NR=$noiseModes, EDGE=$edgeModes"
+            )
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            Log.w("SantetHPCamera", "Could not enable hardware noise reduction", error)
+            Log.w("SantetHPCamera", "Could not apply supported Camera2 focus/quality modes", error)
         }
     }
     private fun switchCamera(facing: String) {
