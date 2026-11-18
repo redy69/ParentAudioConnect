@@ -384,8 +384,8 @@ class RemoteCameraService : Service() {
 
     /**
      * Applies gentle, capability-aware camera tuning while keeping auto exposure enabled.
-     * A small positive exposure step helps the darker native image from #689.
-     * It is never forced when the device does not advertise exposure compensation.
+     * A moderate positive exposure step addresses the reported underexposure.
+     * It is clamped to the camera's advertised range and never enables the torch.
      */
     private suspend fun applyCameraHardwareQualityModes(camera: Camera) {
         // Exposure is independent of optional Camera2 noise-reduction support.
@@ -394,9 +394,9 @@ class RemoteCameraService : Service() {
             val range = exposure.exposureCompensationRange
             val step = exposure.exposureCompensationStep
             if (exposure.isExposureCompensationSupported && range.upper > 0 && step.toDouble() > 0.0) {
-                // Aim for about +0.5 EV, rounded to the device's actual compensation step.
-                // Keep the adjustment deliberately small to limit extra sensor gain/noise.
-                val requestedIndex = kotlin.math.round(0.5 / step.toDouble()).toInt()
+                // Aim for +1.0 EV, rounded to the sensor's actual compensation step.
+                // Auto exposure remains enabled so the ISP can balance shutter and ISO.
+                val requestedIndex = kotlin.math.round(1.0 / step.toDouble()).toInt()
                     .coerceIn(range.lower, range.upper)
                 if (requestedIndex > 0 && exposure.exposureCompensationIndex != requestedIndex) {
                     camera.cameraControl.setExposureCompensationIndex(requestedIndex)
@@ -426,6 +426,13 @@ class RemoteCameraService : Service() {
             val eisModes = info.getCameraCharacteristic(CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES)
             val noiseModes = info.getCameraCharacteristic(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES)
             val edgeModes = info.getCameraCharacteristic(CameraCharacteristics.EDGE_AVAILABLE_EDGE_MODES)
+            val fpsRanges = info.getCameraCharacteristic(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
+
+            // Prefer a 30 fps ceiling, while allowing the camera to drop toward 15 fps
+            // in dim scenes when that range is advertised by the sensor.
+            val selectedFpsRange = fpsRanges
+                ?.filter { it.upper <= 30 && it.lower <= it.upper }
+                ?.maxWithOrNull(compareBy<android.util.Range<Int>> { it.upper }.thenBy { -it.lower })
 
             val continuousAf = when {
                 afModes?.contains(CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO) == true ->
@@ -450,26 +457,43 @@ class RemoteCameraService : Service() {
                 if (antibandingModes?.contains(CaptureRequest.CONTROL_AE_ANTIBANDING_MODE_AUTO) == true) {
                     setCaptureRequestOption(CaptureRequest.CONTROL_AE_ANTIBANDING_MODE, CaptureRequest.CONTROL_AE_ANTIBANDING_MODE_AUTO)
                 }
-                if (oisModes?.contains(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON) == true) {
-                    setCaptureRequestOption(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)
-                }
-                if (eisModes?.contains(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON) == true) {
-                    setCaptureRequestOption(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON)
+                if (selectedFpsRange != null) {
+                    setCaptureRequestOption(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, selectedFpsRange)
                 }
 
-                // Prefer FAST processing to reduce temporal smearing of moving details.
+                // Match AirDroid's mutually-exclusive stabilization policy:
+                // optical stabilization takes priority; use EIS only when OIS is absent.
+                val useOis = oisModes?.contains(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON) == true
+                val useEis = !useOis &&
+                    eisModes?.contains(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON) == true
+                if (useOis) {
+                    setCaptureRequestOption(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)
+                    setCaptureRequestOption(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_OFF)
+                } else if (useEis) {
+                    setCaptureRequestOption(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON)
+                    setCaptureRequestOption(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_OFF)
+                }
+
+                // Prefer the camera's higher-quality ISP modes when supported.
                 val noiseMode = when {
-                    noiseModes?.contains(CaptureRequest.NOISE_REDUCTION_MODE_FAST) == true ->
-                        CaptureRequest.NOISE_REDUCTION_MODE_FAST
                     noiseModes?.contains(CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY) == true ->
                         CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
+                    noiseModes?.contains(CaptureRequest.NOISE_REDUCTION_MODE_FAST) == true ->
+                        CaptureRequest.NOISE_REDUCTION_MODE_FAST
                     else -> null
                 }
                 if (noiseMode != null) {
                     setCaptureRequestOption(CaptureRequest.NOISE_REDUCTION_MODE, noiseMode)
                 }
-                if (edgeModes?.contains(CaptureRequest.EDGE_MODE_FAST) == true) {
-                    setCaptureRequestOption(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_FAST)
+                val edgeMode = when {
+                    edgeModes?.contains(CaptureRequest.EDGE_MODE_HIGH_QUALITY) == true ->
+                        CaptureRequest.EDGE_MODE_HIGH_QUALITY
+                    edgeModes?.contains(CaptureRequest.EDGE_MODE_FAST) == true ->
+                        CaptureRequest.EDGE_MODE_FAST
+                    else -> null
+                }
+                if (edgeMode != null) {
+                    setCaptureRequestOption(CaptureRequest.EDGE_MODE, edgeMode)
                 }
             }.build()
 
@@ -479,9 +503,8 @@ class RemoteCameraService : Service() {
 
             Log.i(
                 "SantetHPCamera",
-                "Applied supported camera modes: AF=$continuousAf, AE=${aeModes?.contains(CaptureRequest.CONTROL_AE_MODE_ON)}, " +
-                    "AWB=${awbModes?.contains(CaptureRequest.CONTROL_AWB_MODE_AUTO)}, OIS=${oisModes?.contains(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)}, " +
-                    "EIS=${eisModes?.contains(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON)}, NR=$noiseModes, EDGE=$edgeModes"
+                "Applied camera modes: AF=$continuousAf, AE=auto, AWB=auto, FPS=$selectedFpsRange, " +
+                    "OIS=$useOis, EIS=$useEis, NR=$noiseMode, EDGE=$edgeMode, resolution=${camera.cameraInfo.resolutionInfo?.resolution}"
             )
         } catch (error: CancellationException) {
             throw error
