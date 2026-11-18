@@ -20,6 +20,10 @@ import io.livekit.android.room.track.CameraPosition
 import io.livekit.android.room.track.LocalVideoTrack
 import io.livekit.android.room.track.VideoPreset169
 import io.livekit.android.room.track.Track
+import io.livekit.android.room.track.video.NoDropVideoProcessor
+import livekit.org.webrtc.JavaI420Buffer
+import livekit.org.webrtc.VideoFrame
+import livekit.org.webrtc.VideoSink
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,8 +37,12 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.nio.ByteBuffer
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.math.ln
+import kotlin.math.pow
+import kotlin.math.roundToInt
 
 /**
  * Camera standby is explicitly enabled from the child's visible app.
@@ -286,20 +294,36 @@ class RemoteCameraService : Service() {
             try {
                 val activeRoom = room ?: throw IllegalStateException("Ruang kamera belum terhubung")
                 updateNotification("Permintaan diterima • kamera sedang diaktifkan")
-                // Use 720p for a lighter, more stable live preview on mobile networks.
-                activeRoom.localParticipant.videoTrackCaptureDefaults =
-                    activeRoom.localParticipant.videoTrackCaptureDefaults.copy(
-                        position = if (facing == "front") CameraPosition.FRONT else CameraPosition.BACK,
-                        captureParams = VideoPreset169.H720.capture
-                    )
-                activeRoom.localParticipant.videoTrackPublishDefaults =
-                    activeRoom.localParticipant.videoTrackPublishDefaults.copy(
+                // Use one LiveKit-owned camera session. The processor is attached
+                // to this exact track; do not register a second CameraX session.
+                val participant = activeRoom.localParticipant
+                val captureOptions = participant.videoTrackCaptureDefaults.copy(
+                    position = if (facing == "front") CameraPosition.FRONT else CameraPosition.BACK,
+                    captureParams = VideoPreset169.H720.capture
+                )
+                participant.videoTrackCaptureDefaults = captureOptions
+                participant.videoTrackPublishDefaults =
+                    participant.videoTrackPublishDefaults.copy(
                         videoEncoding = VideoPreset169.H720.encoding
                     )
-                val enabled = activeRoom.localParticipant.setCameraEnabled(true)
-                if (!enabled) throw IllegalStateException("Android tidak dapat mengaktifkan kamera")
-                cameraTrack = activeRoom.localParticipant.getTrackPublication(Track.Source.CAMERA)?.track as? LocalVideoTrack
-                cameraTrack?.switchCamera(position = if (facing == "front") CameraPosition.FRONT else CameraPosition.BACK)
+
+                val track = participant.createVideoTrack(
+                    options = captureOptions,
+                    videoProcessor = AdaptiveBrightnessVideoProcessor()
+                )
+                cameraTrack = track
+                try {
+                    track.startCapture()
+                    val published = participant.publishVideoTrack(track)
+                    if (!published) {
+                        throw IllegalStateException("LiveKit gagal menerbitkan kamera")
+                    }
+                } catch (error: Exception) {
+                    cameraTrack = null
+                    runCatching { participant.unpublishTrack(track) }
+                    runCatching { track.dispose() }
+                    throw error
+                }
                 val audioEnabled = if (hasCameraAudioConsent()) {
                     try { activeRoom.localParticipant.setMicrophoneEnabled(true) } catch (_: Exception) { false }
                 } else {
@@ -341,9 +365,16 @@ class RemoteCameraService : Service() {
         cameraStopJob?.cancel()
         cameraStopJob = null
         scope.launch {
-            try { room?.localParticipant?.setMicrophoneEnabled(false) } catch (_: Exception) { }
-            try { room?.localParticipant?.setCameraEnabled(false) } catch (_: Exception) { }
+            val participant = room?.localParticipant
+            try { participant?.setMicrophoneEnabled(false) } catch (_: Exception) { }
+            val track = cameraTrack
             cameraTrack = null
+            if (track != null) {
+                try { participant?.unpublishTrack(track) } catch (_: Exception) { }
+                try { track.dispose() } catch (_: Exception) { }
+            } else {
+                try { participant?.setCameraEnabled(false) } catch (_: Exception) { }
+            }
             updateNotification(message + " • suara dan kamera berhenti, layanan tetap siaga")
         }
     }
@@ -359,8 +390,16 @@ class RemoteCameraService : Service() {
         getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
             .putBoolean("remote_camera_armed", false).apply()
         scope.launch {
-            try { room?.localParticipant?.setMicrophoneEnabled(false) } catch (_: Exception) { }
-            try { room?.localParticipant?.setCameraEnabled(false) } catch (_: Exception) { }
+            val participant = room?.localParticipant
+            try { participant?.setMicrophoneEnabled(false) } catch (_: Exception) { }
+            val track = cameraTrack
+            cameraTrack = null
+            if (track != null) {
+                try { participant?.unpublishTrack(track) } catch (_: Exception) { }
+                try { track.dispose() } catch (_: Exception) { }
+            } else {
+                try { participant?.setCameraEnabled(false) } catch (_: Exception) { }
+            }
             try { room?.disconnect() } catch (_: Exception) { }
             try { room?.release() } catch (_: Exception) { }
             room = null
@@ -459,6 +498,129 @@ class RemoteCameraService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+}
+
+/**
+ * Per-frame adaptive tone correction for the outgoing LiveKit camera track.
+ *
+ * Samples the centre of each frame and gently adjusts luma with a smoothed
+ * gamma curve. This is intentionally a video-frame processor: it reuses the
+ * camera session already owned by LiveKit and never opens a second CameraX
+ * session. Chroma planes are shared read-only; only the luma plane is copied.
+ */
+private class AdaptiveBrightnessVideoProcessor : NoDropVideoProcessor() {
+    @Volatile private var outputSink: VideoSink? = null
+    private var currentGamma = 1.0f
+
+    override fun onCapturerStarted(success: Boolean) = Unit
+
+    override fun onCapturerStopped() = Unit
+
+    override fun setSink(sink: VideoSink?) {
+        outputSink = sink
+    }
+
+    override fun onFrameCaptured(frame: VideoFrame) {
+        val sink = outputSink ?: return
+        val source = try {
+            frame.buffer.toI420()
+        } catch (_: Exception) {
+            null
+        }
+        if (source == null) {
+            sink.onFrame(frame)
+            return
+        }
+
+        var sourceOwnershipTransferred = false
+        try {
+            val width = source.width
+            val height = source.height
+            if (width <= 0 || height <= 0) {
+                source.release()
+                sink.onFrame(frame)
+                return
+            }
+
+            val sourceY = source.dataY
+            val strideY = source.strideY
+            val left = width / 6
+            val right = width - left
+            val top = height / 6
+            val bottom = height - top
+            var sum = 0L
+            var samples = 0
+            val sampleStep = 12
+            var y = top
+            while (y < bottom) {
+                var x = left
+                while (x < right) {
+                    sum += sourceY.get(y * strideY + x).toInt() and 0xff
+                    samples++
+                    x += sampleStep
+                }
+                y += sampleStep
+            }
+
+            if (samples > 0) {
+                val meanLuma = sum.toFloat() / samples
+                val normalizedMean = ((meanLuma - 16f) / 219f).coerceIn(0.025f, 0.97f)
+                val targetLuma = (104f - 16f) / 219f
+                val desiredGamma = (
+                    ln(targetLuma.toDouble()) / ln(normalizedMean.toDouble())
+                ).toFloat().coerceIn(0.58f, 1.8f)
+                // Smooth changes so moving between dark and bright rooms does
+                // not cause visible frame-to-frame pumping.
+                currentGamma += (desiredGamma - currentGamma) * 0.06f
+            }
+
+            val lookup = IntArray(256)
+            for (value in 0..255) {
+                val normalized = ((value - 16f) / 219f).coerceIn(0f, 1f)
+                lookup[value] = if (value <= 16) {
+                    16
+                } else {
+                    (16f + normalized.pow(currentGamma) * 219f)
+                        .roundToInt().coerceIn(16, 235)
+                }
+            }
+
+            val outputY = ByteBuffer.allocateDirect(width * height)
+            for (row in 0 until height) {
+                val sourceRow = row * strideY
+                val outputRow = row * width
+                for (column in 0 until width) {
+                    val value = sourceY.get(sourceRow + column).toInt() and 0xff
+                    outputY.put(outputRow + column, lookup[value].toByte())
+                }
+            }
+
+            val outputBuffer = JavaI420Buffer.wrap(
+                width,
+                height,
+                outputY,
+                width,
+                source.dataU,
+                source.strideU,
+                source.dataV,
+                source.strideV
+            ) {
+                source.release()
+            }
+            sourceOwnershipTransferred = true
+            val processedFrame = VideoFrame(outputBuffer, frame.rotation, frame.timestampNs)
+            try {
+                sink.onFrame(processedFrame)
+            } finally {
+                processedFrame.release()
+            }
+        } catch (_: Exception) {
+            if (!sourceOwnershipTransferred) {
+                runCatching { source.release() }
+            }
+            sink.onFrame(frame)
+        }
+    }
 }
 
 private suspend fun <T> Task<T>.await(): T =
