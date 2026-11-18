@@ -180,11 +180,19 @@ class CameraViewerActivity : Activity() {
         // Keep the camera preview window at 3:4 (width:height) on portrait phones.
         val previewWidthPx = resources.displayMetrics.widthPixels - dp(24)
         val previewHeightPx = (previewWidthPx * 4f / 3f).toInt()
+        // Keep the preview vertically centered in the available space between
+        // the connection status and the controls on the parent's phone.
+        root.addView(View(this), LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+        ))
         root.addView(videoFrame, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, previewHeightPx
         ).apply {
             bottomMargin = dp(12)
         })
+        root.addView(View(this), LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+        ))
         root.addView(controls, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
         ))
