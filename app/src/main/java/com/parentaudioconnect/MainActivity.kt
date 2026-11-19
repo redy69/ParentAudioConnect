@@ -310,6 +310,7 @@ private var receivedMp3File: File? = null
     private const val BACKUP_MEDIA_PERMISSION = 1012
     private const val CAMERA_AUDIO_PERMISSION = 1013
     private const val CHILD_TALK_MIC_PERMISSION = 1014
+    private const val GOOGLE_PARENT_SIGN_IN = 1015
 }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -968,6 +969,17 @@ private var receivedMp3File: File? = null
         ))
         notificationsBellButton.setOnClickListener { showChildNotificationsDialog() }
         childHeaderRow.addView(notificationBellContainer)
+        val parentAccountButton = createButton("⚙️").apply {
+            textSize = 18f
+            minHeight = dp(42)
+            minimumWidth = dp(42)
+            setPadding(0, 0, 0, 0)
+            contentDescription = "Akun Orang Tua"
+            layoutParams = LinearLayout.LayoutParams(dp(42), dp(42)).apply { setMargins(dp(3), 0, dp(3), 0) }
+            setOnClickListener { showParentAccountSettings() }
+        }
+        childHeaderRow.addView(parentAccountButton)
+        parentOnlyViews.add(parentAccountButton)
         parentOnlyViews.add(notificationBellContainer)
         childHeaderRow.addView(addChildButton)
         rootLayout.addView(childHeaderRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)))
@@ -2222,6 +2234,79 @@ private var receivedMp3File: File? = null
             }
             .setNegativeButton("Nanti", null)
             .show()
+    }
+
+    private fun showParentAccountSettings() {
+        if (currentRole != "parent") return
+        val user = auth.currentUser
+        val signedGoogle = user?.providerData?.any { it.providerId == "google.com" } == true
+        val accountLabel = if (signedGoogle) "Akun Google sudah terhubung" else "Belum terhubung ke Google"
+        SantetHpDialogBuilder()
+            .setTitle("Akun Orang Tua")
+            .setMessage("$accountLabel\\n\\nLogin Google membantu mengamankan identitas akun orang tua. Identitas Firebase saat ini akan dipertahankan saat proses pengaitan.")
+            .setNegativeButton("Tutup", null)
+            .setPositiveButton(if (signedGoogle) "Status akun" else "Hubungkan Google") { _, _ ->
+                if (!signedGoogle) startParentGoogleLink()
+            }
+            .show()
+    }
+
+    private fun startParentGoogleLink() {
+        if (currentRole != "parent") {
+            Toast.makeText(this, "Login Google hanya tersedia di mode orang tua", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val webClientIdResource = resources.getIdentifier("default_web_client_id", "string", packageName)
+        if (webClientIdResource == 0) {
+            SantetHpDialogBuilder()
+                .setTitle("Konfigurasi Google belum tersedia")
+                .setMessage("Login Google belum dapat digunakan. Firebase Console perlu mengaktifkan provider Google dan konfigurasi OAuth terlebih dahulu.")
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+        val clientId = getString(webClientIdResource)
+        val options = com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder(
+            com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN
+        ).requestEmail().requestIdToken(clientId).build()
+        val client = com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(this, options)
+        startActivityForResult(client.signInIntent, GOOGLE_PARENT_SIGN_IN)
+    }
+
+    private fun finishParentGoogleLink(data: Intent?) {
+        if (currentRole != "parent") return
+        val task = com.google.android.gms.auth.api.signin.GoogleSignIn.getSignedInAccountFromIntent(data)
+        try {
+            val account = task.getResult(com.google.android.gms.common.api.ApiException::class.java)
+            val idToken = account.idToken
+            if (idToken.isNullOrBlank()) {
+                Toast.makeText(this, "Token Google tidak tersedia. Periksa konfigurasi OAuth.", Toast.LENGTH_LONG).show()
+                return
+            }
+            val credential = com.google.firebase.auth.GoogleAuthProvider.getCredential(idToken, null)
+            val user = auth.currentUser
+            if (user == null) {
+                Toast.makeText(this, "Firebase belum siap. Coba lagi setelah koneksi pulih.", Toast.LENGTH_LONG).show()
+                return
+            }
+            if (user.isAnonymous) {
+                user.linkWithCredential(credential).addOnCompleteListener(this) { linkTask ->
+                    if (linkTask.isSuccessful) {
+                        Toast.makeText(this, "Akun Google berhasil dihubungkan. UID Firebase tetap dipertahankan.", Toast.LENGTH_LONG).show()
+                        showParentAccountSettings()
+                    } else {
+                        val error = linkTask.exception
+                        Toast.makeText(this, error?.localizedMessage ?: "Gagal menghubungkan akun Google. Akun yang sudah digunakan tidak akan digabung otomatis.", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } else {
+                Toast.makeText(this, "Akun Firebase sudah terhubung. Tidak ada perubahan identitas.", Toast.LENGTH_LONG).show()
+            }
+        } catch (e: com.google.android.gms.common.api.ApiException) {
+            if (e.statusCode != com.google.android.gms.common.api.CommonStatusCodes.CANCELED) {
+                Toast.makeText(this, "Login Google gagal: ${e.localizedMessage ?: "coba lagi"}", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun connectFirebase() {
@@ -7777,6 +7862,11 @@ override fun onActivityResult(
     super.onActivityResult(requestCode, resultCode, data)
 
     if (googleDriveAuthorization?.onActivityResult(requestCode, resultCode, data) == true) return
+
+    if (requestCode == GOOGLE_PARENT_SIGN_IN) {
+        if (resultCode == RESULT_OK) finishParentGoogleLink(data)
+        return
+    }
 
     if (requestCode == PARENT_MEDIA_PICKER && resultCode == RESULT_OK) {
         val uri = data?.data
