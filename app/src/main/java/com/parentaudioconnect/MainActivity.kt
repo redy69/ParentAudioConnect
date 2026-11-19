@@ -311,6 +311,7 @@ private var receivedMp3File: File? = null
     private const val CAMERA_AUDIO_PERMISSION = 1013
     private const val CHILD_TALK_MIC_PERMISSION = 1014
     private const val GOOGLE_PARENT_SIGN_IN = 1015
+    private const val GOOGLE_PARENT_LOGIN = 1016
 }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -541,7 +542,7 @@ private var receivedMp3File: File? = null
         }
 
         roleIntroText = TextView(this).apply {
-            text = "SELAMAT DATANG DI SANTETHP\nPilih jenis perangkat untuk melanjutkan. Pastikan Anda memilih peran yang sesuai dengan HP ini."
+            text = "SELAMAT DATANG DI SANTETHP\nPilih cara masuk untuk melanjutkan."
             textSize = 14f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(Color.rgb(48, 67, 103))
@@ -561,8 +562,8 @@ private var receivedMp3File: File? = null
             ).apply { setMargins(0, dp(24), 0, dp(12)) }
             visibility = View.GONE
         }
-        parentButton = createButton("👨‍👩‍👧  ORANG TUA\nKelola perangkat anak")
-        childButton = createButton("📱  PERANGKAT ANAK\nHubungkan ke orang tua")
+        parentButton = createButton("G  LOGIN DENGAN GOOGLE\nMasuk sebagai Orang Tua")
+        childButton = createButton("📱  MASUK SEBAGAI ANAK\nHubungkan ke orang tua")
         listOf(parentButton, childButton).forEach { button ->
             button.textSize = 14f
             button.gravity = Gravity.CENTER
@@ -657,8 +658,8 @@ private var receivedMp3File: File? = null
             visibility = View.GONE
         }
 
-        parentButton.setOnClickListener { createPairingCode() }
-        childButton.setOnClickListener { showCodeDialog() }
+        parentButton.setOnClickListener { startParentGoogleSignIn() }
+        childButton.setOnClickListener { enterChildMode() }
         startButton.setOnClickListener { showLiveConversationPage() }
         stopButton.setOnClickListener { showLiveConversationPage() }
         sendMp3Button.setOnClickListener { openMp3Picker() }
@@ -2251,6 +2252,131 @@ private var receivedMp3File: File? = null
             .show()
     }
 
+    private fun enterChildMode() {
+        val current = auth.currentUser
+        if (current?.isAnonymous == true) {
+            showCodeDialog()
+            return
+        }
+        statusText.text = "Menyiapkan identitas perangkat anak..."
+        auth.signOut()
+        auth.signInAnonymously().addOnCompleteListener(this) { task ->
+            if (task.isSuccessful) showCodeDialog()
+            else {
+                statusText.text = "Gagal menyiapkan mode anak"
+                Toast.makeText(this, task.exception?.localizedMessage ?: "Coba lagi", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun startParentGoogleSignIn() {
+        val webClientIdResource = resources.getIdentifier("default_web_client_id", "string", packageName)
+        if (webClientIdResource == 0) {
+            Toast.makeText(this, "Konfigurasi Google belum tersedia", Toast.LENGTH_LONG).show()
+            return
+        }
+        val options = com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder(
+            com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN
+        ).requestEmail().requestIdToken(getString(webClientIdResource)).build()
+        val client = com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(this, options)
+        client.signOut().addOnCompleteListener(this) {
+            startActivityForResult(client.signInIntent, GOOGLE_PARENT_LOGIN)
+        }
+    }
+
+    private fun finishParentGoogleSignIn(data: Intent?) {
+        try {
+            val account = com.google.android.gms.auth.api.signin.GoogleSignIn
+                .getSignedInAccountFromIntent(data)
+                .getResult(com.google.android.gms.common.api.ApiException::class.java)
+            val token = account.idToken
+            if (token.isNullOrBlank()) {
+                Toast.makeText(this, "Token Google tidak tersedia", Toast.LENGTH_LONG).show()
+                return
+            }
+            val credential = com.google.firebase.auth.GoogleAuthProvider.getCredential(token, null)
+            val anonymousUser = auth.currentUser?.takeIf { it.isAnonymous }
+            val signInAction: () -> Unit = {
+                auth.signInWithCredential(credential).addOnCompleteListener(this) { signIn ->
+                    if (signIn.isSuccessful) activateParentAccount()
+                    else Toast.makeText(this, signIn.exception?.localizedMessage ?: "Login Google gagal", Toast.LENGTH_LONG).show()
+                }
+            }
+            if (anonymousUser != null) {
+                anonymousUser.linkWithCredential(credential).addOnCompleteListener(this) { linked ->
+                    if (linked.isSuccessful) activateParentAccount()
+                    else if (linked.exception is com.google.firebase.auth.FirebaseAuthUserCollisionException) {
+                        SantetHpDialogBuilder()
+                            .setTitle("Akun Google sudah terdaftar")
+                            .setMessage("Login akan membuka perangkat yang tersimpan pada akun Google ini. Perangkat yang masih terikat pada akun anonim lama yang belum ditautkan mungkin tidak ikut dipulihkan.")
+                            .setNegativeButton("Batal", null)
+                            .setPositiveButton("Login akun ini") { _, _ -> signInAction() }
+                            .show()
+                    } else {
+                        Toast.makeText(this, linked.exception?.localizedMessage ?: "Gagal menghubungkan akun Google", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } else signInAction()
+        } catch (error: com.google.android.gms.common.api.ApiException) {
+            if (error.statusCode != com.google.android.gms.common.CommonStatusCodes.CANCELED) {
+                Toast.makeText(this, "Login Google gagal: ${error.localizedMessage ?: "coba lagi"}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun activateParentAccount() {
+        val user = auth.currentUser ?: return
+        if (user.isAnonymous) {
+            Toast.makeText(this, "Login Google belum selesai", Toast.LENGTH_LONG).show()
+            return
+        }
+        currentRole = "parent"
+        getSharedPreferences("parent_audio", MODE_PRIVATE).edit()
+            .putString("pair_role", "parent")
+            .remove("pair_code")
+            .apply()
+        restoreParentChildrenFromFirebase()
+    }
+
+    private fun restoreParentChildrenFromFirebase() {
+        val uid = auth.currentUser?.uid ?: return
+        val prefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+        val localNames = linkedMapOf<String, String>()
+        try {
+            val saved = prefs.getString("parent_children", null)
+            if (!saved.isNullOrBlank()) {
+                val json = JSONObject(saved)
+                json.keys().forEach { code -> localNames[code] = json.optString(code, "Anak") }
+            }
+        } catch (_: Exception) { }
+        statusText.text = "Memulihkan perangkat anak..."
+        db.collection("pairings").whereEqualTo("parentUid", uid).get()
+            .addOnSuccessListener { snapshots ->
+                childNames.clear()
+                val paired = snapshots.documents.filter { !it.getString("childUid").isNullOrBlank() }
+                    .sortedBy { it.getTimestamp("createdAt")?.toDate()?.time ?: 0L }
+                paired.forEachIndexed { index, document ->
+                    childNames[document.id] = localNames[document.id] ?: "Anak ${index + 1}"
+                    childConnected[document.id] = false
+                }
+                persistChildren()
+                val prior = prefs.getString("selected_child_code", null)
+                selectedChildCode = prior?.takeIf { it in childNames.keys } ?: childNames.keys.firstOrNull()
+                prefs.edit().putString("selected_child_code", selectedChildCode).apply()
+                loadSavedChildren()
+                showParentDashboard()
+                codeText.text = selectedChildCode.orEmpty()
+                statusText.text = if (childNames.isEmpty()) {
+                    "Belum ada HP anak terhubung. Tekan TAMBAH ANAK untuk membuat kode."
+                } else "Menampilkan ${childNames.size} perangkat anak"
+            }
+            .addOnFailureListener { error ->
+                showParentDashboard()
+                statusText.text = "Gagal memulihkan perangkat anak. Periksa koneksi dan aturan Firebase."
+                Toast.makeText(this, error.localizedMessage ?: "Pemulihan gagal", Toast.LENGTH_LONG).show()
+            }
+    }
+
     private fun startParentGoogleLink() {
         if (currentRole != "parent") {
             Toast.makeText(this, "Login Google hanya tersedia di mode orang tua", Toast.LENGTH_SHORT).show()
@@ -3837,6 +3963,10 @@ private var receivedMp3File: File? = null
         val role = prefs.getString("pair_role", null) ?: return
         currentRole = role
         if (role == "parent") {
+            if (auth.currentUser?.isAnonymous == false) {
+                restoreParentChildrenFromFirebase()
+                return
+            }
             loadSavedChildren()
             showParentDashboard()
             if (childNames.isEmpty()) {
@@ -7865,6 +7995,11 @@ override fun onActivityResult(
     super.onActivityResult(requestCode, resultCode, data)
 
     if (googleDriveAuthorization?.onActivityResult(requestCode, resultCode, data) == true) return
+
+    if (requestCode == GOOGLE_PARENT_LOGIN) {
+        if (resultCode == RESULT_OK) finishParentGoogleSignIn(data)
+        return
+    }
 
     if (requestCode == GOOGLE_PARENT_SIGN_IN) {
         if (resultCode == RESULT_OK) finishParentGoogleLink(data)
