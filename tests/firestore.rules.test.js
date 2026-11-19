@@ -7,11 +7,15 @@ import {
 } from "@firebase/rules-unit-testing";
 import {
   Timestamp,
+  collection,
   deleteField,
   doc,
   getDoc,
+  getDocs,
+  query,
   setDoc,
-  updateDoc
+  updateDoc,
+  where
 } from "firebase/firestore";
 
 const PROJECT_ID = "demo-santethp";
@@ -63,6 +67,14 @@ beforeEach(async () => {
 
 after(async () => {
   await testEnv.cleanup();
+});
+
+test("parent can query their own pairing docs and not other parents", async () => {
+  const db = testEnv.authenticatedContext("parent-user").firestore();
+  const ownQuery = query(collection(db, "pairings"), where("parentUid", "==", "parent-user"));
+  await assertSucceeds(getDocs(ownQuery));
+  const otherQuery = query(collection(db, "pairings"), where("parentUid", "==", "another-parent"));
+  await assertFails(getDocs(otherQuery));
 });
 
 test("parent can save a valid schedule using Sunday=1 through Saturday=7", async () => {
