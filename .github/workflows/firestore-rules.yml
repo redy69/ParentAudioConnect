@@ -7,6 +7,7 @@ on:
       - feature/livekit-multi-server-failover
       - feature/gallery-webrtc-p2p
       - ui/dark-emerald-glass-dashboard
+      - feature/live-camera-environment-audio
     paths:
       - 'firestore.rules'
       - 'tests/firestore.rules.test.js'
