@@ -2270,7 +2270,10 @@ private var receivedMp3File: File? = null
             com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN
         ).requestEmail().requestIdToken(clientId).build()
         val client = com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(this, options)
-        startActivityForResult(client.signInIntent, GOOGLE_PARENT_SIGN_IN)
+        // Clear the cached Google chooser selection so the user can choose another account.
+        client.signOut().addOnCompleteListener(this) {
+            startActivityForResult(client.signInIntent, GOOGLE_PARENT_SIGN_IN)
+        }
     }
 
     private fun finishParentGoogleLink(data: Intent?) {
