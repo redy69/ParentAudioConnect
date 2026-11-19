@@ -2318,7 +2318,7 @@ private var receivedMp3File: File? = null
                 }
             } else signInAction()
         } catch (error: com.google.android.gms.common.api.ApiException) {
-            if (error.statusCode != com.google.android.gms.common.CommonStatusCodes.CANCELED) {
+            if (error.statusCode != 12501) {
                 Toast.makeText(this, "Login Google gagal: ${error.localizedMessage ?: "coba lagi"}", Toast.LENGTH_LONG).show()
             }
         }
