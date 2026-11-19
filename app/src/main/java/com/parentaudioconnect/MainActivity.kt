@@ -2103,7 +2103,28 @@ private var receivedMp3File: File? = null
             return
         }
         childModePanel.setOnClickListener {
-            ensureChildConversationServiceReady(forcePrompt = true)
+            val usagePrefs = getSharedPreferences("parent_audio", MODE_PRIVATE)
+            if (!usagePrefs.getBoolean("child_usage_audit_enabled", false) ||
+                !AppUsageReporter.hasUsageAccess(this)
+            ) {
+                SantetHpDialogBuilder()
+                    .setTitle("Riwayat penggunaan aplikasi")
+                    .setMessage(
+                        "SantetHP perlu izin khusus Android bernama Akses penggunaan aplikasi (Usage Access). Ketuk Buka pengaturan, cari SantetHP, lalu aktifkan sakelarnya. Setelah kembali ke SantetHP, status izin akan diperiksa langsung oleh Android. Yang dibagikan hanya nama aplikasi dan perkiraan durasi penggunaan 24 jam terakhir."
+                    )
+                    .setNegativeButton("Nanti", null)
+                    .setPositiveButton("Buka pengaturan") { _, _ ->
+                        usagePrefs.edit().putBoolean("child_usage_audit_enabled", true).apply()
+                        try {
+                            startActivity(Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                        } catch (_: Exception) {
+                            Toast.makeText(this, "Pengaturan Usage Access tidak tersedia di perangkat ini", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                    .show()
+            } else {
+                ensureChildConversationServiceReady(forcePrompt = true)
+            }
         }
 
         roleIntroText.visibility = View.GONE
