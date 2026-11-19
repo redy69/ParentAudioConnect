@@ -12,7 +12,12 @@
           "package_name": "com.parentaudioconnect"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "510992503464-o2h2vhte1saeg9gp4m5hcnkgabgo2qjp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyArnd_Ejlu045Sgu_UYKaD0BLs3BtFLTDg"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "510992503464-o2h2vhte1saeg9gp4m5hcnkgabgo2qjp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     },
@@ -31,7 +41,20 @@
           "package_name": "com.santethp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "510992503464-q16241ltaf2dj3ousihuuk7f9b02gmri.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.santethp",
+            "certificate_hash": "9e6b4eb435fc2b6e62b952776525dd037982f2c6"
+          }
+        },
+        {
+          "client_id": "510992503464-o2h2vhte1saeg9gp4m5hcnkgabgo2qjp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyArnd_Ejlu045Sgu_UYKaD0BLs3BtFLTDg"
@@ -39,7 +62,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "510992503464-o2h2vhte1saeg9gp4m5hcnkgabgo2qjp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
