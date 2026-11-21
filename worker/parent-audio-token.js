@@ -1,4 +1,4 @@
-const PROJECT_ID = "parentaudioconnect";
+const PROJECT_ID = "handroid-65ab1";
 const encoder = new TextEncoder();
 
 function base64url(bytes) {
