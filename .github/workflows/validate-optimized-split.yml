@@ -104,17 +104,86 @@ jobs:
           test -n "$ANDROID_KEY_PASSWORD"
           gradle -p split-source :app:assembleAnakRelease :app:assembleOrtuRelease -PversionCode=720
           mkdir -p "$RUNNER_TEMP/santethp-optimized-release"
-          cp split-source/app/build/outputs/apk/anak/release/app-anak-arm64-v8a-release.apk "$RUNNER_TEMP/santethp-optimized-release/santethp-anak-arm64.apk"
+          cp split-source/app/build/outputs/apk/anak/release/app-anak-arm64-v8a-release.apk "$RUNNER_TEMP/santethp-optimized-release/santethp-anak-arm64-v8a.apk"
+          cp split-source/app/build/outputs/apk/anak/release/app-anak-armeabi-v7a-release.apk "$RUNNER_TEMP/santethp-optimized-release/santethp-anak-armeabi-v7a.apk"
+          cp split-source/app/build/outputs/apk/anak/release/app-anak-x86-release.apk "$RUNNER_TEMP/santethp-optimized-release/santethp-anak-x86.apk"
+          cp split-source/app/build/outputs/apk/anak/release/app-anak-x86_64-release.apk "$RUNNER_TEMP/santethp-optimized-release/santethp-anak-x86_64.apk"
           cp split-source/app/build/outputs/apk/anak/release/app-anak-universal-release.apk "$RUNNER_TEMP/santethp-optimized-release/santethp-anak-universal.apk"
-          cp split-source/app/build/outputs/apk/ortu/release/app-ortu-arm64-v8a-release.apk "$RUNNER_TEMP/santethp-optimized-release/santethp-ortu-arm64.apk"
+          cp split-source/app/build/outputs/apk/ortu/release/app-ortu-arm64-v8a-release.apk "$RUNNER_TEMP/santethp-optimized-release/santethp-ortu-arm64-v8a.apk"
+          cp split-source/app/build/outputs/apk/ortu/release/app-ortu-armeabi-v7a-release.apk "$RUNNER_TEMP/santethp-optimized-release/santethp-ortu-armeabi-v7a.apk"
+          cp split-source/app/build/outputs/apk/ortu/release/app-ortu-x86-release.apk "$RUNNER_TEMP/santethp-optimized-release/santethp-ortu-x86.apk"
+          cp split-source/app/build/outputs/apk/ortu/release/app-ortu-x86_64-release.apk "$RUNNER_TEMP/santethp-optimized-release/santethp-ortu-x86_64.apk"
           cp split-source/app/build/outputs/apk/ortu/release/app-ortu-universal-release.apk "$RUNNER_TEMP/santethp-optimized-release/santethp-ortu-universal.apk"
           sha256sum "$RUNNER_TEMP"/santethp-optimized-release/*.apk
           du -b "$RUNNER_TEMP"/santethp-optimized-release/*.apk
 
-      - name: Upload signed release validation APKs
+      - name: Upload signed anak arm64-v8a APK separately
         uses: actions/upload-artifact@v4
         with:
-          name: SantetHP-optimized-signed-validation-v720
-          path: ${{ runner.temp }}/santethp-optimized-release/*.apk
+          name: SantetHP-anak-arm64-v8a-signed-validation-v720
+          path: ${{ runner.temp }}/santethp-optimized-release/santethp-anak-arm64-v8a.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload signed anak armeabi-v7a APK separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: SantetHP-anak-armeabi-v7a-signed-validation-v720
+          path: ${{ runner.temp }}/santethp-optimized-release/santethp-anak-armeabi-v7a.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload signed anak x86 APK separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: SantetHP-anak-x86-signed-validation-v720
+          path: ${{ runner.temp }}/santethp-optimized-release/santethp-anak-x86.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload signed anak x86_64 APK separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: SantetHP-anak-x86_64-signed-validation-v720
+          path: ${{ runner.temp }}/santethp-optimized-release/santethp-anak-x86_64.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload signed anak universal APK separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: SantetHP-anak-universal-signed-validation-v720
+          path: ${{ runner.temp }}/santethp-optimized-release/santethp-anak-universal.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload signed ortu arm64-v8a APK separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: SantetHP-ortu-arm64-v8a-signed-validation-v720
+          path: ${{ runner.temp }}/santethp-optimized-release/santethp-ortu-arm64-v8a.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload signed ortu armeabi-v7a APK separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: SantetHP-ortu-armeabi-v7a-signed-validation-v720
+          path: ${{ runner.temp }}/santethp-optimized-release/santethp-ortu-armeabi-v7a.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload signed ortu x86 APK separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: SantetHP-ortu-x86-signed-validation-v720
+          path: ${{ runner.temp }}/santethp-optimized-release/santethp-ortu-x86.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload signed ortu x86_64 APK separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: SantetHP-ortu-x86_64-signed-validation-v720
+          path: ${{ runner.temp }}/santethp-optimized-release/santethp-ortu-x86_64.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload signed ortu universal APK separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: SantetHP-ortu-universal-signed-validation-v720
+          path: ${{ runner.temp }}/santethp-optimized-release/santethp-ortu-universal.apk
           if-no-files-found: error
           retention-days: 30
