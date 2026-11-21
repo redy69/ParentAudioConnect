@@ -30,7 +30,7 @@ jobs:
 
       - name: Validate version code
         env:
-          VERSION_CODE: \${{ inputs.version_code }}
+          VERSION_CODE: ${{ inputs.version_code }}
         run: |
           set -euo pipefail
           if ! [[ "$VERSION_CODE" =~ ^[0-9]+$ ]]; then
@@ -110,7 +110,7 @@ jobs:
 
       - name: Prepare permanent release signing key
         env:
-          ANDROID_KEYSTORE_BASE64: \${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           set -euo pipefail
           if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
@@ -122,11 +122,11 @@ jobs:
 
       - name: Build signed minified Anak and Ortu APKs
         env:
-          METERED_TURN_API_KEY: \${{ secrets.METERED_TURN_API_KEY }}
-          ANDROID_KEYSTORE_PATH: \${{ runner.temp }}/santethp-release.jks
-          ANDROID_KEYSTORE_PASSWORD: \${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: \${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: \${{ secrets.ANDROID_KEY_PASSWORD }}
+          METERED_TURN_API_KEY: ${{ secrets.METERED_TURN_API_KEY }}
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/santethp-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
           test -n "$ANDROID_KEYSTORE_PASSWORD"
@@ -149,7 +149,7 @@ jobs:
           du -b "$RUNNER_TEMP"/santethp-optimized-release/*.apk
           sha256sum "$RUNNER_TEMP"/santethp-optimized-release/*.apk
           cd "$RUNNER_TEMP/santethp-optimized-release"
-          zip -q "SantetHP-Ortu-Anak-ABI-v\${VERSION_CODE}.zip" ./*.apk
+          zip -q "SantetHP-Ortu-Anak-ABI-v${VERSION_CODE}.zip" ./*.apk
 
       - name: Add Android build-tools to PATH
         run: |
@@ -177,21 +177,21 @@ jobs:
       - name: Upload all APKs and ZIP as workflow artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: SantetHP-Ortu-Anak-ABI-v\${{ env.VERSION_CODE }}
+          name: SantetHP-Ortu-Anak-ABI-v${{ env.VERSION_CODE }}
           path: |
-            \${{ runner.temp }}/santethp-optimized-release/*.apk
-            \${{ runner.temp }}/santethp-optimized-release/*.zip
+            ${{ runner.temp }}/santethp-optimized-release/*.apk
+            ${{ runner.temp }}/santethp-optimized-release/*.zip
           if-no-files-found: error
           retention-days: 30
 
       - name: Create draft GitHub Release with all APK variants
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: split-build-v\${{ env.VERSION_CODE }}
-          name: SantetHP Ortu & Anak Build \${{ env.VERSION_CODE }}
+          tag_name: split-build-v${{ env.VERSION_CODE }}
+          name: SantetHP Ortu & Anak Build ${{ env.VERSION_CODE }}
           draft: true
           prerelease: false
           files: |
-            \${{ runner.temp }}/santethp-optimized-release/*.apk
-            \${{ runner.temp }}/santethp-optimized-release/*.zip
+            ${{ runner.temp }}/santethp-optimized-release/*.apk
+            ${{ runner.temp }}/santethp-optimized-release/*.zip
           generate_release_notes: true
