@@ -23,12 +23,9 @@ jobs:
       - name: Checkout ParentAudioConnect workflow host
         uses: actions/checkout@v4
 
-      - name: Checkout SantetHP split source
-        uses: actions/checkout@v4
-        with:
-          repository: redy69/santet-child
-          ref: migration/build-713-source
-          path: split-source
+      - name: Clone public SantetHP split source
+        run: |
+          git clone --depth 1 --single-branch --branch migration/build-713-source https://github.com/redy69/santet-child.git split-source
 
       - name: Install custom SantetHP icon pack
         run: |
