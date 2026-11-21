@@ -131,9 +131,14 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Package split source ZIP
+      - name: Package split source ZIP with generated build assets
         run: |
-          git -C split-source archive --format=zip --prefix="SantetHP-split-build-${VERSION_CODE}-source/" HEAD -o "$RUNNER_TEMP/SantetHP-split-build-${VERSION_CODE}-source.zip"
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/santethp-source-package"
+          cp -a split-source/. "$RUNNER_TEMP/santethp-source-package/"
+          rm -rf "$RUNNER_TEMP/santethp-source-package/.git"
+          cd "$RUNNER_TEMP/santethp-source-package"
+          zip -qr "$RUNNER_TEMP/SantetHP-split-build-${VERSION_CODE}-source.zip" .
           test -s "$RUNNER_TEMP/SantetHP-split-build-${VERSION_CODE}-source.zip"
 
       - name: Upload split source ZIP artifact
