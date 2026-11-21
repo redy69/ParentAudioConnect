@@ -120,11 +120,20 @@ jobs:
           fi
           test -s "$RUNNER_TEMP/santethp-split-release/santethp-anak.apk"
 
-      - name: Upload signed APK artifacts
+      - name: Upload SantetHP Anak APK separately
         uses: actions/upload-artifact@v4
         with:
-          name: SantetHP-split-release
-          path: ${{ runner.temp }}/santethp-split-release/*.apk
+          name: SantetHP-Anak-v${{ env.VERSION_CODE }}
+          path: ${{ runner.temp }}/santethp-split-release/santethp-anak.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload SantetHP Ortu APK separately
+        if: ${{ inputs.build_parent }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: SantetHP-Ortu-v${{ env.VERSION_CODE }}
+          path: ${{ runner.temp }}/santethp-split-release/santethp-ortu.apk
           if-no-files-found: error
           retention-days: 30
 
