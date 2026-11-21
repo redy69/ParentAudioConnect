@@ -117,6 +117,20 @@ jobs:
           sha256sum "$RUNNER_TEMP"/santethp-optimized-release/*.apk
           du -b "$RUNNER_TEMP"/santethp-optimized-release/*.apk
 
+      - name: Verify official release certificate on all APKs
+        run: |
+          set -euo pipefail
+          expected="9e6b4eb435fc2b6e62b952776525dd037982f2c6"
+          for apk in "$RUNNER_TEMP"/santethp-optimized-release/*.apk; do
+            output="$(apksigner verify --print-certs "$apk")"
+            actual="$(printf '%s\n' "$output" | awk -F': ' '/certificate SHA-1 digest:/ {print tolower($2); exit}' | tr -d ':')"
+            if [ "$actual" != "$expected" ]; then
+              echo "::error::Unexpected signing certificate for $(basename "$apk"): $actual"
+              exit 1
+            fi
+            echo "Verified official certificate: $(basename "$apk")"
+          done
+
       - name: Upload signed anak arm64-v8a APK separately
         uses: actions/upload-artifact@v4
         with:
