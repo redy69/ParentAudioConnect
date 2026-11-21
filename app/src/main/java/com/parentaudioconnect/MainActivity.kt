@@ -543,6 +543,32 @@ playMp3Button.setOnClickListener {
                             throw Exception("Peran perangkat tidak sesuai")
                         }
 
+                        // Child device: hand over the LiveKit connection to a
+                        // foreground service so it can continue in background.
+                        if (role == "child") {
+                            val serviceIntent = Intent(
+                                this@MainActivity,
+                                ChildAudioConnectionService::class.java
+                            ).apply {
+                                action = ChildAudioConnectionService.ACTION_CONNECT
+                                putExtra(
+                                    ChildAudioConnectionService.EXTRA_PAIR_CODE,
+                                    code
+                                )
+                                putExtra(
+                                    ChildAudioConnectionService.EXTRA_FIREBASE_ID_TOKEN,
+                                    idToken
+                                )
+                            }
+                            ContextCompat.startForegroundService(
+                                this@MainActivity,
+                                serviceIntent
+                            )
+                            statusText.text =
+                                "Layanan audio anak berjalan • menunggu suara orang tua"
+                            return@launch
+                        }
+
                         val newRoom = LiveKit.create(applicationContext)
 
                         newRoom.connect(
