@@ -1,0 +1,120 @@
+name: Validate optimized SantetHP signed APKs
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: santethp-optimized-validation
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout workflow host
+        uses: actions/checkout@v4
+
+      - name: Clone optimized SantetHP source
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --single-branch --branch optimization/apk-size-build-719 https://github.com/redy69/santet-child.git split-source
+
+      - name: Install SantetHP icon assets
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/santethp-icons"
+          curl -fL "https://raw.githubusercontent.com/redy69/ParentAudioConnect/b164ed1a75a7bece1e1a840b9ac5670055aca8d7/screenshot/icon.zip" -o "$RUNNER_TEMP/santethp-icons/icon.zip"
+          unzip -q "$RUNNER_TEMP/santethp-icons/icon.zip" -d "$RUNNER_TEMP/santethp-icons"
+          mkdir -p split-source/app/src/main/res/raw split-source/app/src/main/res/drawable-nodpi
+          cp "$RUNNER_TEMP/santethp-icons/icon/notification.gif" split-source/app/src/main/res/raw/notification_icon.gif
+          cp "$RUNNER_TEMP/santethp-icons/icon/whatsapp.png" split-source/app/src/main/res/drawable-nodpi/whatsapp_icon.png
+          cp "$RUNNER_TEMP/santethp-icons/icon/wifi.png" split-source/app/src/main/res/drawable-nodpi/wifi_icon.png
+          curl -fL "https://raw.githubusercontent.com/redy69/ParentAudioConnect/49a6dc86eb92eed40871adfb77962d027fcb0294/screenshot/icon1.zip" -o "$RUNNER_TEMP/santethp-icons/icon1.zip"
+          unzip -q "$RUNNER_TEMP/santethp-icons/icon1.zip" -d "$RUNNER_TEMP/santethp-icons"
+          cp "$RUNNER_TEMP/santethp-icons/icon1/baterai.png" split-source/app/src/main/res/drawable-nodpi/battery_icon.png
+          cp "$RUNNER_TEMP/santethp-icons/icon1/wifi-router.png" split-source/app/src/main/res/drawable-nodpi/wifi_icon.png
+          cp "$RUNNER_TEMP/santethp-icons/icon1/signal.png" split-source/app/src/main/res/drawable-nodpi/signal_icon.png
+
+      - name: Install icon2 menu images
+        run: |
+          set -euo pipefail
+          ICON_DIR="split-source/screenshot/icon2-inspection/extracted/icon2"
+          mkdir -p split-source/app/src/main/res/drawable-nodpi
+          test -d "$ICON_DIR"
+          cp "$ICON_DIR/add.png" split-source/app/src/main/res/drawable-nodpi/menu_add_icon.png
+          cp "$ICON_DIR/audio.png" split-source/app/src/main/res/drawable-nodpi/menu_audio_icon.png
+          cp "$ICON_DIR/blocked.png" split-source/app/src/main/res/drawable-nodpi/menu_blocked_icon.png
+          cp "$ICON_DIR/boy.png" split-source/app/src/main/res/drawable-nodpi/menu_boy_icon.png
+          cp "$ICON_DIR/camera.png" split-source/app/src/main/res/drawable-nodpi/menu_camera_icon.png
+          cp "$ICON_DIR/galeri.png" split-source/app/src/main/res/drawable-nodpi/menu_gallery_icon.png
+          cp "$ICON_DIR/map.png" split-source/app/src/main/res/drawable-nodpi/menu_map_icon.png
+          cp "$ICON_DIR/mp3.png" split-source/app/src/main/res/drawable-nodpi/menu_mp3_icon.png
+          cp "$ICON_DIR/server.png" split-source/app/src/main/res/drawable-nodpi/menu_server_icon.png
+          cp "$ICON_DIR/whatsapp.png" split-source/app/src/main/res/drawable-nodpi/menu_whatsapp_icon.png
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 12266719
+          packages: 'platform-tools'
+
+      - name: Install Android SDK components
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Prepare permanent release signing key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::Missing GitHub Actions secret ANDROID_KEYSTORE_BASE64"
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/santethp-release.jks"
+          test -s "$RUNNER_TEMP/santethp-release.jks"
+
+      - name: Build signed minified Anak and Ortu APKs
+        env:
+          METERED_TURN_API_KEY: ${{ secrets.METERED_TURN_API_KEY }}
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/santethp-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+          test -n "$ANDROID_KEY_ALIAS"
+          test -n "$ANDROID_KEY_PASSWORD"
+          gradle -p split-source :app:assembleAnakRelease :app:assembleOrtuRelease -PversionCode=720
+          mkdir -p "$RUNNER_TEMP/santethp-optimized-release"
+          cp split-source/app/build/outputs/apk/anak/release/app-anak-arm64-v8a-release.apk "$RUNNER_TEMP/santethp-optimized-release/santethp-anak-arm64.apk"
+          cp split-source/app/build/outputs/apk/anak/release/app-anak-universal-release.apk "$RUNNER_TEMP/santethp-optimized-release/santethp-anak-universal.apk"
+          cp split-source/app/build/outputs/apk/ortu/release/app-ortu-arm64-v8a-release.apk "$RUNNER_TEMP/santethp-optimized-release/santethp-ortu-arm64.apk"
+          cp split-source/app/build/outputs/apk/ortu/release/app-ortu-universal-release.apk "$RUNNER_TEMP/santethp-optimized-release/santethp-ortu-universal.apk"
+          sha256sum "$RUNNER_TEMP"/santethp-optimized-release/*.apk
+          du -b "$RUNNER_TEMP"/santethp-optimized-release/*.apk
+
+      - name: Upload signed release validation APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: SantetHP-optimized-signed-validation-v720
+          path: ${{ runner.temp }}/santethp-optimized-release/*.apk
+          if-no-files-found: error
+          retention-days: 30
