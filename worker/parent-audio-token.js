@@ -118,7 +118,14 @@ async function getFcmAccessToken(env) {
       assertion
     })
   });
-  if (!response.ok) throw new Error("Could not obtain FCM access token");
+  if (!response.ok) {
+    let detail = "unknown";
+    try {
+      const failure = await response.json();
+      detail = failure.error || failure.error_description || "provider_rejected_request";
+    } catch (_) {}
+    throw new Error("FCM_OAUTH_" + response.status + "_" + String(detail).slice(0, 100));
+  }
   const result = await response.json();
   if (!result.access_token) throw new Error("FCM access token missing");
   return { accessToken: result.access_token, projectId: account.project_id };
@@ -236,26 +243,41 @@ export default {
         };
         const command = commands[action];
         if (!command) return jsonResponse({ error: "Invalid audio action" }, 400);
-        const credentials = await getFcmAccessToken(env);
-        const response = await fetch(
-          "https://fcm.googleapis.com/v1/projects/" + encodeURIComponent(credentials.projectId) + "/messages:send",
-          {
-            method: "POST",
-            headers: {
-              Authorization: "Bearer " + credentials.accessToken,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              message: {
-                token: childFcmToken,
-                data: { command, code, serverId: fields.audioLiveKitServerId?.stringValue || "main" },
-                android: { priority: "HIGH", ttl: "30s" }
-              }
-            })
+        try {
+          const credentials = await getFcmAccessToken(env);
+          const response = await fetch(
+            "https://fcm.googleapis.com/v1/projects/" + encodeURIComponent(credentials.projectId) + "/messages:send",
+            {
+              method: "POST",
+              headers: {
+                Authorization: "Bearer " + credentials.accessToken,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                message: {
+                  token: childFcmToken,
+                  data: { command, code, serverId: fields.audioLiveKitServerId?.stringValue || "main" },
+                  android: { priority: "HIGH", ttl: "30s" }
+                }
+              })
+            }
+          );
+          if (!response.ok) {
+            let detail = "unknown";
+            try {
+              const failure = await response.json();
+              detail = failure.error?.status || failure.error?.message || "provider_rejected_request";
+            } catch (_) {}
+            throw new Error("FCM_SEND_" + response.status + "_" + String(detail).slice(0, 100));
           }
-        );
-        if (!response.ok) throw new Error("FCM rejected audio request");
-        return jsonResponse({ sent: true, action });
+          return jsonResponse({ sent: true, action });
+        } catch (error) {
+          console.error("Audio FCM request failed", error?.name || "Error", error?.message || "unknown");
+          return jsonResponse({
+            error: "Audio FCM request failed",
+            diagnostic: String(error?.message || "unknown").slice(0, 160)
+          }, 502);
+        }
       }
 
 
