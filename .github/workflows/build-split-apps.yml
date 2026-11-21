@@ -151,7 +151,7 @@ jobs:
       - name: Publish split APKs to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: split-build-${{ env.VERSION_CODE }}
+          tag_name: split-build-v${{ env.VERSION_CODE }}
           name: SantetHP Ortu & Anak Build ${{ env.VERSION_CODE }}
           files: ${{ runner.temp }}/santethp-split-release/*.apk
           generate_release_notes: true
