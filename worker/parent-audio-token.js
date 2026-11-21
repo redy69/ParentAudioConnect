@@ -128,7 +128,11 @@ async function getFcmAccessToken(env) {
   }
   const result = await response.json();
   if (!result.access_token) throw new Error("FCM access token missing");
-  return { accessToken: result.access_token, projectId: account.project_id };
+  return {
+    accessToken: result.access_token,
+    projectId: account.project_id,
+    serviceAccountEmail: account.client_email
+  };
 }
 
 
@@ -245,6 +249,11 @@ export default {
         if (!command) return jsonResponse({ error: "Invalid audio action" }, 400);
         try {
           const credentials = await getFcmAccessToken(env);
+          // Safe diagnostic only: never log private keys, OAuth tokens, or device FCM tokens.
+          console.info("FCM credential identity", {
+            projectId: credentials.projectId,
+            serviceAccountEmail: credentials.serviceAccountEmail
+          });
           const response = await fetch(
             "https://fcm.googleapis.com/v1/projects/" + encodeURIComponent(credentials.projectId) + "/messages:send",
             {
