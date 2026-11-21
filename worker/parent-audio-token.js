@@ -228,7 +228,12 @@ export default {
         const childFcmToken = fields.childFcmToken?.stringValue;
         if (!childFcmToken) return jsonResponse({ error: "Child device has not registered for notifications" }, 409);
         const action = body.action || "start";
-        const commands = { start: "AUDIO_START", stop: "AUDIO_STOP" };
+        const commands = {
+          start: "AUDIO_START",
+          stop: "AUDIO_STOP",
+          talk_start: "TALK_START",
+          talk_stop: "TALK_STOP"
+        };
         const command = commands[action];
         if (!command) return jsonResponse({ error: "Invalid audio action" }, 400);
         const credentials = await getFcmAccessToken(env);
