@@ -140,7 +140,7 @@ jobs:
           count=0
           for apk in "$RUNNER_TEMP"/santethp-lifecycle-candidate/*.apk; do
             output="$(apksigner verify --print-certs "$apk")"
-            actual="$(printf '%s\\n' "$output" | awk -F': ' '/certificate SHA-1 digest:/ {print tolower($2); exit}' | tr -d ':')"
+            actual="$(printf '%s\n' "$output" | awk -F': ' '/certificate SHA-1 digest:/ {print tolower($2); exit}' | tr -d ':')"
             if [ "$actual" != "$expected" ]; then
               echo "::error::Unexpected signing certificate for $(basename "$apk"): $actual"
               exit 1
