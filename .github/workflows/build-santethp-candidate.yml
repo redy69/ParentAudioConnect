@@ -118,16 +118,8 @@ jobs:
           gradle -p split-source :app:assembleAnakRelease :app:assembleOrtuRelease -PversionCode=721
           mkdir -p "$RUNNER_TEMP/santethp-lifecycle-candidate"
           cp split-source/app/build/outputs/apk/anak/release/app-anak-arm64-v8a-release.apk "$RUNNER_TEMP/santethp-lifecycle-candidate/santethp-anak-arm64-v8a.apk"
-          cp split-source/app/build/outputs/apk/anak/release/app-anak-armeabi-v7a-release.apk "$RUNNER_TEMP/santethp-lifecycle-candidate/santethp-anak-armeabi-v7a.apk"
-          cp split-source/app/build/outputs/apk/anak/release/app-anak-x86-release.apk "$RUNNER_TEMP/santethp-lifecycle-candidate/santethp-anak-x86.apk"
-          cp split-source/app/build/outputs/apk/anak/release/app-anak-x86_64-release.apk "$RUNNER_TEMP/santethp-lifecycle-candidate/santethp-anak-x86_64.apk"
-          cp split-source/app/build/outputs/apk/anak/release/app-anak-universal-release.apk "$RUNNER_TEMP/santethp-lifecycle-candidate/santethp-anak-universal.apk"
           cp split-source/app/build/outputs/apk/ortu/release/app-ortu-arm64-v8a-release.apk "$RUNNER_TEMP/santethp-lifecycle-candidate/santethp-ortu-arm64-v8a.apk"
-          cp split-source/app/build/outputs/apk/ortu/release/app-ortu-armeabi-v7a-release.apk "$RUNNER_TEMP/santethp-lifecycle-candidate/santethp-ortu-armeabi-v7a.apk"
-          cp split-source/app/build/outputs/apk/ortu/release/app-ortu-x86-release.apk "$RUNNER_TEMP/santethp-lifecycle-candidate/santethp-ortu-x86.apk"
-          cp split-source/app/build/outputs/apk/ortu/release/app-ortu-x86_64-release.apk "$RUNNER_TEMP/santethp-lifecycle-candidate/santethp-ortu-x86_64.apk"
-          cp split-source/app/build/outputs/apk/ortu/release/app-ortu-universal-release.apk "$RUNNER_TEMP/santethp-lifecycle-candidate/santethp-ortu-universal.apk"
-          test "$(find "$RUNNER_TEMP/santethp-lifecycle-candidate" -maxdepth 1 -name '*.apk' | wc -l)" -eq 10
+          test "$(find "$RUNNER_TEMP/santethp-lifecycle-candidate" -maxdepth 1 -name '*.apk' | wc -l)" -eq 2
           du -b "$RUNNER_TEMP"/santethp-lifecycle-candidate/*.apk
           sha256sum "$RUNNER_TEMP"/santethp-lifecycle-candidate/*.apk
           cd "$RUNNER_TEMP/santethp-lifecycle-candidate"
@@ -139,7 +131,7 @@ jobs:
           echo "$ANDROID_HOME/build-tools/35.0.0" >> "$GITHUB_PATH"
           test -x "$ANDROID_HOME/build-tools/35.0.0/apksigner"
 
-      - name: Verify official release certificate on all APKs
+      - name: Verify official release certificate on both ARM64 APKs
         run: |
           set -euo pipefail
           expected="9e6b4eb435fc2b6e62b952776525dd037982f2c6"
@@ -154,12 +146,12 @@ jobs:
             echo "Verified official certificate: $(basename "$apk")"
             count=$((count + 1))
           done
-          test "$count" -eq 10
+          test "$count" -eq 2
 
       - name: Upload signed candidate APKs and ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: SantetHP-Lifecycle-Candidate-v721
+          name: SantetHP-Lifecycle-ARM64-v721
           path: ${{ runner.temp }}/santethp-lifecycle-candidate/*.zip
           if-no-files-found: error
           retention-days: 3
