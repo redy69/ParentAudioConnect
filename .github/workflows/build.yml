@@ -11,6 +11,7 @@ on:
       - feature/device-health-monitoring
       - feature/livekit-multi-server-failover
       - recovery/full-features-2026-11-12
+      - feature/gallery-webrtc-p2p
 
 permissions:
   contents: write
