@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - ".github/workflows/**"
   workflow_dispatch:
 
 permissions:
@@ -143,67 +145,67 @@ jobs:
           name: SantetHP-anak-arm64-v8a-signed-validation-v720
           path: ${{ runner.temp }}/santethp-optimized-release/santethp-anak-arm64-v8a.apk
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
       - name: Upload signed anak armeabi-v7a APK separately
         uses: actions/upload-artifact@v4
         with:
           name: SantetHP-anak-armeabi-v7a-signed-validation-v720
           path: ${{ runner.temp }}/santethp-optimized-release/santethp-anak-armeabi-v7a.apk
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
       - name: Upload signed anak x86 APK separately
         uses: actions/upload-artifact@v4
         with:
           name: SantetHP-anak-x86-signed-validation-v720
           path: ${{ runner.temp }}/santethp-optimized-release/santethp-anak-x86.apk
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
       - name: Upload signed anak x86_64 APK separately
         uses: actions/upload-artifact@v4
         with:
           name: SantetHP-anak-x86_64-signed-validation-v720
           path: ${{ runner.temp }}/santethp-optimized-release/santethp-anak-x86_64.apk
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
       - name: Upload signed anak universal APK separately
         uses: actions/upload-artifact@v4
         with:
           name: SantetHP-anak-universal-signed-validation-v720
           path: ${{ runner.temp }}/santethp-optimized-release/santethp-anak-universal.apk
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
       - name: Upload signed ortu arm64-v8a APK separately
         uses: actions/upload-artifact@v4
         with:
           name: SantetHP-ortu-arm64-v8a-signed-validation-v720
           path: ${{ runner.temp }}/santethp-optimized-release/santethp-ortu-arm64-v8a.apk
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
       - name: Upload signed ortu armeabi-v7a APK separately
         uses: actions/upload-artifact@v4
         with:
           name: SantetHP-ortu-armeabi-v7a-signed-validation-v720
           path: ${{ runner.temp }}/santethp-optimized-release/santethp-ortu-armeabi-v7a.apk
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
       - name: Upload signed ortu x86 APK separately
         uses: actions/upload-artifact@v4
         with:
           name: SantetHP-ortu-x86-signed-validation-v720
           path: ${{ runner.temp }}/santethp-optimized-release/santethp-ortu-x86.apk
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
       - name: Upload signed ortu x86_64 APK separately
         uses: actions/upload-artifact@v4
         with:
           name: SantetHP-ortu-x86_64-signed-validation-v720
           path: ${{ runner.temp }}/santethp-optimized-release/santethp-ortu-x86_64.apk
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
       - name: Upload signed ortu universal APK separately
         uses: actions/upload-artifact@v4
         with:
           name: SantetHP-ortu-universal-signed-validation-v720
           path: ${{ runner.temp }}/santethp-optimized-release/santethp-ortu-universal.apk
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3

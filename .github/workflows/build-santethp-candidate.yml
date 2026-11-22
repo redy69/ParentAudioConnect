@@ -133,6 +133,12 @@ jobs:
           cd "$RUNNER_TEMP/santethp-lifecycle-candidate"
           zip -q "SantetHP-Lifecycle-Candidate-v721.zip" ./*.apk
 
+      - name: Add Android build-tools to PATH
+        run: |
+          set -euo pipefail
+          echo "$ANDROID_HOME/build-tools/35.0.0" >> "$GITHUB_PATH"
+          test -x "$ANDROID_HOME/build-tools/35.0.0/apksigner"
+
       - name: Verify official release certificate on all APKs
         run: |
           set -euo pipefail
@@ -154,8 +160,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: SantetHP-Lifecycle-Candidate-v721
-          path: |
-            ${{ runner.temp }}/santethp-lifecycle-candidate/*.apk
-            ${{ runner.temp }}/santethp-lifecycle-candidate/*.zip
+          path: ${{ runner.temp }}/santethp-lifecycle-candidate/*.zip
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3

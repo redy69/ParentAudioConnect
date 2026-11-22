@@ -6,6 +6,8 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - ".github/workflows/**"
 
 permissions:
   contents: write
@@ -54,3 +56,4 @@ jobs:
         with:
           name: ParentAudioConnect-debug
           path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 3
