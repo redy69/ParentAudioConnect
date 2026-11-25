@@ -22,14 +22,16 @@ jobs:
       - name: Checkout workflow host
         uses: actions/checkout@v4
 
+      
       - name: Fetch exact lifecycle candidate source
-        run: |
-          set -euo pipefail
-          git init split-source
-          git -C split-source remote add origin https://github.com/redy69/santet-child.git
-          git -C split-source fetch --depth 1 origin df198e26f5d6bd850cbd52f197331938cf0240ae
-          git -C split-source checkout --detach FETCH_HEAD
-          test "$(git -C split-source rev-parse HEAD)" = "df198e26f5d6bd850cbd52f197331938cf0240ae"
+        uses: actions/checkout@v4
+        with:
+          repository: redy69/santet-child
+          ref: df198e26f5d6bd850cbd52f197331938cf0240ae
+          token: ${{ secrets.SANTET_CHILD_READ_TOKEN }}
+          path: split-source
+          persist-credentials: false
+
 
       - name: Install SantetHP icon assets
         run: |
